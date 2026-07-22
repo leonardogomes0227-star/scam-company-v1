@@ -99,87 +99,89 @@ export const formatCurrency = (value: any) => {
 };
 
 export const generatePixPayload = (key: string, name: string, amount: number): string => {
- const amt = Number(amount || 0).toFixed(2);
-  const sanitizedName = name.substring(0, 25).padEnd(25, ' ');
-  return `00020126580014BR.GOV.BCB.PIX0136${key.replace(/\s/g, '')}5204000053039865406${amt}5802BR5925${sanitizedName}6009SAO PAULO62070503***6304ABCD`;
+  const amt = Number(amount || 0).toFixed(2);
+  const sanitizedName = String(name || 'Loja').substring(0, 25).padEnd(25, ' ');
+  return `00020126580014BR.GOV.BCB.PIX0136${String(key || '').replace(/\s/g, '')}5204000053039865406${amt}5802BR5925${sanitizedName}`;
 };
+
 export function generateScript(
   product: Product,
   tone: ToneOfVoice,
 ): GeneratedScript {
-  const price = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
-    product.promoPrice ?? product.price
-  )
-  const hasPromo = product.promoPrice != null
-  const percent = hasPromo
-    ? Math.round(((product.price - (product.promoPrice as number)) / product.price) * 100)
-    : 0
+  const currentPrice = Number(product.promoPrice ?? product.price || 0);
+  const basePrice = Number(product.price || 0);
 
-  let hook = ""
-  let hookVisual = ""
-  let demo = ""
-  let demoVisual = ""
-  let cta = ""
-  let ctaVisual = ""
-  let caption = ""
-  let audioSuggestion = ""
+  const price = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(currentPrice);
+
+  const hasPromo = product.promoPrice != null && basePrice > 0;
+  const percent = hasPromo
+    ? Math.round(((basePrice - Number(product.promoPrice)) / basePrice) * 100)
+    : 0;
+  let hook = "";
+  let hookVisual = "";
+  let demo = "";
+  let demoVisual = "";
+  let cta = "";
+  let ctaVisual = "";
+  let caption = "";
+  let audioSuggestion = "";
 
   switch (tone) {
     case "urgencia":
-      hook = `PARA TUDO! Se você quer ${product.name.toLowerCase()}, o estoque tá nas últimas unidades!`
-      hookVisual = "Mostre o produto em mãos de forma dinâmica ou apontando para a câmera."
-      demo = `${product.description} ${hasPromo ? `Ele tá com ${percent}% OFF!` : "Preço promocional exclusivo só hoje."}`
-      demoVisual = "Mostre detalhes do produto bem de perto (close-up) e em uso rápido."
-      cta = `Por apenas ${price}. Comenta "EU QUERO" no direct agora!`
-      ctaVisual = "Aponte para o texto na tela mostrando o preço e a chamada para o WhatsApp/Direct."
-      caption = `🚨 OFERTA RELÂMPAGO 🚨\n\n${product.name} por apenas ${price} ✅\n\n⚠️ Restam poucas unidades. Garanta o seu com pagamento rápido no Pix!\n\n📲 Link na bio.\n\n#promocao #oferta #${product.category.toLowerCase()}`
-      audioSuggestion = "Áudio em alta / Trend de urgência ou batida acelerada."
-      break
+      hook = `PARA TUDO! Se você quer ${(product.name || '').toLowerCase()}, o estoque tá nas últimas unidades!`;
+      hookVisual = "Mostre o produto em mãos de forma dinâmica ou apontando para a câmera.";
+      demo = `${product.description} ${hasPromo ? `Ele tá com ${percent}% OFF!` : "Preço promocional exclusivo só hoje."}`;
+      demoVisual = "Mostre detalhes do produto bem de perto (close-up) e em uso rápido.";
+      cta = `Por apenas ${price}. Comenta "EU QUERO" no direct agora!`;
+      ctaVisual = "Aponte para o texto na tela mostrando o preço e a chamada para o WhatsApp/Direct.";
+      caption = `🚨 OFERTA RELÂMPAGO 🚨\n\n${product.name} por apenas ${price} ✅\n\n⚠️ Restam poucas unidades. Garanta o seu com pagamento rápido no Pix!\n\n📲 Link na bio.\n\n#promocao #oferta #${(product.category || '').toLowerCase()}`;
+      audioSuggestion = "Áudio em alta / Trend de urgência ou batida acelerada.";
+      break;
 
     case "humor":
-      hook = `POV: Você achou o ${product.name.toLowerCase()} perfeito e achou que custava uma fortuna...`
-      hookVisual = "Texto grande na tela com você olhando desacreditado para o produto."
-      demo = `Testei e confesso: ${product.description.toLowerCase()} Fiquei chocado com a qualidade.`
-      demoVisual = "Vídeo curto mostrando a reação abrindo a caixa / usando no dia a dia."
-      cta = `E o preço? Apenas ${price}! Corre no WhatsApp antes que acabe 😂`
-      ctaVisual = "Mostre a tela do celular ou o produto com um sorriso."
-      caption = `Ninguém tava preparado pra esse achado 👀✨\n\n${product.name} por apenas ${price}.\n\n#viral #humor #achados #${product.category.toLowerCase()}`
-      audioSuggestion = "Áudio viral engraçado ou meme em alta no Reels/TikTok."
-      break
+      hook = `POV: Você achou o ${(product.name || '').toLowerCase()} perfeito e achou que custava uma fortuna...`;
+      hookVisual = "Texto grande na tela com você olhando desacreditado para o produto.";
+      demo = `Testei e confesso: ${(product.description || '').toLowerCase()} Fiquei chocado com a qualidade.`;
+      demoVisual = "Vídeo curto mostrando a reação abrindo a caixa / usando no dia a dia.";
+      cta = `E o preço? Apenas ${price}! Corre no WhatsApp antes que acabe 😂`;
+      ctaVisual = "Mostre a tela do celular ou o produto com um sorriso.";
+      caption = `Ninguém tava preparado pra esse achado 👀✨\n\n${product.name} por apenas ${price}.\n\n#viral #humor #achados #${(product.category || '').toLowerCase()}`;
+      audioSuggestion = "Áudio viral engraçado ou meme em alta no Reels/TikTok.";
+      break;
 
     case "autoridade":
-      hook = `Procurando ${product.name.toLowerCase()} com qualidade profissional? Presta atenção nisso aqui.`
-      hookVisual = "Gravação com boa iluminação, segurando o produto com firmeza."
-      demo = `${product.description} Material de alta durabilidade e acabamento impecável.`
-      demoVisual = "Mostre os diferenciais técnicos e acabamento detalhado."
-      cta = `Garanta o seu por ${price}. Pagamento facilitado no Pix com envio rápido.`
-      ctaVisual = "Mostre o produto pronto para uso."
-      caption = `Qualidade e custo-benefício que você procura. 👌\n\n${product.name}\n💰 Apenas ${price}\n\n#qualidade #premium #${product.category.toLowerCase()}`
-      audioSuggestion = "Música de fundo instrumental/lo-fi moderna e elegante."
-      break
+      hook = `Procurando ${(product.name || '').toLowerCase()} com qualidade profissional? Presta atenção nisso aqui.`;
+      hookVisual = "Gravação com boa iluminação, segurando o produto com firmeza.";
+      demo = `${product.description} Material de alta durabilidade e acabamento impecável.`;
+      demoVisual = "Mostre os diferenciais técnicos e acabamento detalhado.";
+      cta = `Garanta o seu por ${price}. Pagamento facilitado no Pix com envio rápido.`;
+      ctaVisual = "Mostre o produto pronto para uso.";
+      caption = `Qualidade e custo-benefício que você procura. 👌\n\n${product.name}\n💰 Apenas ${price}\n\n#qualidade #premium #${(product.category || '').toLowerCase()}`;
+      audioSuggestion = "Música de fundo instrumental/lo-fi moderna e elegante.";
+      break;
 
     case "provocador":
-      hook = `Você ainda tá usando produto ruim só porque acha que ${product.name.toLowerCase()} é caro?`
-      hookVisual = "Balançar a cabeça dizendo 'não' e mostrar o produto em destaque."
-      demo = `Olha esse resultado: ${product.description.toLowerCase()} Chega de passar raiva!`
-      demoVisual = "Comparativo rápido do uso do produto facilitando a rotina."
-      cta = `Sai por apenas ${price} na nossa loja. Clica no link da bio e resolve isso hoje!`
-      ctaVisual = "Aponte para baixo ou para a bio com o produto na mão."
-      caption = `Parou com a desculpa! 🛑\n\n${product.name} por apenas ${price}.\n\n#novidade #solucao #${product.category.toLowerCase()}`
-      audioSuggestion = "Áudio de transição impacto/música eletrônica com batida marcante."
-      break
+      hook = `Você ainda tá usando produto ruim só porque acha que ${(product.name || '').toLowerCase()} é caro?`;
+      hookVisual = "Balançar a cabeça dizendo 'não' e mostrar o produto em destaque.";
+      demo = `Olha esse resultado: ${(product.description || '').toLowerCase()} Chega de passar raiva!`;
+      demoVisual = "Comparativo rápido do uso do produto facilitando a rotina.";
+      cta = `Sai por apenas ${price} na nossa loja. Clica no link da bio e resolve isso hoje!`;
+      ctaVisual = "Aponte para baixo ou para a bio com o produto na mão.";
+      caption = `Parou com a desculpa! 🛑\n\n${product.name} por apenas ${price}.\n\n#novidade #solucao #${(product.category || '').toLowerCase()}`;
+      audioSuggestion = "Áudio de transição impacto/música eletrônica com batida marcante.";
+      break;
 
     case "direto":
     default:
-      hook = `Procurando ${product.name.toLowerCase()}? Achamos a melhor opção para você!`
-      hookVisual = "Apresente o produto centralizado na tela com visual limpo."
-      demo = `${product.description} Praticidade e preço justo em um só item.`
-      demoVisual = "Demonstração prática em 5 segundos."
-      cta = `Preço especial: ${price}. Chama no WhatsApp pelo link da bio e garanta o seu!`
-      ctaVisual = "Mostre o produto e a chamada em texto cobrindo a parte inferior."
-      caption = `${product.name} disponível na loja! 🔥\n\nGaranta por apenas ${price}.\n\n#${product.category.toLowerCase()} #compras #ofertas`
-      audioSuggestion = "Música pop animada / instrumental leve de fundo."
-      break
+      hook = `Procurando ${(product.name || '').toLowerCase()}? Achamos a melhor opção para você!`;
+      hookVisual = "Apresente o produto centralizado na tela com visual limpo.";
+      demo = `${product.description} Praticidade e preço justo em um só item.`;
+      demoVisual = "Demonstração prática em 5 segundos.";
+      cta = `Preço especial: ${price}. Chama no WhatsApp pelo link da bio e garanta o seu!`;
+      ctaVisual = "Mostre o produto e a chamada em texto cobrindo a parte inferior.";
+      caption = `${product.name} disponível na loja! 🔥\n\nGaranta por apenas ${price}.\n\n#${(product.category || '').toLowerCase()} #compras #ofertas`;
+      audioSuggestion = "Música pop animada / instrumental leve de fundo.";
+      break;
   }
 
   return {
@@ -190,5 +192,5 @@ export function generateScript(
     ],
     caption,
     audioSuggestion,
-  }
+  };
 }
