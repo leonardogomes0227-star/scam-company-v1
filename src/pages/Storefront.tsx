@@ -3,7 +3,7 @@ import { Product, CartItem, StoreConfig } from '@/types';
 import { CATEGORIES, formatCurrency, generatePixPayload } from '@/data';
 import { buildWhatsAppMessage } from '@/utils';
 import {
-  Search, ShoppingCart, Plus, Minus, Trash2, X, Copy, Check, MessageCircle, QrCode, Star, Sparkles, ShieldCheck, Heart
+  Search, ShoppingCart, Plus, Minus, Trash2, X, Copy, Check, MessageCircle, QrCode, Star, Sparkles, ShieldCheck
 } from 'lucide-react';
 
 interface StorefrontProps {
@@ -30,16 +30,15 @@ export default function Storefront({
   const [pixModal, setPixModal] = useState(false);
   const [copiedPix, setCopiedPix] = useState(false);
 
-  // Prova Social Fake (Pop-up de compras recentes)
   useEffect(() => {
     const names = ['Mariana', 'Lucas', 'Guilherme', 'Beatriz', 'Matheus', 'Fernanda'];
     const cities = ['Campo Grande', 'Rio Verde', 'São Paulo', 'Curitiba', 'Goiânia'];
 
     const interval = setInterval(() => {
-      if (products.length === 0) return;
+      if (!products || products.length === 0) return;
       const randomName = names[Math.floor(Math.random() * names.length)];
       const randomCity = cities[Math.floor(Math.random() * cities.length)];
-      const randomProduct = products[Math.floor(Math.random() * products.length)].name;
+      const randomProduct = products[Math.floor(Math.random() * products.length)]?.name || 'Produto';
 
       setSocialProof({ name: randomName, city: randomCity, product: randomProduct });
 
@@ -50,6 +49,7 @@ export default function Storefront({
   }, [products]);
 
   const filtered = useMemo(() => {
+    if (!products) return [];
     return products.filter((p) => {
       if (!p.active) return false;
       if (category !== 'Todos' && p.category !== category) return false;
@@ -59,10 +59,12 @@ export default function Storefront({
   }, [products, category, search]);
 
   const totalCart = useMemo(() => {
+    if (!cart) return 0;
     return cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
   }, [cart]);
 
   const totalItems = useMemo(() => {
+    if (!cart) return 0;
     return cart.reduce((acc, item) => acc + item.quantity, 0);
   }, [cart]);
 
@@ -87,15 +89,14 @@ export default function Storefront({
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-xs font-semibold backdrop-blur-md mb-3">
             <Sparkles className="w-3.5 h-3.5" /> Envio rápido e pagamento via Pix
           </span>
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-3">{config.name}</h1>
-          <p className="text-emerald-100 text-sm sm:text-base max-w-xl mx-auto">{config.about}</p>
+          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-3">{config?.name || 'Nossa Loja'}</h1>
+          <p className="text-emerald-100 text-sm sm:text-base max-w-xl mx-auto">{config?.about || ''}</p>
         </div>
       </section>
 
       {/* Categorias e Busca */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          {/* Categorias */}
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
             {CATEGORIES.map((c) => (
               <button
@@ -112,7 +113,6 @@ export default function Storefront({
             ))}
           </div>
 
-          {/* Busca */}
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -141,7 +141,6 @@ export default function Storefront({
                 </div>
 
                 <div className="p-4 space-y-2">
-                  {/* Rating Fake */}
                   <div className="flex items-center gap-1 text-amber-400 text-xs">
                     <Star className="w-3.5 h-3.5 fill-amber-400" />
                     <Star className="w-3.5 h-3.5 fill-amber-400" />
@@ -205,7 +204,6 @@ export default function Storefront({
                 </button>
               </div>
 
-              {/* Progress Frete Grátis */}
               <div className="my-4 bg-emerald-50 p-3.5 rounded-2xl border border-emerald-100">
                 <div className="flex justify-between text-xs font-semibold text-emerald-800 mb-1.5">
                   <span>
@@ -218,7 +216,6 @@ export default function Storefront({
                 </div>
               </div>
 
-              {/* Itens do Carrinho */}
               {cart.length === 0 ? (
                 <div className="text-center py-16 text-gray-400">
                   <ShoppingCart className="w-12 h-12 mx-auto mb-2 opacity-20" />
@@ -251,7 +248,6 @@ export default function Storefront({
               )}
             </div>
 
-            {/* Footer do Carrinho */}
             {cart.length > 0 && (
               <div className="pt-4 border-t border-gray-100 space-y-3">
                 <div className="flex justify-between items-center text-sm">
@@ -278,7 +274,7 @@ export default function Storefront({
         </div>
       )}
 
-      {/* Pop-up de Prova Social */}
+      {/* Pop-up Prova Social */}
       {socialProof && (
         <div className="fixed bottom-6 left-6 z-40 bg-white p-3.5 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-3 animate-slide-up max-w-xs">
           <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
@@ -299,7 +295,7 @@ export default function Storefront({
               <h3 className="font-bold text-gray-900 text-base">Pagamento Pix</h3>
               <button onClick={() => setPixModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
             </div>
-            <p className="text-xs text-gray-500">Copie o código ou escaneie a chave Pix para finalizar seu pagamento de <strong className="text-emerald-600">{formatCurrency(totalCart)}</strong>.</p>
+            <p className="text-xs text-gray-500">Copie o código abaixo para pagar <strong className="text-emerald-600">{formatCurrency(totalCart)}</strong>.</p>
             <div className="bg-gray-50 p-3 rounded-xl text-[11px] font-mono break-all text-gray-600 border border-gray-100">
               {pixCode}
             </div>
