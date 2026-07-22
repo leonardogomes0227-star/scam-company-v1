@@ -320,4 +320,240 @@ export default function AdminDashboard(props: any) {
                 <div key={o.id} className="p-4 bg-slate-950 rounded-2xl border border-slate-800 flex items-center justify-between gap-4 text-xs">
                   <div>
                     <span className="font-bold text-white">Pedido #{o.id} - {o.customer}</span>
-                    <span className="block text-slate-50
+                    <span className="block text-slate-500 text-[10px]">Data: {o.date}</span>
+                  </div>
+                  <span className="font-black text-emerald-400">{formatCurrency(o.total)}</span>
+                  <select
+                    value={o.status}
+                    onChange={(e) => updateOrderStatus(o.id, e.target.value)}
+                    className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-white font-bold text-xs"
+                  >
+                    <option value="Pendente">Pendente</option>
+                    <option value="Pago">Pago</option>
+                    <option value="Enviado">Enviado</option>
+                    <option value="Concluído">Concluído</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 🎟️ ABA CUPONS */}
+        {activeTab === 'coupons' && (
+          <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Cupons de Desconto ({coupons.length})</h2>
+                <p className="text-xs text-slate-400">Crie códigos promocionais para impulsionar suas vendas.</p>
+              </div>
+              <button onClick={() => setIsCouponModalOpen(true)} className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-500 text-slate-950 font-extrabold text-xs rounded-xl">
+                <Plus className="w-4 h-4" /> Criar Cupom
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {coupons.map((c) => (
+                <div key={c.id} className="p-4 bg-slate-950 rounded-2xl border border-slate-800 flex justify-between items-center">
+                  <div>
+                    <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 font-mono font-bold rounded-lg text-xs">{c.code}</span>
+                    <span className="block text-xs text-slate-400 mt-2">
+                      Desconto: {c.type === 'percent' ? `${c.discount}%` : `R$ ${c.discount.toFixed(2)}`}
+                    </span>
+                  </div>
+                  <button onClick={() => setCoupons(coupons.filter(item => item.id !== c.id))} className="text-rose-400 p-2 hover:bg-rose-500/10 rounded-xl">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ⭐️ ABA DEPOIMENTOS */}
+        {activeTab === 'testimonials' && (
+          <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4">
+            <h2 className="text-lg font-bold text-white">Prova Social & Avaliações</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {testimonials.map((t) => (
+                <div key={t.id} className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <strong className="text-xs text-white">{t.name}</strong>
+                    <span className="text-xs text-amber-400 font-bold">⭐ {t.stars}.0</span>
+                  </div>
+                  <p className="text-xs text-slate-400 italic">"{t.comment}"</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ⚙️ ABA CONFIGURAÇÕES COM BOTÃO SALVAR */}
+        {activeTab === 'config' && (
+          <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-bold text-white">Configurações Gerais da Loja</h2>
+                <p className="text-xs text-slate-400">Altere o nome, dados de contato, chave Pix e taxas de frete.</p>
+              </div>
+              
+              <button
+                onClick={handleSaveConfig}
+                className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all active:scale-95"
+              >
+                <Save className="w-4 h-4" /> Salvar Alterações
+              </button>
+            </div>
+
+            {showSaveAlert && (
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs flex items-center gap-2">
+                <Check className="w-4 h-4" /> Configurações salvas com sucesso!
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div>
+                <label className="font-bold text-slate-300 block mb-1">Nome Comercial da Loja</label>
+                <input value={config.name} onChange={(e) => setConfig({ ...config, name: e.target.value })} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" />
+              </div>
+              <div>
+                <label className="font-bold text-slate-300 block mb-1">WhatsApp de Atendimento</label>
+                <input value={config.whatsapp} onChange={(e) => setConfig({ ...config, whatsapp: e.target.value })} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" />
+              </div>
+              <div>
+                <label className="font-bold text-slate-300 block mb-1">Chave Pix para Pagamentos</label>
+                <input value={config.pixKey} onChange={(e) => setConfig({ ...config, pixKey: e.target.value })} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" />
+              </div>
+              <div>
+                <label className="font-bold text-slate-300 block mb-1">URL da Logo da Sua Marca</label>
+                <input value={config.logoUrl || ''} onChange={(e) => setConfig({ ...config, logoUrl: e.target.value })} placeholder="https://..." className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" />
+              </div>
+              <div>
+                <label className="font-bold text-slate-300 block mb-1">Taxa Fixa de Frete (R$)</label>
+                <input type="number" value={config.fixedFreight || 10} onChange={(e) => setConfig({ ...config, fixedFreight: parseFloat(e.target.value) })} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" />
+              </div>
+              <div>
+                <label className="font-bold text-slate-300 block mb-1">Frete Grátis Acima De (R$)</label>
+                <input type="number" value={config.freeFreightThreshold || 150} onChange={(e) => setConfig({ ...config, freeFreightThreshold: parseFloat(e.target.value) })} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 🎬 ABA IA ROTEIROS */}
+        {activeTab === 'ia' && (
+          <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-6">
+            <h2 className="text-lg font-bold text-white flex items-center gap-2"><Sparkles className="w-5 h-5 text-emerald-400" /> Estúdio de Criativos IA</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Produto</label>
+                <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)} className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white outline-none">
+                  <option value="">Selecione um produto...</option>
+                  {products.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
+                </select>
+              </div>
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Tom de Voz</label>
+                <select value={selectedTone} onChange={(e) => setSelectedTone(e.target.value)} className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white outline-none">
+                  <option value="Persuasivo">Urgente/Persuasivo</option>
+                  <option value="Vendedor">Vendedor</option>
+                </select>
+              </div>
+              <div>
+                <label className="block font-bold text-slate-300 mb-1">Duração</label>
+                <select value={selectedDuration} onChange={(e) => setSelectedDuration(e.target.value)} className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white outline-none">
+                  <option value="15s">15s (Viral)</option>
+                  <option value="30s">30s (Detalhado)</option>
+                </select>
+              </div>
+            </div>
+
+            <button onClick={handleGenerateScript} className="w-full py-3 bg-emerald-500 text-slate-950 font-extrabold text-xs rounded-xl">
+              Gerar Roteiro + Legenda
+            </button>
+
+            {generatedScript && (
+              <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-3 text-xs">
+                <div><strong className="text-emerald-400">1. Gancho:</strong> <p>{generatedScript.hook}</p></div>
+                <div><strong className="text-emerald-400">2. Demonstração:</strong> <p>{generatedScript.demo}</p></div>
+                <div><strong className="text-emerald-400">3. CTA:</strong> <p>{generatedScript.cta}</p></div>
+                <div><strong className="text-emerald-400">Legenda:</strong> <p className="font-mono text-[11px]">{generatedScript.caption}</p></div>
+              </div>
+            )}
+          </div>
+        )}
+
+      </div>
+
+      {/* MODAL CRIAR CUPOM */}
+      {isCouponModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4">
+            <h3 className="font-bold text-white text-base">Novo Cupom de Desconto</h3>
+            <form onSubmit={handleAddCoupon} className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-slate-300 block mb-1">Código do Cupom</label>
+                <input required value={cupCode} onChange={(e) => setCupCode(e.target.value)} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none font-mono" placeholder="Ex: NOVO10" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="font-bold text-slate-300 block mb-1">Valor do Desconto</label>
+                  <input required type="number" step="0.01" value={cupDiscount} onChange={(e) => setCupDiscount(e.target.value)} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" placeholder="10" />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-300 block mb-1">Tipo de Desconto</label>
+                  <select value={cupType} onChange={(e: any) => setCupType(e.target.value)} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none">
+                    <option value="percent">Porcentagem (%)</option>
+                    <option value="fixed">Fixo (R$)</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setIsCouponModalOpen(false)} className="px-4 py-2 bg-slate-800 text-slate-300 font-bold rounded-xl">Cancelar</button>
+                <button type="submit" className="px-4 py-2 bg-emerald-500 text-slate-950 font-extrabold rounded-xl">Criar Cupom</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PRODUTO */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4">
+            <h3 className="font-bold text-white text-base">{editingId ? 'Editar Produto' : 'Cadastrar Produto'}</h3>
+            <form onSubmit={handleSaveProduct} className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-slate-300 block mb-1">Nome do Produto</label>
+                <input required value={prodName} onChange={(e) => setProdName(e.target.value)} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" placeholder="Ex: Smartwatch Pro" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="font-bold text-slate-300 block mb-1">Preço Normal (R$)</label>
+                  <input required type="number" step="0.01" value={prodPrice} onChange={(e) => setProdPrice(e.target.value)} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" placeholder="199.90" />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-300 block mb-1">Preço Promo (R$)</label>
+                  <input type="number" step="0.01" value={prodPromoPrice} onChange={(e) => setProdPromoPrice(e.target.value)} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" placeholder="149.90" />
+                </div>
+              </div>
+              <div>
+                <label className="font-bold text-slate-300 block mb-1">Variações (P, M, G ou Cores)</label>
+                <input value={prodVariants} onChange={(e) => setProdVariants(e.target.value)} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" placeholder="Ex: P, M, G, GG ou Preto, Branco" />
+              </div>
+              <div>
+                <label className="font-bold text-slate-300 block mb-1">URL da Imagem</label>
+                <input value={prodImg} onChange={(e) => setProdImg(e.target.value)} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" placeholder="https://..." />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-slate-800 text-slate-300 font-bold rounded-xl">Cancelar</button>
+                <button type="submit" className="px-4 py-2 bg-emerald-500 text-slate-950 font-extrabold rounded-xl">Salvar Produto</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
