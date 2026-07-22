@@ -1,105 +1,33 @@
-import { Product, StoreConfig, ScriptData } from './types';
-
-export const INITIAL_CONFIG: StoreConfig = {
-  name: 'Sua Loja Digital',
-  about: 'Encontre os melhores produtos com os melhores preços e entrega garantida.',
-  whatsapp: '5567999999999',
-  pixKey: '00000000000',
-  pixKeyType: 'cpf',
-};
-
-export const INITIAL_PRODUCTS: Product[] = [
-  {
-    id: '1',
-    name: 'Fone de Ouvido Bluetooth',
-    description: 'Som de alta qualidade com cancelamento de ruído e bateria de longa duração.',
-    price: 149.90,
-    promoPrice: 99.90,
-    category: 'Eletrônicos',
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80',
-    active: true,
-  },
-  {
-    id: '2',
-    name: 'Smartwatch Esportivo',
-    description: 'Monitore seus batimentos, passos e receba notificações no seu pulso.',
-    price: 299.90,
-    category: 'Eletrônicos',
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80',
-    active: true,
-  },
-];
+import { Product } from './types';
 
 export const CATEGORIES = [
   'Todos',
   'Eletrônicos',
   'Acessórios',
-  'Casa & Decoração',
-  'Moda'
+  'Vestuário',
+  'Calçados',
+  'Casa & Decoração'
 ];
 
 export function formatCurrency(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
-  }).format(value || 0);
+  }).format(value);
 }
 
 export function generatePixPayload(key: string, name: string, amount: number): string {
-  const value = Number(amount || 0).toFixed(2);
-  const sanitizedName = String(name || 'Loja').substring(0, 25).padEnd(25, ' ');
-  return `00020126580014BR.GOV.BCB.PIX0136${String(key || '').replace(/\s/g, '')}5204000053039865406${value}5802BR5925${sanitizedName}6009CAMPO GRANDE62070503***6304`;
+  const cleanKey = key ? key.trim() : '00000000000';
+  const cleanName = name ? name.substring(0, 25).trim() : 'LOJA';
+  const valStr = amount.toFixed(2);
+  
+  return `00020126580014BR.GOV.BCB.PIX0114${cleanKey}520400005303986540${valStr.length < 10 ? '0' + valStr.length : valStr}${valStr}5802BR5915${cleanName}6009SAO PAULO62070503***6304`;
 }
 
-export function generateScript(
-  product: Product,
-  tone: string
-): ScriptData {
-  const currentPrice = Number((product.promoPrice ?? product.price) || 0);
-  const basePrice = Number(product.price || 0);
-
-  const priceFormatted = new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(currentPrice);
-
-  const hasPromo = product.promoPrice != null && basePrice > 0;
-  const discountPercent = hasPromo
-    ? Math.round(((basePrice - Number(product.promoPrice)) / basePrice) * 100)
-    : 0;
-
-  let hook = '';
-  let visualHook = '';
-  let demo = '';
-  let visualDemo = '';
-  let cta = '';
-  let visualCta = '';
-
-  if (tone === 'Persuasivo' || tone === 'Vendedor') {
-    hook = `Você precisa ver isso antes que acabe! O ${product.name} está com uma condição imperdível.`;
-    visualHook = `Mostrar o produto ${product.name} em destaque com texto chamativo na tela.`;
-    demo = `Olha a qualidade desse produto! ${product.description || 'Design incrível e alta durabilidade.'}`;
-    visualDemo = `Foco nos detalhes do produto sendo utilizado.`;
-    cta = `Garanta o seu agora por apenas ${priceFormatted} clicando no link do perfil!`;
-    visualCta = `Seta apontando para a bio/link de compra.`;
-  } else {
-    hook = `Conheça o ${product.name}, a melhor escolha para o seu dia a dia.`;
-    visualHook = `Apresentação limpa do produto em um cenário agradável.`;
-    demo = `${product.description || 'Ideal para quem busca praticidade e qualidade.'}`;
-    visualDemo = `Uso prático do produto mostrando seus benefícios.`;
-    cta = `Aproveite por apenas ${priceFormatted}. Link disponível na loja!`;
-    visualCta = `Logotipo da loja e chamada para ação simples.`;
-  }
-
+export function generateScript(product: Product, tone: string) {
   return {
-    hook,
-    visualHook,
-    demo,
-    visualDemo,
-    cta,
-    visualCta,
-    hasPromo,
-    discountPercent,
-    priceFormatted,
+    hook: `🔥 Procurando ${product.name} com o melhor preço do mercado?`,
+    demo: `Garantimos entrega rápida, suporte via WhatsApp e pagamento facilitado via Pix!`,
+    cta: `Clique no link do perfil e faça seu pedido agora mesmo antes que esgote o estoque!`
   };
 }
