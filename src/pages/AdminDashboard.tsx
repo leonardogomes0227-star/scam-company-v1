@@ -1,10 +1,10 @@
 import { useState, useMemo } from 'react';
 import { Product, StoreConfig, AdminTab } from '@/types';
-import { formatCurrency, CATEGORIES } from '@/data';
-import { generateScript } from '@/utils';
+import { formatCurrency, CATEGORIES, generateScript } from '@/data';
+
 import {
   Package, BrainCircuit, Settings, Plus, Pencil, Trash2, Check, X,
-  Search, Copy, Sparkles, MessageCircle, Save, Store, Power,
+  Search, Copy, Sparkles, MessageCircle, Save, Store, Power, Video, Music, Type
 } from 'lucide-react';
 
 interface AdminProps {
@@ -309,132 +309,175 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function IATab({ products }: { products: Product[] }) {
   const [selectedId, setSelectedId] = useState<string>(products[0]?.id ?? '');
-  const [script, setScript] = useState<string>('');
+  const [tone, setTone] = useState<ToneOfVoice>('urgencia');
+  const [scriptResult, setScriptResult] = useState<GeneratedScript | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const selected = products.find((p) => p.id === selectedId);
 
+  const TONES: { id: ToneOfVoice; label: string }[] = [
+    { id: 'direto', label: '🎯 Direto' },
+    { id: 'urgencia', label: '🔥 Urgência' },
+    { id: 'humor', label: '😂 Humor' },
+    { id: 'autoridade', label: '⭐ Autoridade' },
+    { id: 'provocador', label: '😈 Provocador' },
+  ];
+
   const handleGenerate = () => {
     if (!selected) return;
     setLoading(true);
-    setScript('');
+    setScriptResult(null);
     setTimeout(() => {
-      setScript(generateScript(selected.name, selected.description, selected.price));
+      setScriptResult(generateScript(selected, tone));
       setLoading(false);
-    }, 900);
+    }, 800);
   };
 
-  const handleCopy = () => {
-    navigator.clipboard?.writeText(script);
+  const handleCopy = (text: string) => {
+    navigator.clipboard?.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-
-  const segments = useMemo(() => {
-    if (!script) return [];
-    return script.split('\n\n').map((block) => {
-      const [header, ...rest] = block.split('\n');
-      return { header, content: rest.join('\n') };
-    });
-  }, [script]);
 
   return (
     <div>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Estúdio de IA</h1>
-        <p className="text-sm text-gray-500">Gere roteiros de vídeo de 15 segundos para seus produtos.</p>
+        <p className="text-sm text-gray-500">Gere roteiros completos para Reels e TikTok com instruções de câmera e áudio.</p>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
-        <label className="block">
-          <span className="text-xs font-medium text-gray-600 mb-1.5 block">Selecione um produto</span>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <select
-              value={selectedId}
-              onChange={(e) => { setSelectedId(e.target.value); setScript(''); }}
-              className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
-            >
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>{p.name} — {formatCurrency(p.price)}</option>
-              ))}
-            </select>
-            <button
-              onClick={handleGenerate}
-              disabled={!selected || loading}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50 whitespace-nowrap"
-            >
-              {loading ? (
-                <>
-                  <Sparkles className="w-4 h-4 animate-spin" />
-                  Gerando...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  Gerar Roteiro de 15s
-                </>
-              )}
-            </button>
+      <div className="bg-white rounded-2xl border border-gray-100 p-6 mb-6 space-y-4">
+        <div>
+          <label className="text-xs font-medium text-gray-600 mb-1.5 block">1. Selecione um produto</label>
+          <select
+            value={selectedId}
+            onChange={(e) => { setSelectedId(e.target.value); setScriptResult(null); }}
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+          >
+            {products.map((p) => (
+              <option key={p.id} value={p.id}>{p.name} — {formatCurrency(p.price)}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="text-xs font-medium text-gray-600 mb-2 block">2. Escolha o Tom de Voz</label>
+          <div className="flex flex-wrap gap-2">
+            {TONES.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => setTone(t.id)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+                  tone === t.id
+                    ? 'bg-emerald-600 text-white shadow-sm scale-105'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
           </div>
-        </label>
+        </div>
+
+        <button
+          onClick={handleGenerate}
+          disabled={!selected || loading}
+          className="w-full mt-2 flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors disabled:opacity-50"
+        >
+          {loading ? (
+            <>
+              <Sparkles className="w-4 h-4 animate-spin" />
+              Criando Roteiro Perfeito...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4" />
+              Gerar Roteiro Completo
+            </>
+          )}
+        </button>
       </div>
 
       {/* Output */}
-      {script && (
-        <div className="space-y-4">
+      {scriptResult && (
+        <div className="space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2">
               <BrainCircuit className="w-5 h-5 text-emerald-600" />
-              Roteiro gerado
+              Roteiro Gerado
             </h3>
             <button
-              onClick={handleCopy}
+              onClick={() => handleCopy(scriptResult.caption)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 text-sm font-medium hover:bg-emerald-100 transition-colors"
             >
               {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              {copied ? 'Copiado!' : 'Copiar roteiro'}
+              {copied ? 'Copiado!' : 'Copiar Legenda'}
             </button>
           </div>
 
-          {/* Timeline */}
+          {/* Timeline Blocks */}
           <div className="grid md:grid-cols-3 gap-4">
-            {segments.map((seg, i) => {
-              const colors = [
-                { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-600', label: 'HOOK', time: '0–3s' },
-                { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-600', label: 'VALOR & DEMO', time: '3–10s' },
-                { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-600', label: 'CTA', time: '10–15s' },
+            {scriptResult.blocks.map((block, i) => {
+              const styles = [
+                { bg: 'bg-rose-50', border: 'border-rose-200', text: 'text-rose-600' },
+                { bg: 'bg-blue-50', border: 'border-blue-200', text: 'text-blue-600' },
+                { bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-600' },
               ];
-              const c = colors[i];
+              const s = styles[i] || styles[0];
               return (
-                <div key={i} className={`p-5 rounded-2xl border-2 ${c.border} ${c.bg}`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <span className={`text-xs font-bold tracking-wider ${c.text}`}>{c.label}</span>
-                    <span className="text-xs text-gray-400 font-mono">{c.time}</span>
+                <div key={i} className={`p-5 rounded-2xl border-2 ${s.border} ${s.bg} flex flex-col justify-between space-y-3`}>
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`text-xs font-bold tracking-wider uppercase ${s.text}`}>{block.label}</span>
+                      <span className="text-xs text-gray-400 font-mono">{block.time}</span>
+                    </div>
+
+                    {/* Camera Instruction */}
+                    <div className="flex items-start gap-1.5 text-xs text-gray-500 bg-white/70 p-2 rounded-lg mb-2 border border-gray-100">
+                      <Video className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
+                      <span>{block.visualInstruction}</span>
+                    </div>
+
+                    {/* Audio Fala */}
+                    <p className="text-sm font-medium text-gray-800 leading-relaxed">
+                      "{block.text}"
+                    </p>
                   </div>
-                  <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{seg.content}</p>
                 </div>
               );
             })}
           </div>
 
-          {/* Full script */}
-          <div className="bg-gray-900 rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs text-gray-400 uppercase tracking-wider">Script completo</span>
-              <button onClick={handleCopy} className="text-gray-400 hover:text-white transition-colors">
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              </button>
+          {/* Caption & Music Suggestions */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="bg-white p-5 rounded-2xl border border-gray-100">
+              <div className="flex items-center gap-2 mb-2 text-sm font-semibold text-gray-900">
+                <Type className="w-4 h-4 text-emerald-600" />
+                Legenda Pronta para Postar
+              </div>
+              <p className="text-xs text-gray-600 whitespace-pre-line leading-relaxed bg-gray-50 p-3 rounded-xl border border-gray-100">
+                {scriptResult.caption}
+              </p>
             </div>
-            <pre className="text-sm text-gray-200 whitespace-pre-wrap font-mono leading-relaxed">{script}</pre>
+
+            <div className="bg-white p-5 rounded-2xl border border-gray-100">
+              <div className="flex items-center gap-2 mb-2 text-sm font-semibold text-gray-900">
+                <Music className="w-4 h-4 text-emerald-600" />
+                Sugestão de Áudio
+              </div>
+              <p className="text-xs text-gray-600 leading-relaxed bg-gray-50 p-3 rounded-xl border border-gray-100">
+                {scriptResult.audioSuggestion}
+              </p>
+            </div>
           </div>
         </div>
       )}
 
-      {!script && !loading && (
+      {!scriptResult && !loading && (
         <div className="text-center py-16 text-gray-400">
           <BrainCircuit className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p>Selecione um produto e clique em "Gerar Roteiro de 15s".</p>
+          <p>Selecione um produto, um tom de voz e clique para gerar o roteiro completo.</p>
         </div>
       )}
     </div>
