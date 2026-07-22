@@ -1,5 +1,35 @@
 import { Product, StoreConfig, ScriptData } from './types';
 
+export const INITIAL_CONFIG: StoreConfig = {
+  name: 'Sua Loja Digital',
+  about: 'Encontre os melhores produtos com os melhores preços e entrega garantida.',
+  whatsapp: '5567999999999',
+  pixKey: '00000000000',
+  pixKeyType: 'cpf',
+};
+
+export const INITIAL_PRODUCTS: Product[] = [
+  {
+    id: '1',
+    name: 'Fone de Ouvido Bluetooth',
+    description: 'Som de alta qualidade com cancelamento de ruído e bateria de longa duração.',
+    price: 149.90,
+    promoPrice: 99.90,
+    category: 'Eletrônicos',
+    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80',
+    active: true,
+  },
+  {
+    id: '2',
+    name: 'Smartwatch Esportivo',
+    description: 'Monitore seus batimentos, passos e receba notificações no seu pulso.',
+    price: 299.90,
+    category: 'Eletrônicos',
+    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80',
+    active: true,
+  },
+];
+
 export const CATEGORIES = [
   'Todos',
   'Eletrônicos',
