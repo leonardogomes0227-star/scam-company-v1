@@ -66,19 +66,19 @@ export default function Storefront(props: StorefrontProps) {
 
   const filtered = useMemo(() => {
     return products.filter((p) => {
-      if (!p.active) return false;
+      if (!p || !p.active) return false;
       if (category !== 'Todos' && p.category !== category) return false;
-      if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
+      if (search && !(p.name || '').toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
   }, [products, category, search]);
 
   const totalCart = useMemo(() => {
-    return cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+    return cart.reduce((acc, item) => acc + (Number(item.product?.price || 0) * (item.quantity || 1)), 0);
   }, [cart]);
 
   const totalItems = useMemo(() => {
-    return cart.reduce((acc, item) => acc + item.quantity, 0);
+    return cart.reduce((acc, item) => acc + (item.quantity || 0), 0);
   }, [cart]);
 
   const freeShippingProgress = Math.min(100, (totalCart / FREE_SHIPPING_THRESHOLD) * 100);
@@ -90,8 +90,9 @@ export default function Storefront(props: StorefrontProps) {
     window.open(url, '_blank');
   };
 
+  // ✅ FIX: Ordem corrigida dos parâmetros (key, name, amount)
   const pixCode = useMemo(() => {
-    return generatePixPayload(config.pixKey, totalCart, config.name);
+    return generatePixPayload(config.pixKey || '', config.name || 'Loja', totalCart);
   }, [config, totalCart]);
 
   return (
