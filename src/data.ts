@@ -1,5 +1,3 @@
-import { Product } from './types';
-
 export const CATEGORIES = [
   'Todos',
   'Eletrônicos',
@@ -24,9 +22,9 @@ export function generatePixPayload(key: string, name: string, amount: number): s
   return `00020126580014BR.GOV.BCB.PIX0114${cleanKey}520400005303986540${valStr.length < 10 ? '0' + valStr.length : valStr}${valStr}5802BR5915${cleanName}6009SAO PAULO62070503***6304`;
 }
 
-export function generateScript(product: Product, tone: string) {
+export function generateScript(product: any, tone: string) {
   return {
-    hook: `🔥 Procurando ${product.name} com o melhor preço do mercado?`,
+    hook: `🔥 Procurando ${product?.name || 'este produto'} com o melhor preço do mercado?`,
     demo: `Garantimos entrega rápida, suporte via WhatsApp e pagamento facilitado via Pix!`,
     cta: `Clique no link do perfil e faça seu pedido agora mesmo antes que esgote o estoque!`
   };
