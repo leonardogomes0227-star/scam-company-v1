@@ -1,559 +1,513 @@
 import { useState, useEffect } from 'react';
-import { Product } from '../types';
-import { generateScript, formatCurrency } from '../data';
 import { 
-  Package, Settings, Sparkles, Check, Copy, Layers, LogOut, 
-  ArrowRight, ShieldCheck, Plus, Trash2, Edit2, Eye, MessageCircle, 
-  DollarSign, Star, Ticket, ShoppingBag, Save
+  Package, Settings, ShoppingBag, Plus, Trash2, Edit3, 
+  Sparkles, Ticket, DollarSign, Users, Copy, Check, Save, RefreshCw
 } from 'lucide-react';
 
-export default function AdminDashboard(props: any) {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('is_logged_in') === 'true';
-  });
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [storeNameInput, setStoreNameInput] = useState('');
+export default function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'coupons' | 'script' | 'config'>('products');
 
-  // Estados dos Dados Persistidos no Navegador
-  const [products, setProducts] = useState<Product[]>(() => {
+  // PRODUTOS
+  const [products, setProducts] = useState<any[]>(() => {
     const saved = localStorage.getItem('store_products');
-    return saved ? JSON.parse(saved) : (props.products || []);
+    return saved ? JSON.parse(saved) : [
+      { id: '1', name: 'Fone de Ouvido Bluetooth', price: 149.90, promoPrice: 99.90, category: 'Eletrônicos', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', variants: ['Preto', 'Branco'] },
+      { id: '2', name: 'Smartwatch Esportivo', price: 299.90, category: 'Eletrônicos', image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80', variants: ['Preto', 'Cinza'] }
+    ];
   });
 
+  // CONFIGURAÇÕES DA LOJA
   const [config, setConfig] = useState<any>(() => {
     const saved = localStorage.getItem('store_config');
-    return saved ? JSON.parse(saved) : (props.config || {
+    return saved ? JSON.parse(saved) : {
       name: 'Minha Loja Digital',
-      about: 'Os melhores produtos com entrega rápida.',
+      about: 'Encontre os melhores produtos com entrega garantida e pagamento via Pix.',
       whatsapp: '5567999999999',
       pixKey: '00000000000',
-      bannerUrl: '',
-      logoUrl: '',
       fixedFreight: 10,
-      freeFreightThreshold: 150,
-    });
+      freeFreightThreshold: 150
+    };
   });
 
+  // CUPONS
   const [coupons, setCoupons] = useState<any[]>(() => {
     const saved = localStorage.getItem('store_coupons');
     return saved ? JSON.parse(saved) : [
-      { id: '1', code: 'PROMO10', discount: 10, type: 'percent' },
-      { id: '2', code: 'FRETEGRATIS', discount: 10, type: 'fixed' }
+      { id: '1', code: 'PRIMEIRACOMPRA', discount: 10, type: 'percent' },
+      { id: '2', code: 'FRETEGRATIS', discount: 15, type: 'fixed' }
     ];
   });
 
+  // PEDIDOS (CRM)
   const [orders, setOrders] = useState<any[]>(() => {
     const saved = localStorage.getItem('store_orders');
     return saved ? JSON.parse(saved) : [
-      { id: '1001', customer: 'João Silva', total: 149.90, status: 'Pendente', date: 'Hoje' },
-      { id: '1002', customer: 'Maria Oliveira', total: 299.90, status: 'Pago', date: 'Ontem' }
+      { id: '1001', customer: 'João Silva', total: 149.90, status: 'Pago', date: '22/07/2026' },
+      { id: '1002', customer: 'Maria Oliveira', total: 299.90, status: 'Pendente', date: '22/07/2026' }
     ];
   });
 
-  const [testimonials, setTestimonials] = useState<any[]>(() => {
-    const saved = localStorage.getItem('store_testimonials');
-    return saved ? JSON.parse(saved) : [
-      { id: '1', name: 'Lucas Andrade', stars: 5, comment: 'Atendimento nota 10, entregaram super rápido!' },
-      { id: '2', name: 'Carla Dias', stars: 5, comment: 'Produto de altíssima qualidade. Recomendo demais!' }
-    ];
+  // FORMULÁRIO NOVO PRODUTO
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    price: '',
+    promoPrice: '',
+    category: 'Eletrônicos',
+    image: '',
+    variants: ''
   });
 
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'coupons' | 'testimonials' | 'config' | 'ia'>('products');
-  const [showSaveAlert, setShowSaveAlert] = useState(false);
+  // FORMULÁRIO NOVO CUPOM
+  const [newCoupon, setNewCoupon] = useState({ code: '', discount: '', type: 'percent' });
 
-  // Modais de Cadastro
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [prodName, setProdName] = useState('');
-  const [prodPrice, setProdPrice] = useState('');
-  const [prodPromoPrice, setProdPromoPrice] = useState('');
-  const [prodImg, setProdImg] = useState('');
-  const [prodCategory, setProdCategory] = useState('Eletrônicos');
-  const [prodVariants, setProdVariants] = useState('P, M, G');
-
-  const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
-  const [cupCode, setCupCode] = useState('');
-  const [cupDiscount, setCupDiscount] = useState('');
-  const [cupType, setCupType] = useState<'percent' | 'fixed'>('percent');
-
-  // Gerador de Roteiros IA
-  const [selectedProductId, setSelectedProductId] = useState<string>('');
-  const [selectedTone, setSelectedTone] = useState<string>('Persuasivo');
-  const [selectedDuration, setSelectedDuration] = useState<string>('15s');
+  // GERADOR DE SCRIPT
+  const [selectedProductForScript, setSelectedProductForScript] = useState<string>('');
   const [generatedScript, setGeneratedScript] = useState<any>(null);
 
-  useEffect(() => { localStorage.setItem('store_products', JSON.stringify(products)); }, [products]);
-  useEffect(() => { localStorage.setItem('store_coupons', JSON.stringify(coupons)); }, [coupons]);
-  useEffect(() => { localStorage.setItem('store_orders', JSON.stringify(orders)); }, [orders]);
-  useEffect(() => { localStorage.setItem('store_testimonials', JSON.stringify(testimonials)); }, [testimonials]);
+  // ESTADOS DE FEEDBACK
+  const [savedSuccess, setSavedSuccess] = useState(false);
+  const [copiedScript, setCopiedScript] = useState(false);
 
-  const handleSaveConfig = () => {
+  // PERSISTÊNCIA NO LOCALSTORAGE
+  useEffect(() => {
+    localStorage.setItem('store_products', JSON.stringify(products));
+  }, [products]);
+
+  useEffect(() => {
     localStorage.setItem('store_config', JSON.stringify(config));
-    setShowSaveAlert(true);
-    setTimeout(() => setShowSaveAlert(false), 3000);
-  };
+  }, [config]);
 
-  const handleAuth = (e: React.FormEvent) => {
+  useEffect(() => {
+    localStorage.setItem('store_coupons', JSON.stringify(coupons));
+  }, [coupons]);
+
+  useEffect(() => {
+    localStorage.setItem('store_orders', JSON.stringify(orders));
+  }, [orders]);
+
+  // AÇÕES DE PRODUTO
+  const handleAddProduct = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) return;
-    if (isRegistering && storeNameInput) setConfig((prev: any) => ({ ...prev, name: storeNameInput }));
-    setIsAuthenticated(true);
-    localStorage.setItem('is_logged_in', 'true');
+    if (!newProduct.name || !newProduct.price) return;
+    const item = {
+      id: Date.now().toString(),
+      name: newProduct.name,
+      price: parseFloat(newProduct.price),
+      promoPrice: newProduct.promoPrice ? parseFloat(newProduct.promoPrice) : undefined,
+      category: newProduct.category,
+      image: newProduct.image || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&q=80',
+      variants: newProduct.variants ? newProduct.variants.split(',').map((v) => v.trim()) : []
+    };
+    setProducts([...products, item]);
+    setNewProduct({ name: '', price: '', promoPrice: '', category: 'Eletrônicos', image: '', variants: '' });
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem('is_logged_in');
+  const handleDeleteProduct = (id: string) => {
+    setProducts(products.filter((p) => p.id !== id));
   };
 
-  const handleSaveProduct = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!prodName || !prodPrice) return;
-
-    const priceNum = parseFloat(prodPrice);
-    const promoNum = prodPromoPrice ? parseFloat(prodPromoPrice) : undefined;
-    const variantsArr = prodVariants.split(',').map(v => v.trim()).filter(Boolean);
-
-    if (editingId) {
-      setProducts(products.map(p => p.id === editingId ? {
-        ...p, name: prodName, price: priceNum, promoPrice: promoNum, image: prodImg || p.image, 
-        category: prodCategory, variants: variantsArr
-      } : p));
-    } else {
-      const newProduct: any = {
-        id: Date.now().toString(),
-        name: prodName,
-        price: priceNum,
-        promoPrice: promoNum,
-        image: prodImg || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80',
-        category: prodCategory,
-        variants: variantsArr,
-        active: true,
-      };
-      setProducts([...products, newProduct]);
-    }
-    setIsModalOpen(false);
-  };
-
+  // AÇÕES DE CUPOM
   const handleAddCoupon = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cupCode || !cupDiscount) return;
-    setCoupons([...coupons, { id: Date.now().toString(), code: cupCode.toUpperCase(), discount: parseFloat(cupDiscount), type: cupType }]);
-    setCupCode('');
-    setCupDiscount('');
-    setIsCouponModalOpen(false);
+    if (!newCoupon.code || !newCoupon.discount) return;
+    setCoupons([...coupons, {
+      id: Date.now().toString(),
+      code: newCoupon.code.toUpperCase().trim(),
+      discount: parseFloat(newCoupon.discount),
+      type: newCoupon.type
+    }]);
+    setNewCoupon({ code: '', discount: '', type: 'percent' });
   };
 
-  const updateOrderStatus = (orderId: string, status: string) => {
-    setOrders(orders.map(o => o.id === orderId ? { ...o, status } : o));
+  const handleDeleteCoupon = (id: string) => {
+    setCoupons(coupons.filter((c) => c.id !== id));
   };
 
+  // GERAR SCRIPT DE VENDAS
   const handleGenerateScript = () => {
-    const product = products.find((p) => p.id === selectedProductId) || products[0];
-    if (!product) return;
-    const scriptBase = generateScript(product, selectedTone);
-    const caption = `🔥 ${product.name} disponível na loja!\n\nGaranta o seu com desconto e entrega rápida.\n\n👉 Clique no link para pedir no WhatsApp!`;
-    const hashtags = `#${product.category?.replace(/\s+/g, '') || 'loja'} #promocao`;
-    setGeneratedScript({ ...scriptBase, duration: selectedDuration, caption, hashtags });
+    const prod = products.find((p) => p.id === selectedProductForScript);
+    if (!prod) return;
+    setGeneratedScript({
+      hook: `🔥 Procurando ${prod.name} com o melhor preço do mercado?`,
+      demo: `Garantimos entrega rápida, suporte via WhatsApp e pagamento facilitado no Pix!`,
+      cta: `Clique no link do perfil e faça seu pedido agora mesmo antes que acabe o estoque!`
+    });
   };
 
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-        <div className="bg-slate-900 w-full max-w-md p-8 rounded-3xl border border-slate-800 shadow-2xl space-y-6">
-          <div className="text-center space-y-2">
-            <div className="w-12 h-12 bg-emerald-500/10 text-emerald-400 rounded-2xl flex items-center justify-center mx-auto border border-emerald-500/20">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-            <h2 className="text-2xl font-extrabold text-white">{isRegistering ? 'Criar Minha Loja' : 'Acessar Painel Admin'}</h2>
-            <p className="text-xs text-slate-400">Gerencie produtos, cupons e vendas da sua vitrine</p>
-          </div>
+  // SALVAR CONFIGURAÇÕES COM FEEDBACK VISUAL
+  const handleSaveConfig = () => {
+    localStorage.setItem('store_config', JSON.stringify(config));
+    setSavedSuccess(true);
+    setTimeout(() => setSavedSuccess(false), 2500);
+  };
 
-          <form onSubmit={handleAuth} className="space-y-4">
-            {isRegistering && (
-              <div>
-                <label className="block text-xs font-bold text-slate-300 mb-1">Nome da Loja</label>
-                <input type="text" required value={storeNameInput} onChange={(e) => setStoreNameInput(e.target.value)} placeholder="Ex: Trendbox Virtual" className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-emerald-500" />
-              </div>
-            )}
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">E-mail do Lojista</label>
-              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="seuemail@exemplo.com" className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-emerald-500" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-300 mb-1">Senha</label>
-              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="w-full px-4 py-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white outline-none focus:border-emerald-500" />
-            </div>
-            <button type="submit" className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs rounded-xl shadow-lg flex items-center justify-center gap-2">
-              {isRegistering ? 'Criar Loja Agora' : 'Entrar no Painel'} <ArrowRight className="w-4 h-4" />
-            </button>
-          </form>
-
-          <div className="text-center pt-2 border-t border-slate-800">
-            <button onClick={() => setIsRegistering(!isRegistering)} className="text-xs font-bold text-emerald-400 hover:underline">
-              {isRegistering ? 'Já tem conta? Faça Login' : 'Não tem conta? Cadastre sua loja'}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const formatBRL = (val: number) => {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+  };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 pb-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-6xl mx-auto space-y-6 pt-4">
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-4 sm:p-8 font-sans">
+      <div className="max-w-6xl mx-auto space-y-8">
         
-        {/* TOPO DO PAINEL */}
-        <div className="bg-slate-900 p-4 rounded-2xl border border-slate-800 flex flex-wrap gap-2 justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold border border-emerald-500/20">
-              <Layers className="w-5 h-5" />
-            </div>
-            <div>
-              <h1 className="text-base font-extrabold text-white">{config.name}</h1>
-              <p className="text-[11px] text-slate-400">Painel de Gestão Comercial</p>
-            </div>
+        {/* CABEÇALHO DO PAINEL */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800 pb-6">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-black text-white flex items-center gap-2">
+              <Settings className="w-7 h-7 text-emerald-400" /> Painel de Controle
+            </h1>
+            <p className="text-xs text-slate-400 mt-1">Gerencie produtos, pedidos, cupons e inteligência de vendas da sua loja.</p>
           </div>
-
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <button onClick={() => setActiveTab('products')} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold ${activeTab === 'products' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-950 text-slate-400'}`}>
-              <Package className="w-3.5 h-3.5" /> Produtos
-            </button>
-            <button onClick={() => setActiveTab('orders')} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold ${activeTab === 'orders' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-950 text-slate-400'}`}>
-              <ShoppingBag className="w-3.5 h-3.5" /> Pedidos
-            </button>
-            <button onClick={() => setActiveTab('coupons')} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold ${activeTab === 'coupons' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-950 text-slate-400'}`}>
-              <Ticket className="w-3.5 h-3.5" /> Cupons
-            </button>
-            <button onClick={() => setActiveTab('testimonials')} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold ${activeTab === 'testimonials' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-950 text-slate-400'}`}>
-              <Star className="w-3.5 h-3.5" /> Depoimentos
-            </button>
-            <button onClick={() => setActiveTab('ia')} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold ${activeTab === 'ia' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-950 text-slate-400'}`}>
-              <Sparkles className="w-3.5 h-3.5" /> Roteiros IA
-            </button>
-            <button onClick={() => setActiveTab('config')} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold ${activeTab === 'config' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-950 text-slate-400'}`}>
-              <Settings className="w-3.5 h-3.5" /> Config
-            </button>
-            <button onClick={handleLogout} className="p-2 rounded-xl bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 ml-1">
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          
+          <button
+            onClick={handleSaveConfig}
+            className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center gap-2"
+          >
+            {savedSuccess ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+            {savedSuccess ? 'Configurações Salvas!' : 'Salvar Alterações'}
+          </button>
         </div>
 
-        {/* METRICAS */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 flex items-center gap-4">
-            <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl"><Eye className="w-5 h-5" /></div>
-            <div>
-              <p className="text-xs text-slate-400 font-bold">Visitas na Vitrine</p>
-              <h3 className="text-xl font-black text-white">312</h3>
-            </div>
-          </div>
-          <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 flex items-center gap-4">
-            <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl"><MessageCircle className="w-5 h-5" /></div>
-            <div>
-              <p className="text-xs text-slate-400 font-bold">Cliques WhatsApp</p>
-              <h3 className="text-xl font-black text-white">54</h3>
-            </div>
-          </div>
-          <div className="p-4 bg-slate-900 rounded-2xl border border-slate-800 flex items-center gap-4">
-            <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl"><DollarSign className="w-5 h-5" /></div>
-            <div>
-              <p className="text-xs text-slate-400 font-bold">Volume em Vendas</p>
-              <h3 className="text-xl font-black text-emerald-400">R$ 3.820,00</h3>
-            </div>
-          </div>
-        </div>
-
-        {/* 📦 ABA PRODUTOS */}
-        {activeTab === 'products' && (
-          <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-lg font-bold text-white">Gestão de Estoque ({products.length})</h2>
-                <p className="text-xs text-slate-400">Adicione variações (P/M/G ou Cores) e preços promocionais.</p>
-              </div>
-              <button onClick={() => { setEditingId(null); setProdName(''); setProdPrice(''); setProdPromoPrice(''); setProdImg(''); setIsModalOpen(true); }} className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-500 text-slate-950 font-extrabold text-xs rounded-xl">
-                <Plus className="w-4 h-4" /> Cadastrar Produto
+        {/* NAVEGAÇÃO DE ABAS */}
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none border-b border-slate-900">
+          {[
+            { id: 'products', label: 'Produtos', icon: Package },
+            { id: 'orders', label: 'Pedidos (CRM)', icon: ShoppingBag },
+            { id: 'coupons', label: 'Cupons', icon: Ticket },
+            { id: 'script', label: 'Gerador de Script', icon: Sparkles },
+            { id: 'config', label: 'Configurações', icon: Settings },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 whitespace-nowrap ${
+                  activeTab === tab.id
+                    ? 'bg-emerald-500 text-slate-950 shadow-md'
+                    : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {tab.label}
               </button>
+            );
+          })}
+        </div>
+
+        {/* ABA: PRODUTOS */}
+        {activeTab === 'products' && (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 h-fit">
+              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                <Plus className="w-4 h-4 text-emerald-400" /> Cadastrar Produto
+              </h3>
+              <form onSubmit={handleAddProduct} className="space-y-3">
+                <div>
+                  <label className="text-[11px] text-slate-400 font-bold">Nome do Produto</label>
+                  <input
+                    type="text"
+                    value={newProduct.name}
+                    onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:border-emerald-500"
+                    placeholder="Ex: Tênis Esportivo"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[11px] text-slate-400 font-bold">Preço (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={newProduct.price}
+                      onChange={(e) => setNewProduct({ ...newProduct, price: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:border-emerald-500"
+                      placeholder="199.90"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] text-slate-400 font-bold">Promoção (R$)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={newProduct.promoPrice}
+                      onChange={(e) => setNewProduct({ ...newProduct, promoPrice: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:border-emerald-500"
+                      placeholder="149.90"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-400 font-bold">URL da Imagem</label>
+                  <input
+                    type="text"
+                    value={newProduct.image}
+                    onChange={(e) => setNewProduct({ ...newProduct, image: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:border-emerald-500"
+                    placeholder="https://..."
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-400 font-bold">Variações (Separe por vírgula)</label>
+                  <input
+                    type="text"
+                    value={newProduct.variants}
+                    onChange={(e) => setNewProduct({ ...newProduct, variants: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:border-emerald-500"
+                    placeholder="P, M, G, GG ou Preto, Branco"
+                  />
+                </div>
+                <button type="submit" className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all">
+                  Salvar Produto
+                </button>
+              </form>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {products.map((p) => (
-                <div key={p.id} className="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center justify-between gap-3">
-                  <img src={p.image} alt={p.name} className="w-12 h-12 rounded-lg object-cover" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-white truncate">{p.name}</p>
-                    <p className="text-[10px] text-slate-400">Opções: {p.variants?.join(', ') || 'Nenhuma'}</p>
-                    <p className="text-xs text-emerald-400 font-bold mt-0.5">
-                      {p.promoPrice ? (
-                        <>
-                          <span className="line-through text-slate-500 mr-1.5 text-[10px]">R$ {p.price.toFixed(2)}</span>
-                          R$ {p.promoPrice.toFixed(2)}
-                        </>
-                      ) : `R$ ${p.price.toFixed(2)}`}
-                    </p>
-                  </div>
-                  <div className="flex gap-1">
-                    <button onClick={() => { setEditingId(p.id); setProdName(p.name); setProdPrice(p.price.toString()); setProdPromoPrice(p.promoPrice ? p.promoPrice.toString() : ''); setProdImg(p.image); setIsModalOpen(true); }} className="p-1.5 text-slate-400 hover:text-emerald-400">
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => setProducts(products.filter(item => item.id !== p.id))} className="p-1.5 text-rose-400 hover:bg-rose-500/10 rounded-lg">
+            <div className="lg:col-span-2 space-y-4">
+              <h3 className="text-base font-extrabold text-white">Produtos Cadastrados ({products.length})</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {products.map((p) => (
+                  <div key={p.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex gap-4 items-center justify-between">
+                    <img src={p.image} alt={p.name} className="w-16 h-16 rounded-xl object-cover" />
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-xs font-bold text-white truncate">{p.name}</h4>
+                      <p className="text-xs text-emerald-400 font-black">{formatBRL(p.promoPrice ?? p.price)}</p>
+                      {p.variants && p.variants.length > 0 && (
+                        <p className="text-[10px] text-slate-500 truncate">Opções: {p.variants.join(', ')}</p>
+                      )}
+                    </div>
+                    <button onClick={() => handleDeleteProduct(p.id)} className="p-2 text-slate-500 hover:text-red-400">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         )}
 
-        {/* 📋 ABA PEDIDOS (CRM) */}
+        {/* ABA: PEDIDOS (CRM) */}
         {activeTab === 'orders' && (
-          <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4">
-            <h2 className="text-lg font-bold text-white">Gerenciador de Pedidos</h2>
-            <p className="text-xs text-slate-400">Acompanhe as vendas iniciadas pelos seus clientes no WhatsApp.</p>
-            <div className="space-y-3 pt-2">
-              {orders.map((o) => (
-                <div key={o.id} className="p-4 bg-slate-950 rounded-2xl border border-slate-800 flex items-center justify-between gap-4 text-xs">
-                  <div>
-                    <span className="font-bold text-white">Pedido #{o.id} - {o.customer}</span>
-                    <span className="block text-slate-500 text-[10px]">Data: {o.date}</span>
-                  </div>
-                  <span className="font-black text-emerald-400">{formatCurrency(o.total)}</span>
-                  <select
-                    value={o.status}
-                    onChange={(e) => updateOrderStatus(o.id, e.target.value)}
-                    className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-white font-bold text-xs"
-                  >
-                    <option value="Pendente">Pendente</option>
-                    <option value="Pago">Pago</option>
-                    <option value="Enviado">Enviado</option>
-                    <option value="Concluído">Concluído</option>
-                  </select>
-                </div>
-              ))}
+          <div className="space-y-4">
+            <h3 className="text-base font-extrabold text-white">Gestão de Pedidos (CRM)</h3>
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+              <table className="w-full text-left text-xs text-slate-300">
+                <thead className="bg-slate-950 text-slate-400 font-bold uppercase border-b border-slate-800">
+                  <tr>
+                    <th className="p-4">Pedido</th>
+                    <th className="p-4">Cliente</th>
+                    <th className="p-4">Data</th>
+                    <th className="p-4">Total</th>
+                    <th className="p-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {orders.map((o) => (
+                    <tr key={o.id}>
+                      <td className="p-4 font-mono text-emerald-400 font-bold">#{o.id}</td>
+                      <td className="p-4 text-white font-bold">{o.customer}</td>
+                      <td className="p-4 text-slate-400">{o.date}</td>
+                      <td className="p-4 font-bold text-white">{formatBRL(o.total)}</td>
+                      <td className="p-4">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                          o.status === 'Pago' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        }`}>
+                          {o.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
 
-        {/* 🎟️ ABA CUPONS */}
+        {/* ABA: CUPONS */}
         {activeTab === 'coupons' && (
-          <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-lg font-bold text-white">Cupons de Desconto ({coupons.length})</h2>
-                <p className="text-xs text-slate-400">Crie códigos promocionais para impulsionar suas vendas.</p>
-              </div>
-              <button onClick={() => setIsCouponModalOpen(true)} className="flex items-center gap-1.5 px-4 py-2.5 bg-emerald-500 text-slate-950 font-extrabold text-xs rounded-xl">
-                <Plus className="w-4 h-4" /> Criar Cupom
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {coupons.map((c) => (
-                <div key={c.id} className="p-4 bg-slate-950 rounded-2xl border border-slate-800 flex justify-between items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 h-fit">
+              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                <Ticket className="w-4 h-4 text-emerald-400" /> Criar Cupom
+              </h3>
+              <form onSubmit={handleAddCoupon} className="space-y-3">
+                <div>
+                  <label className="text-[11px] text-slate-400 font-bold">Código do Cupom</label>
+                  <input
+                    type="text"
+                    value={newCoupon.code}
+                    onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:border-emerald-500 uppercase"
+                    placeholder="EX: PROMO10"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <span className="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 font-mono font-bold rounded-lg text-xs">{c.code}</span>
-                    <span className="block text-xs text-slate-400 mt-2">
-                      Desconto: {c.type === 'percent' ? `${c.discount}%` : `R$ ${c.discount.toFixed(2)}`}
-                    </span>
+                    <label className="text-[11px] text-slate-400 font-bold">Desconto</label>
+                    <input
+                      type="number"
+                      value={newCoupon.discount}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, discount: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:border-emerald-500"
+                      placeholder="10"
+                    />
                   </div>
-                  <button onClick={() => setCoupons(coupons.filter(item => item.id !== c.id))} className="text-rose-400 p-2 hover:bg-rose-500/10 rounded-xl">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ⭐️ ABA DEPOIMENTOS */}
-        {activeTab === 'testimonials' && (
-          <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-4">
-            <h2 className="text-lg font-bold text-white">Prova Social & Avaliações</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {testimonials.map((t) => (
-                <div key={t.id} className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
-                  <div className="flex justify-between items-center">
-                    <strong className="text-xs text-white">{t.name}</strong>
-                    <span className="text-xs text-amber-400 font-bold">⭐ {t.stars}.0</span>
+                  <div>
+                    <label className="text-[11px] text-slate-400 font-bold">Tipo</label>
+                    <select
+                      value={newCoupon.type}
+                      onChange={(e) => setNewCoupon({ ...newCoupon, type: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:border-emerald-500"
+                    >
+                      <option value="percent">Porcentagem (%)</option>
+                      <option value="fixed">Fixo (R$)</option>
+                    </select>
                   </div>
-                  <p className="text-xs text-slate-400 italic">"{t.comment}"</p>
                 </div>
-              ))}
+                <button type="submit" className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all">
+                  Cadastrar Cupom
+                </button>
+              </form>
             </div>
-          </div>
-        )}
 
-        {/* ⚙️ ABA CONFIGURAÇÕES COM BOTÃO SALVAR */}
-        {activeTab === 'config' && (
-          <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h2 className="text-lg font-bold text-white">Configurações Gerais da Loja</h2>
-                <p className="text-xs text-slate-400">Altere o nome, dados de contato, chave Pix e taxas de frete.</p>
+            <div className="lg:col-span-2 space-y-4">
+              <h3 className="text-base font-extrabold text-white">Cupons Ativos ({coupons.length})</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {coupons.map((c) => (
+                  <div key={c.id} className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex justify-between items-center">
+                    <div>
+                      <span className="font-mono text-xs font-black text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-md border border-emerald-500/20">{c.code}</span>
+                      <p className="text-xs text-slate-300 mt-2 font-bold">
+                        Desconto: {c.type === 'percent' ? `${c.discount}%` : formatBRL(c.discount)}
+                      </p>
+                    </div>
+                    <button onClick={() => handleDeleteCoupon(c.id)} className="p-2 text-slate-500 hover:text-red-400">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
               </div>
-              
-              <button
-                onClick={handleSaveConfig}
-                className="flex items-center gap-2 px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all active:scale-95"
+            </div>
+          </div>
+        )}
+
+        {/* ABA: GERADOR DE SCRIPT */}
+        {activeTab === 'script' && (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-6 max-w-2xl mx-auto">
+            <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-emerald-400" /> Gerador Inteligente de Script de Vendas
+            </h3>
+            
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-slate-300 block">Selecione o Produto:</label>
+              <select
+                value={selectedProductForScript}
+                onChange={(e) => setSelectedProductForScript(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white outline-none focus:border-emerald-500"
               >
-                <Save className="w-4 h-4" /> Salvar Alterações
+                <option value="">-- Escolha um produto --</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              <button
+                onClick={handleGenerateScript}
+                className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all"
+              >
+                Gerar Script Copia e Cola
               </button>
             </div>
-
-            {showSaveAlert && (
-              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-xs flex items-center gap-2">
-                <Check className="w-4 h-4" /> Configurações salvas com sucesso!
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-              <div>
-                <label className="font-bold text-slate-300 block mb-1">Nome Comercial da Loja</label>
-                <input value={config.name} onChange={(e) => setConfig({ ...config, name: e.target.value })} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" />
-              </div>
-              <div>
-                <label className="font-bold text-slate-300 block mb-1">WhatsApp de Atendimento</label>
-                <input value={config.whatsapp} onChange={(e) => setConfig({ ...config, whatsapp: e.target.value })} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" />
-              </div>
-              <div>
-                <label className="font-bold text-slate-300 block mb-1">Chave Pix para Pagamentos</label>
-                <input value={config.pixKey} onChange={(e) => setConfig({ ...config, pixKey: e.target.value })} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" />
-              </div>
-              <div>
-                <label className="font-bold text-slate-300 block mb-1">URL da Logo da Sua Marca</label>
-                <input value={config.logoUrl || ''} onChange={(e) => setConfig({ ...config, logoUrl: e.target.value })} placeholder="https://..." className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" />
-              </div>
-              <div>
-                <label className="font-bold text-slate-300 block mb-1">Taxa Fixa de Frete (R$)</label>
-                <input type="number" value={config.fixedFreight || 10} onChange={(e) => setConfig({ ...config, fixedFreight: parseFloat(e.target.value) })} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" />
-              </div>
-              <div>
-                <label className="font-bold text-slate-300 block mb-1">Frete Grátis Acima De (R$)</label>
-                <input type="number" value={config.freeFreightThreshold || 150} onChange={(e) => setConfig({ ...config, freeFreightThreshold: parseFloat(e.target.value) })} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 🎬 ABA IA ROTEIROS */}
-        {activeTab === 'ia' && (
-          <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 space-y-6">
-            <h2 className="text-lg font-bold text-white flex items-center gap-2"><Sparkles className="w-5 h-5 text-emerald-400" /> Estúdio de Criativos IA</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-              <div>
-                <label className="block font-bold text-slate-300 mb-1">Produto</label>
-                <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)} className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white outline-none">
-                  <option value="">Selecione um produto...</option>
-                  {products.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
-                </select>
-              </div>
-              <div>
-                <label className="block font-bold text-slate-300 mb-1">Tom de Voz</label>
-                <select value={selectedTone} onChange={(e) => setSelectedTone(e.target.value)} className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white outline-none">
-                  <option value="Persuasivo">Urgente/Persuasivo</option>
-                  <option value="Vendedor">Vendedor</option>
-                </select>
-              </div>
-              <div>
-                <label className="block font-bold text-slate-300 mb-1">Duração</label>
-                <select value={selectedDuration} onChange={(e) => setSelectedDuration(e.target.value)} className="w-full p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white outline-none">
-                  <option value="15s">15s (Viral)</option>
-                  <option value="30s">30s (Detalhado)</option>
-                </select>
-              </div>
-            </div>
-
-            <button onClick={handleGenerateScript} className="w-full py-3 bg-emerald-500 text-slate-950 font-extrabold text-xs rounded-xl">
-              Gerar Roteiro + Legenda
-            </button>
 
             {generatedScript && (
-              <div className="p-4 bg-slate-950 rounded-2xl border border-slate-800 space-y-3 text-xs">
-                <div><strong className="text-emerald-400">1. Gancho:</strong> <p>{generatedScript.hook}</p></div>
-                <div><strong className="text-emerald-400">2. Demonstração:</strong> <p>{generatedScript.demo}</p></div>
-                <div><strong className="text-emerald-400">3. CTA:</strong> <p>{generatedScript.cta}</p></div>
-                <div><strong className="text-emerald-400">Legenda:</strong> <p className="font-mono text-[11px]">{generatedScript.caption}</p></div>
+              <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl space-y-3 text-xs text-slate-300 relative">
+                <p><strong>Ganchos:</strong> {generatedScript.hook}</p>
+                <p><strong>Demonstração:</strong> {generatedScript.demo}</p>
+                <p><strong>Chamada para Ação:</strong> {generatedScript.cta}</p>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${generatedScript.hook}\n${generatedScript.demo}\n${generatedScript.cta}`);
+                    setCopiedScript(true);
+                    setTimeout(() => setCopiedScript(false), 2000);
+                  }}
+                  className="py-2 px-4 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-lg text-emerald-400 font-bold flex items-center gap-2 text-[11px]"
+                >
+                  {copiedScript ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copiedScript ? 'Copiado!' : 'Copiar Texto Completo'}
+                </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* ABA: CONFIGURAÇÕES */}
+        {activeTab === 'config' && (
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4 max-w-2xl mx-auto">
+            <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+              <Settings className="w-5 h-5 text-emerald-400" /> Configurações da Loja White-Label
+            </h3>
+            
+            <div className="space-y-3">
+              <div>
+                <label className="text-[11px] text-slate-400 font-bold">Nome da Loja</label>
+                <input
+                  type="text"
+                  value={config.name}
+                  onChange={(e) => setConfig({ ...config, name: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] text-slate-400 font-bold">WhatsApp de Vendas (com DDD)</label>
+                <input
+                  type="text"
+                  value={config.whatsapp}
+                  onChange={(e) => setConfig({ ...config, whatsapp: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] text-slate-400 font-bold">Chave Pix</label>
+                <input
+                  type="text"
+                  value={config.pixKey}
+                  onChange={(e) => setConfig({ ...config, pixKey: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-[11px] text-slate-400 font-bold">Frete Fixo (R$)</label>
+                  <input
+                    type="number"
+                    value={config.fixedFreight}
+                    onChange={(e) => setConfig({ ...config, fixedFreight: parseFloat(e.target.value) })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:border-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-slate-400 font-bold">Frete Grátis acima de (R$)</label>
+                  <input
+                    type="number"
+                    value={config.freeFreightThreshold}
+                    onChange={(e) => setConfig({ ...config, freeFreightThreshold: parseFloat(e.target.value) })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={handleSaveConfig}
+                className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all mt-4 flex items-center justify-center gap-2"
+              >
+                <Save className="w-4 h-4" /> Salvar Todas as Configurações
+              </button>
+            </div>
           </div>
         )}
 
       </div>
-
-      {/* MODAL CRIAR CUPOM */}
-      {isCouponModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4">
-            <h3 className="font-bold text-white text-base">Novo Cupom de Desconto</h3>
-            <form onSubmit={handleAddCoupon} className="space-y-3 text-xs">
-              <div>
-                <label className="font-bold text-slate-300 block mb-1">Código do Cupom</label>
-                <input required value={cupCode} onChange={(e) => setCupCode(e.target.value)} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none font-mono" placeholder="Ex: NOVO10" />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="font-bold text-slate-300 block mb-1">Valor do Desconto</label>
-                  <input required type="number" step="0.01" value={cupDiscount} onChange={(e) => setCupDiscount(e.target.value)} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" placeholder="10" />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-300 block mb-1">Tipo de Desconto</label>
-                  <select value={cupType} onChange={(e: any) => setCupType(e.target.value)} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none">
-                    <option value="percent">Porcentagem (%)</option>
-                    <option value="fixed">Fixo (R$)</option>
-                  </select>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setIsCouponModalOpen(false)} className="px-4 py-2 bg-slate-800 text-slate-300 font-bold rounded-xl">Cancelar</button>
-                <button type="submit" className="px-4 py-2 bg-emerald-500 text-slate-950 font-extrabold rounded-xl">Criar Cupom</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL PRODUTO */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full space-y-4">
-            <h3 className="font-bold text-white text-base">{editingId ? 'Editar Produto' : 'Cadastrar Produto'}</h3>
-            <form onSubmit={handleSaveProduct} className="space-y-3 text-xs">
-              <div>
-                <label className="font-bold text-slate-300 block mb-1">Nome do Produto</label>
-                <input required value={prodName} onChange={(e) => setProdName(e.target.value)} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" placeholder="Ex: Smartwatch Pro" />
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="font-bold text-slate-300 block mb-1">Preço Normal (R$)</label>
-                  <input required type="number" step="0.01" value={prodPrice} onChange={(e) => setProdPrice(e.target.value)} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" placeholder="199.90" />
-                </div>
-                <div>
-                  <label className="font-bold text-slate-300 block mb-1">Preço Promo (R$)</label>
-                  <input type="number" step="0.01" value={prodPromoPrice} onChange={(e) => setProdPromoPrice(e.target.value)} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" placeholder="149.90" />
-                </div>
-              </div>
-              <div>
-                <label className="font-bold text-slate-300 block mb-1">Variações (P, M, G ou Cores)</label>
-                <input value={prodVariants} onChange={(e) => setProdVariants(e.target.value)} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" placeholder="Ex: P, M, G, GG ou Preto, Branco" />
-              </div>
-              <div>
-                <label className="font-bold text-slate-300 block mb-1">URL da Imagem</label>
-                <input value={prodImg} onChange={(e) => setProdImg(e.target.value)} className="w-full p-2.5 bg-slate-950 border border-slate-800 rounded-xl text-white outline-none" placeholder="https://..." />
-              </div>
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-slate-800 text-slate-300 font-bold rounded-xl">Cancelar</button>
-                <button type="submit" className="px-4 py-2 bg-emerald-500 text-slate-950 font-extrabold rounded-xl">Salvar Produto</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 }
