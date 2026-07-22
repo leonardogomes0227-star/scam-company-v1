@@ -25,7 +25,6 @@ export function generateScript(
   product: Product,
   tone: string
 ): ScriptData {
-  // ✅ FIX: Uso correto dos parênteses para não conflitar || com ??
   const currentPrice = Number((product.promoPrice ?? product.price) || 0);
   const basePrice = Number(product.price || 0);
 
@@ -51,7 +50,7 @@ export function generateScript(
     visualHook = `Mostrar o produto ${product.name} em destaque com texto chamativo na tela.`;
     demo = `Olha a qualidade desse produto! ${product.description || 'Design incrível e alta durabilidade.'}`;
     visualDemo = `Foco nos detalhes do produto sendo utilizado.`;
-    cta = `Ganta o seu agora por apenas ${priceFormatted} clicando no link do perfil!`;
+    cta = `Garanta o seu agora por apenas ${priceFormatted} clicando no link do perfil!`;
     visualCta = `Seta apontando para a bio/link de compra.`;
   } else {
     hook = `Conheça o ${product.name}, a melhor escolha para o seu dia a dia.`;
