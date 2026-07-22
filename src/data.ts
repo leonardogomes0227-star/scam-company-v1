@@ -93,11 +93,13 @@ export const INITIAL_CONFIG: StoreConfig = {
 
 export const CATEGORIES = ['Todos', 'Roupas', 'Calçados', 'Acessórios', 'Eletrônicos'];
 
-export const formatCurrency = (value: number) =>
-  value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+export const formatCurrency = (value: any) => {
+  const num = Number(value || 0);
+  return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+};
 
 export const generatePixPayload = (key: string, name: string, amount: number): string => {
-  const amt = amount.toFixed(2);
+ const amt = Number(amount || 0).toFixed(2);
   const sanitizedName = name.substring(0, 25).padEnd(25, ' ');
   return `00020126580014BR.GOV.BCB.PIX0136${key.replace(/\s/g, '')}5204000053039865406${amt}5802BR5925${sanitizedName}6009SAO PAULO62070503***6304ABCD`;
 };
