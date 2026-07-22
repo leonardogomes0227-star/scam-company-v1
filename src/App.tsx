@@ -1,108 +1,76 @@
-import { useState, useEffect, useCallback } from 'react';
-import Header from '@/components/Header';
-import LandingPage from '@/pages/LandingPage';
-import Storefront from '@/pages/Storefront';
-import AdminDashboard from '@/pages/AdminDashboard';
-import { Product, CartItem, StoreConfig, Page } from '@/types';
-import { INITIAL_PRODUCTS, INITIAL_CONFIG } from '@/data';
-
-function parseHash(): Page {
-  const h = window.location.hash.replace('#/', '').replace('#', '');
-  if (h === 'loja') return 'loja';
-  if (h === 'admin') return 'admin';
-  return 'home';
-}
+import { useState } from 'react';
+import LandingPage from './pages/LandingPage';
+import Storefront from './pages/Storefront';
+import AdminDashboard from './pages/AdminDashboard';
+import { ShoppingBag, LayoutDashboard, Home, Zap } from 'lucide-react';
 
 export default function App() {
-  const [page, setPage] = useState<Page>(parseHash);
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
-  const [config, setConfig] = useState<StoreConfig>(INITIAL_CONFIG);
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [cartOpen, setCartOpen] = useState(false);
-
-  useEffect(() => {
-    const onHash = () => setPage(parseHash());
-    window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
-  }, []);
-
-  const navigate = useCallback((p: Page) => {
-    window.location.hash = p === 'home' ? '/' : `/${p}`;
-    setPage(p);
-    window.scrollTo(0, 0);
-  }, []);
-
-  // Cart actions
-  const addToCart = (p: Product) => {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.product.id === p.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.product.id === p.id ? { ...i, quantity: i.quantity + 1 } : i
-        );
-      }
-      return [...prev, { product: p, quantity: 1 }];
-    });
-    setCartOpen(true);
-  };
-  const removeFromCart = (id: string) =>
-    setCart((prev) => prev.filter((i) => i.product.id !== id));
-  const updateQty = (id: string, delta: number) =>
-    setCart((prev) =>
-      prev
-        .map((i) =>
-          i.product.id === id ? { ...i, quantity: Math.max(0, i.quantity + delta) } : i
-        )
-        .filter((i) => i.quantity > 0)
-    );
-  const clearCart = () => setCart([]);
-
-  // Product actions
-  const addProduct = (p: Product) => setProducts((prev) => [p, ...prev]);
-  const updateProduct = (p: Product) =>
-    setProducts((prev) => prev.map((x) => (x.id === p.id ? p : x)));
-  const toggleProduct = (id: string) =>
-    setProducts((prev) => prev.map((x) => (x.id === id ? { ...x, active: !x.active } : x)));
-  const deleteProduct = (id: string) =>
-    setProducts((prev) => prev.filter((x) => x.id !== id));
-
-  const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
+  const [currentPage, setCurrentPage] = useState<'landing' | 'storefront' | 'admin'>('landing');
 
   return (
-    <div className="min-h-screen bg-white">
-      <Header
-        page={page}
-        onNavigate={navigate}
-        cartCount={cartCount}
-        onCartOpen={() => setCartOpen(true)}
-      />
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
+      
+      {/* CABEÇALHO ESCURO / NAVBAR INTEGRADA */}
+      <header className="fixed top-0 left-0 right-0 z-50 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/80">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          
+          {/* Logo Limpa em SVG */}
+          <div 
+            onClick={() => setCurrentPage('landing')}
+            className="flex items-center gap-2 cursor-pointer group"
+          >
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform">
+              <Zap className="w-4 h-4 fill-emerald-400" />
+            </div>
+            <span className="font-black text-lg text-white tracking-tight">
+              SCAM <span className="text-emerald-400">COMPANY</span>
+            </span>
+          </div>
 
-      {page === 'home' && <LandingPage onNavigate={navigate} />}
-      {page === 'loja' && (
-        <Storefront
-          products={products}
-          config={config}
-          cart={cart}
-          onAdd={addToCart}
-          onRemove={removeFromCart}
-          onQty={updateQty}
-          onClear={clearCart}
-          cartOpen={cartOpen}
-          onCartOpen={() => setCartOpen(true)}
-          onCartClose={() => setCartOpen(false)}
-        />
-      )}
-      {page === 'admin' && (
-        <AdminDashboard
-          products={products}
-          config={config}
-          onAddProduct={addProduct}
-          onUpdateProduct={updateProduct}
-          onToggleProduct={toggleProduct}
-          onDeleteProduct={deleteProduct}
-          onUpdateConfig={setConfig}
-        />
-      )}
+          {/* Menu de Navegação */}
+          <nav className="flex items-center gap-1 sm:gap-2">
+            <button
+              onClick={() => setCurrentPage('landing')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                currentPage === 'landing'
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Home className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Início</span>
+            </button>
+
+            <button
+              onClick={() => setCurrentPage('storefront')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                currentPage === 'storefront'
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <ShoppingBag className="w-3.5 h-3.5" /> <span>Loja</span>
+            </button>
+
+            <button
+              onClick={() => setCurrentPage('admin')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                currentPage === 'admin'
+                  ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                  : 'bg-slate-900 border border-slate-800 text-slate-300 hover:text-white'
+              }`}
+            >
+              <LayoutDashboard className="w-3.5 h-3.5" /> <span>Admin</span>
+            </button>
+          </nav>
+        </div>
+      </header>
+
+      {/* ROTEAMENTO DE PÁGINAS */}
+      <main className="pt-16">
+        {currentPage === 'landing' && <LandingPage onNavigate={setCurrentPage} />}
+        {currentPage === 'storefront' && <Storefront />}
+        {currentPage === 'admin' && <AdminDashboard />}
+      </main>
     </div>
   );
 }
