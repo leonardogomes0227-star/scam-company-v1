@@ -34,12 +34,12 @@ export default function App() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
       
-      {/* BARRA DA SCAM COMPANY: Só aparece na Landing Page e no Admin.
-          Na vitrine do seu cliente ela NÃO existe (White-Label Total). */}
-      {currentPage !== 'storefront' && (
+      {/* BARRA SCAM COMPANY: 
+          APARECE APENAS NA LANDING PAGE PRINCIPAL DE VENDAS DO SAAS.
+          Na Vitrine (#/loja) e no Admin (#/admin) ela é 100% OCULTADA. */}
+      {currentPage === 'landing' && (
         <header className="fixed top-0 left-0 right-0 z-50 bg-slate-950/90 backdrop-blur-md border-b border-slate-800">
           <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-            
             <div onClick={() => navigateTo('landing')} className="flex items-center gap-2 cursor-pointer group">
               <div className="w-8 h-8 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                 <Zap className="w-4 h-4 fill-emerald-400" />
@@ -67,8 +67,8 @@ export default function App() {
         </header>
       )}
 
-      {/* ROTEAMENTO */}
-      <main className={currentPage !== 'storefront' ? 'pt-16' : ''}>
+      {/* ÁREA PRINCIPAL */}
+      <main className={currentPage === 'landing' ? 'pt-16' : ''}>
         {currentPage === 'landing' && <LandingPage onNavigate={navigateTo} />}
         {currentPage === 'storefront' && <Storefront />}
         {currentPage === 'admin' && <AdminDashboard />}
