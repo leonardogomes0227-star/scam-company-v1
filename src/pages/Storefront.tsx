@@ -1,11 +1,30 @@
 import { useState } from 'react';
-import { CATEGORIES, formatCurrency, generatePixPayload } from '../data';
 import { 
   ShoppingBag, Search, Plus, Minus, X, MessageCircle, 
   QrCode, Copy, Check, Tag, ShieldCheck, HeartHandshake, Star
 } from 'lucide-react';
 
 export default function Storefront() {
+  const CATEGORIES = [
+    'Todos',
+    'Eletrônicos',
+    'Acessórios',
+    'Vestuário',
+    'Calçados',
+    'Casa & Decoração'
+  ];
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+  };
+
+  const generatePixPayload = (key: string, name: string, amount: number) => {
+    const cleanKey = key ? key.trim() : '00000000000';
+    const cleanName = name ? name.substring(0, 25).trim() : 'LOJA';
+    const valStr = amount.toFixed(2);
+    return `00020126580014BR.GOV.BCB.PIX0114${cleanKey}520400005303986540${valStr.length < 10 ? '0' + valStr.length : valStr}${valStr}5802BR5915${cleanName}6009SAO PAULO62070503***6304`;
+  };
+
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
   const [cart, setCart] = useState<any[]>([]);
@@ -213,7 +232,7 @@ export default function Storefront() {
           })}
         </div>
 
-        {/* ⭐️ PROVA SOCIAL / DEPOIMENTOS NA VITRINE */}
+        {/* PROVA SOCIAL / DEPOIMENTOS */}
         {testimonials.length > 0 && (
           <div className="pt-12 border-t border-slate-900 space-y-4">
             <h3 className="text-base font-extrabold text-white text-center">O que nossos clientes dizem ⭐</h3>
@@ -265,7 +284,6 @@ export default function Storefront() {
               <p className="text-xs text-slate-400 mt-1">{selectedProductModal.description || 'Produto de altíssima qualidade disponível na loja.'}</p>
             </div>
 
-            {/* Variações (P/M/G ou Cores) */}
             {selectedProductModal.variants && selectedProductModal.variants.length > 0 && (
               <div>
                 <label className="text-xs font-bold text-slate-300 block mb-1">Selecione a Opção / Tamanho:</label>
@@ -303,4 +321,113 @@ export default function Storefront() {
 
       {/* MODAL CARRINHO */}
       {isCartOpen && (
-        <div className="
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex justify-end">
+          <div className="bg-slate-900 border-l border-slate-800 w-full max-w-md h-full flex flex-col justify-between p-6 overflow-y-auto">
+            
+            <div className="space-y-6">
+              <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+                <h2 className="text-base font-extrabold text-white flex items-center gap-2">
+                  <ShoppingBag className="w-5 h-5 text-emerald-400" /> Seu Carrinho ({totalItemsCount})
+                </h2>
+                <button onClick={() => setIsCartOpen(false)} className="p-1.5 text-slate-400 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {cart.map((item) => {
+                  const price = item.product.promoPrice ?? item.product.price;
+                  return (
+                    <div key={`${item.product.id}-${item.variant}`} className="flex items-center gap-3 bg-slate-950 p-3 rounded-2xl border border-slate-800">
+                      <img src={item.product.image} alt={item.product.name} className="w-12 h-12 rounded-xl object-cover" />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-xs font-bold text-white truncate">{item.product.name}</h4>
+                        {item.variant && <p className="text-[10px] text-slate-400">Opção: {item.variant}</p>}
+                        <p className="text-xs text-emerald-400 font-bold">{formatCurrency(price)}</p>
+                      </div>
+
+                      <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl p-1">
+                        <button onClick={() => updateQuantity(item.product.id, item.variant, -1)} className="p-1 text-slate-400">
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="text-xs font-bold text-white min-w-[16px] text-center">{item.quantity}</span>
+                        <button onClick={() => updateQuantity(item.product.id, item.variant, 1)} className="p-1 text-slate-400">
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="border-t border-slate-800 pt-4 space-y-3">
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between text-slate-400">
+                  <span>Subtotal:</span>
+                  <span>{formatCurrency(subtotal)}</span>
+                </div>
+                <div className="flex justify-between text-slate-400">
+                  <span>Frete:</span>
+                  <span>{freightCost === 0 ? <strong className="text-emerald-400">GRÁTIS</strong> : formatCurrency(freightCost)}</span>
+                </div>
+                <div className="flex justify-between text-sm font-black text-white pt-1">
+                  <span>Total:</span>
+                  <span className="text-emerald-400">{formatCurrency(cartTotal)}</span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleCheckoutWhatsApp}
+                className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl flex items-center justify-center gap-2 transition-all"
+              >
+                <MessageCircle className="w-4 h-4" /> Finalizar Pedido no WhatsApp
+              </button>
+
+              <button
+                onClick={handleNegotiateWhatsApp}
+                className="w-full py-3 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 font-bold text-xs rounded-xl flex items-center justify-center gap-2 transition-all"
+              >
+                <HeartHandshake className="w-4 h-4 text-emerald-400" /> Pedir Desconto / Negociar
+              </button>
+
+              <button
+                onClick={() => setShowPixModal(true)}
+                className="w-full py-2 text-xs text-slate-400 font-bold flex items-center justify-center gap-1 hover:text-white"
+              >
+                <QrCode className="w-4 h-4 text-emerald-400" /> Ver Chave Pix Copia e Cola
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL PIX COPIA E COLA */}
+      {showPixModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 text-center">
+            <h3 className="font-extrabold text-white text-base flex items-center justify-center gap-2">
+              <QrCode className="w-5 h-5 text-emerald-400" /> Pix Copia e Cola
+            </h3>
+            <div className="p-3 bg-slate-950 border border-slate-800 rounded-2xl text-[10px] font-mono text-slate-300 break-all select-all">
+              {pixPayload}
+            </div>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(pixPayload);
+                setCopiedPix(true);
+                setTimeout(() => setCopiedPix(false), 2000);
+              }}
+              className="w-full py-3 bg-emerald-500 text-slate-950 font-black text-xs rounded-xl flex items-center justify-center gap-2"
+            >
+              {copiedPix ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              {copiedPix ? 'Código Pix Copiado!' : 'Copiar Código Pix'}
+            </button>
+            <button onClick={() => setShowPixModal(false)} className="text-xs font-bold text-slate-500">Fechar</button>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
