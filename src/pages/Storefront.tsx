@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Product, CartItem, StoreConfig } from '@/types';
-import { CATEGORIES, formatCurrency, generatePixPayload } from '@/data';
-import { buildWhatsAppMessage } from '@/utils';
+import { Product, CartItem, StoreConfig } from '../types';
+import { CATEGORIES, formatCurrency, generatePixPayload } from '../data';
+import { buildWhatsAppMessage } from '../utils';
 import {
   Search, ShoppingCart, Plus, Minus, Trash2, X, Copy, Check, MessageCircle, QrCode, Star, Sparkles, ShieldCheck
 } from 'lucide-react';
@@ -90,7 +90,6 @@ export default function Storefront(props: StorefrontProps) {
     window.open(url, '_blank');
   };
 
-  // ✅ FIX: Ordem corrigida dos parâmetros (key, name, amount)
   const pixCode = useMemo(() => {
     return generatePixPayload(config.pixKey || '', config.name || 'Loja', totalCart);
   }, [config, totalCart]);
