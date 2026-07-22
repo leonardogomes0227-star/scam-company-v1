@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { CATEGORIES, formatCurrency, generatePixPayload } from '../data';
 import { 
   ShoppingBag, Search, Plus, Minus, X, MessageCircle, 
-  QrCode, Copy, Check, Tag, ShieldCheck, HeartHandshake, Star, Truck 
+  QrCode, Copy, Check, Tag, ShieldCheck, HeartHandshake, Star
 } from 'lucide-react';
 
 export default function Storefront() {
@@ -13,7 +13,7 @@ export default function Storefront() {
   const [copiedPix, setCopiedPix] = useState(false);
   const [showPixModal, setShowPixModal] = useState(false);
 
-  // Modal Detalhes do Produto
+  // Modal Detalhes do Produto & Variações
   const [selectedProductModal, setSelectedProductModal] = useState<any | null>(null);
   const [selectedVariant, setSelectedVariant] = useState<string>('');
 
@@ -99,17 +99,17 @@ export default function Storefront() {
     });
     message += `\n📦 *Subtotal:* ${formatCurrency(subtotal)}\n`;
     message += `🚚 *Frete:* ${freightCost === 0 ? 'GRÁTIS' : formatCurrency(freightCost)}\n`;
-    message += `💰 *TOTAL DO PEDIDO:* ${formatCurrency(cartTotal)}\n\nAguardando confirmação para pagamento via Pix.`;
+    message += `💰 *TOTAL DO PEDIDO:* ${formatCurrency(cartTotal)}\n\nAguardando instruções para pagamento via Pix.`;
     window.open(`https://wa.me/${config.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const handleNegotiateWhatsApp = () => {
     if (cart.length === 0) return;
-    let message = `👋 *Olá! Gostaria de negociar um desconto para fechar agora:*\n\n`;
+    let message = `👋 *Olá! Gostaria de negociar uma condição especial para estes itens:*\n\n`;
     cart.forEach((item) => {
       message += `• ${item.quantity}x ${item.product.name}\n`;
     });
-    message += `\n💰 *Total do Carrinho:* ${formatCurrency(cartTotal)}\nConsegue um preço especial no Pix?`;
+    message += `\n💰 *Total do Carrinho:* ${formatCurrency(cartTotal)}\nConsegue um cupom ou desconto no Pix para fechar agora?`;
     window.open(`https://wa.me/${config.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
@@ -118,11 +118,11 @@ export default function Storefront() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-24">
       
-      {/* BANNER PRINCIPAL COM LOGO PERSONALIZADA */}
-      <div className="bg-slate-900 border-b border-slate-800 pt-20 pb-10 px-4 text-center relative overflow-hidden">
+      {/* BANNER PRINCIPAL COM MARCA DO LOJISTA (WHITE-LABEL) */}
+      <div className="bg-slate-900 border-b border-slate-800 pt-12 pb-10 px-4 text-center relative overflow-hidden">
         <div className="max-w-4xl mx-auto space-y-3 relative z-10">
           {config.logoUrl && (
-            <img src={config.logoUrl} alt={config.name} className="w-16 h-16 mx-auto rounded-2xl object-cover mb-2 border border-slate-700" />
+            <img src={config.logoUrl} alt={config.name} className="w-16 h-16 mx-auto rounded-2xl object-cover mb-2 border border-slate-700 shadow-lg" />
           )}
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold">
             <ShieldCheck className="w-3.5 h-3.5" /> Compra 100% Segura via WhatsApp & Pix
@@ -202,7 +202,7 @@ export default function Storefront() {
                         e.stopPropagation();
                         addToCart(p);
                       }}
-                      className="p-2.5 bg-emerald-500 text-slate-950 font-bold rounded-xl"
+                      className="p-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition-all"
                     >
                       <Plus className="w-4 h-4" />
                     </button>
@@ -222,7 +222,7 @@ export default function Storefront() {
                 <div key={t.id} className="p-4 bg-slate-900 rounded-2xl border border-slate-800 space-y-2">
                   <div className="flex justify-between items-center">
                     <strong className="text-xs text-white">{t.name}</strong>
-                    <span className="text-xs text-amber-400 font-bold">⭐⭐⭐⭐⭐ {t.stars}.0</span>
+                    <span className="text-xs text-amber-400 font-bold">⭐ {t.stars}.0</span>
                   </div>
                   <p className="text-xs text-slate-400 italic">"{t.comment}"</p>
                 </div>
@@ -237,7 +237,7 @@ export default function Storefront() {
       {cart.length > 0 && (
         <button
           onClick={() => setIsCartOpen(true)}
-          className="fixed bottom-6 right-6 z-40 bg-emerald-500 text-slate-950 px-5 py-3.5 rounded-2xl font-black text-xs shadow-2xl flex items-center gap-3"
+          className="fixed bottom-6 right-6 z-40 bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-5 py-3.5 rounded-2xl font-black text-xs shadow-2xl flex items-center gap-3 transition-all active:scale-95"
         >
           <div className="relative">
             <ShoppingBag className="w-5 h-5" />
@@ -262,7 +262,7 @@ export default function Storefront() {
             <div>
               <span className="text-[10px] text-emerald-400 uppercase font-bold">{selectedProductModal.category}</span>
               <h3 className="text-base font-extrabold text-white">{selectedProductModal.name}</h3>
-              <p className="text-xs text-slate-400 mt-1">{selectedProductModal.description || 'Produto de altíssima qualidade.'}</p>
+              <p className="text-xs text-slate-400 mt-1">{selectedProductModal.description || 'Produto de altíssima qualidade disponível na loja.'}</p>
             </div>
 
             {/* Variações (P/M/G ou Cores) */}
@@ -292,7 +292,7 @@ export default function Storefront() {
               </div>
               <button
                 onClick={() => addToCart(selectedProductModal, selectedVariant)}
-                className="px-6 py-3 bg-emerald-500 text-slate-950 font-black text-xs rounded-xl"
+                className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all"
               >
                 Adicionar ao Carrinho
               </button>
@@ -303,113 +303,4 @@ export default function Storefront() {
 
       {/* MODAL CARRINHO */}
       {isCartOpen && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex justify-end">
-          <div className="bg-slate-900 border-l border-slate-800 w-full max-w-md h-full flex flex-col justify-between p-6 overflow-y-auto">
-            
-            <div className="space-y-6">
-              <div className="flex justify-between items-center border-b border-slate-800 pb-4">
-                <h2 className="text-base font-extrabold text-white flex items-center gap-2">
-                  <ShoppingBag className="w-5 h-5 text-emerald-400" /> Seu Carrinho ({totalItemsCount})
-                </h2>
-                <button onClick={() => setIsCartOpen(false)} className="p-1.5 text-slate-400 hover:text-white">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                {cart.map((item) => {
-                  const price = item.product.promoPrice ?? item.product.price;
-                  return (
-                    <div key={`${item.product.id}-${item.variant}`} className="flex items-center gap-3 bg-slate-950 p-3 rounded-2xl border border-slate-800">
-                      <img src={item.product.image} alt={item.product.name} className="w-12 h-12 rounded-xl object-cover" />
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-xs font-bold text-white truncate">{item.product.name}</h4>
-                        {item.variant && <p className="text-[10px] text-slate-400">Opção: {item.variant}</p>}
-                        <p className="text-xs text-emerald-400 font-bold">{formatCurrency(price)}</p>
-                      </div>
-
-                      <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl p-1">
-                        <button onClick={() => updateQuantity(item.product.id, item.variant, -1)} className="p-1 text-slate-400">
-                          <Minus className="w-3 h-3" />
-                        </button>
-                        <span className="text-xs font-bold text-white min-w-[16px] text-center">{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.product.id, item.variant, 1)} className="p-1 text-slate-400">
-                          <Plus className="w-3 h-3" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="border-t border-slate-800 pt-4 space-y-3">
-              <div className="space-y-1 text-xs">
-                <div className="flex justify-between text-slate-400">
-                  <span>Subtotal:</span>
-                  <span>{formatCurrency(subtotal)}</span>
-                </div>
-                <div className="flex justify-between text-slate-400">
-                  <span>Frete:</span>
-                  <span>{freightCost === 0 ? <strong className="text-emerald-400">GRÁTIS</strong> : formatCurrency(freightCost)}</span>
-                </div>
-                <div className="flex justify-between text-sm font-black text-white pt-1">
-                  <span>Total:</span>
-                  <span className="text-emerald-400">{formatCurrency(cartTotal)}</span>
-                </div>
-              </div>
-
-              <button
-                onClick={handleCheckoutWhatsApp}
-                className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl flex items-center justify-center gap-2"
-              >
-                <MessageCircle className="w-4 h-4" /> Finalizar Pedido no WhatsApp
-              </button>
-
-              <button
-                onClick={handleNegotiateWhatsApp}
-                className="w-full py-3 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 font-bold text-xs rounded-xl flex items-center justify-center gap-2"
-              >
-                <HeartHandshake className="w-4 h-4 text-emerald-400" /> Pedir Desconto / Negociar
-              </button>
-
-              <button
-                onClick={() => setShowPixModal(true)}
-                className="w-full py-2 text-xs text-slate-400 font-bold flex items-center justify-center gap-1"
-              >
-                <QrCode className="w-4 h-4 text-emerald-400" /> Ver Chave Pix Copia e Cola
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL PIX */}
-      {showPixModal && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-sm w-full space-y-4 text-center">
-            <h3 className="font-extrabold text-white text-base flex items-center justify-center gap-2">
-              <QrCode className="w-5 h-5 text-emerald-400" /> Pix Copia e Cola
-            </h3>
-            <div className="p-3 bg-slate-950 border border-slate-800 rounded-2xl text-[10px] font-mono text-slate-300 break-all">
-              {pixPayload}
-            </div>
-            <button
-              onClick={() => {
-                navigator.clipboard.writeText(pixPayload);
-                setCopiedPix(true);
-                setTimeout(() => setCopiedPix(false), 2000);
-              }}
-              className="w-full py-3 bg-emerald-500 text-slate-950 font-black text-xs rounded-xl flex items-center justify-center gap-2"
-            >
-              {copiedPix ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              {copiedPix ? 'Copiado!' : 'Copiar Código Pix'}
-            </button>
-            <button onClick={() => setShowPixModal(false)} className="text-xs font-bold text-slate-500">Fechar</button>
-          </div>
-        </div>
-      )}
-
-    </div>
-  );
-}
+        <div className="
