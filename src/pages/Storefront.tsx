@@ -45,7 +45,6 @@ export default function Storefront(props: StorefrontProps) {
   const handleOpenCart = props.onCartOpen || (() => setInternalCartOpen(true));
   const handleCloseCart = props.onCartClose || (() => setInternalCartOpen(false));
 
-  // Notificações de Prova Social
   useEffect(() => {
     if (!products || products.length === 0) return;
     const names = ['Mariana', 'Lucas', 'Guilherme', 'Beatriz', 'Matheus', 'Fernanda'];
