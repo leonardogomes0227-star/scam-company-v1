@@ -7,35 +7,51 @@ import {
 } from 'lucide-react';
 
 interface StorefrontProps {
-  products: Product[];
-  config: StoreConfig;
-  cart: CartItem[];
-  onAdd: (p: Product) => void;
-  onRemove: (id: string) => void;
-  onQty: (id: string, delta: number) => void;
-  onClear: () => void;
-  cartOpen: boolean;
-  onCartOpen: () => void;
-  onCartClose: () => void;
+  products?: Product[];
+  config?: StoreConfig;
+  cart?: CartItem[];
+  onAdd?: (p: Product) => void;
+  onRemove?: (id: string) => void;
+  onQty?: (id: string, delta: number) => void;
+  onClear?: () => void;
+  cartOpen?: boolean;
+  onCartOpen?: () => void;
+  onCartClose?: () => void;
 }
+
+const DEFAULT_CONFIG: StoreConfig = {
+  name: 'Sua Loja Digital',
+  about: 'Encontre os melhores produtos com os melhores preços e entrega garantida.',
+  whatsapp: '5567999999999',
+  pixKey: '00000000000',
+  pixKeyType: 'cpf',
+};
 
 const FREE_SHIPPING_THRESHOLD = 150;
 
-export default function Storefront({
-  products, config, cart, onAdd, onRemove, onQty, onClear, cartOpen, onCartOpen, onCartClose
-}: StorefrontProps) {
+export default function Storefront(props: StorefrontProps) {
+  const products = props.products || [];
+  const config = props.config || DEFAULT_CONFIG;
+  const cart = props.cart || [];
+
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('Todos');
+  const [internalCartOpen, setInternalCartOpen] = useState(false);
   const [socialProof, setSocialProof] = useState<{ name: string; city: string; product: string } | null>(null);
   const [pixModal, setPixModal] = useState(false);
   const [copiedPix, setCopiedPix] = useState(false);
 
+  const isCartOpen = props.cartOpen !== undefined ? props.cartOpen : internalCartOpen;
+  const handleOpenCart = props.onCartOpen || (() => setInternalCartOpen(true));
+  const handleCloseCart = props.onCartClose || (() => setInternalCartOpen(false));
+
+  // Notificações de Prova Social
   useEffect(() => {
+    if (!products || products.length === 0) return;
     const names = ['Mariana', 'Lucas', 'Guilherme', 'Beatriz', 'Matheus', 'Fernanda'];
     const cities = ['Campo Grande', 'Rio Verde', 'São Paulo', 'Curitiba', 'Goiânia'];
 
     const interval = setInterval(() => {
-      if (!products || products.length === 0) return;
       const randomName = names[Math.floor(Math.random() * names.length)];
       const randomCity = cities[Math.floor(Math.random() * cities.length)];
       const randomProduct = products[Math.floor(Math.random() * products.length)]?.name || 'Produto';
@@ -43,13 +59,12 @@ export default function Storefront({
       setSocialProof({ name: randomName, city: randomCity, product: randomProduct });
 
       setTimeout(() => setSocialProof(null), 4000);
-    }, 12000);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [products]);
 
   const filtered = useMemo(() => {
-    if (!products) return [];
     return products.filter((p) => {
       if (!p.active) return false;
       if (category !== 'Todos' && p.category !== category) return false;
@@ -59,12 +74,10 @@ export default function Storefront({
   }, [products, category, search]);
 
   const totalCart = useMemo(() => {
-    if (!cart) return 0;
     return cart.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
   }, [cart]);
 
   const totalItems = useMemo(() => {
-    if (!cart) return 0;
     return cart.reduce((acc, item) => acc + item.quantity, 0);
   }, [cart]);
 
@@ -83,14 +96,14 @@ export default function Storefront({
 
   return (
     <div className="min-h-screen bg-gray-50 pt-20 pb-16">
-      {/* Banner / Hero */}
+      {/* Hero Banner */}
       <section className="bg-gradient-to-r from-emerald-600 to-teal-700 text-white py-12 px-4 text-center relative overflow-hidden">
         <div className="max-w-4xl mx-auto relative z-10">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-xs font-semibold backdrop-blur-md mb-3">
-            <Sparkles className="w-3.5 h-3.5" /> Envio rápido e pagamento via Pix
+            <Sparkles className="w-3.5 h-3.5" /> Envio rápido e pagamento seguro via Pix
           </span>
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-3">{config?.name || 'Nossa Loja'}</h1>
-          <p className="text-emerald-100 text-sm sm:text-base max-w-xl mx-auto">{config?.about || ''}</p>
+          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-3">{config.name}</h1>
+          <p className="text-emerald-100 text-sm sm:text-base max-w-xl mx-auto">{config.about}</p>
         </div>
       </section>
 
@@ -162,7 +175,7 @@ export default function Storefront({
                 </div>
 
                 <button
-                  onClick={() => onAdd(p)}
+                  onClick={() => props.onAdd && props.onAdd(p)}
                   className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 active:scale-95 transition-all shadow-sm"
                 >
                   <Plus className="w-4 h-4" /> Comprar
@@ -173,10 +186,10 @@ export default function Storefront({
         </div>
       </div>
 
-      {/* Floating Cart Button */}
-      {totalItems > 0 && !cartOpen && (
+      {/* Botão Flutuante do Carrinho */}
+      {totalItems > 0 && !isCartOpen && (
         <button
-          onClick={onCartOpen}
+          onClick={handleOpenCart}
           className="fixed bottom-6 right-6 z-40 bg-emerald-600 text-white p-4 rounded-2xl shadow-xl hover:bg-emerald-700 transition-all active:scale-95 flex items-center gap-3"
         >
           <div className="relative">
@@ -189,9 +202,9 @@ export default function Storefront({
         </button>
       )}
 
-      {/* Cart Drawer Lateral */}
-      {cartOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm transition-opacity" onClick={onCartClose}>
+      {/* Gaveta Lateral do Carrinho */}
+      {isCartOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-black/40 backdrop-blur-sm transition-opacity" onClick={handleCloseCart}>
           <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col justify-between p-6 overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-gray-100">
@@ -199,11 +212,12 @@ export default function Storefront({
                   <ShoppingCart className="w-5 h-5 text-emerald-600" />
                   <h2 className="font-bold text-lg text-gray-900">Seu Carrinho</h2>
                 </div>
-                <button onClick={onCartClose} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
+                <button onClick={handleCloseCart} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
+              {/* Progress Bar Frete Grátis */}
               <div className="my-4 bg-emerald-50 p-3.5 rounded-2xl border border-emerald-100">
                 <div className="flex justify-between text-xs font-semibold text-emerald-800 mb-1.5">
                   <span>
@@ -231,14 +245,14 @@ export default function Storefront({
                         <span className="text-xs font-bold text-emerald-600">{formatCurrency(item.product.price)}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button onClick={() => onQty(item.product.id, -1)} className="p-1 rounded bg-white border text-gray-600 hover:bg-gray-100">
+                        <button onClick={() => props.onQty && props.onQty(item.product.id, -1)} className="p-1 rounded bg-white border text-gray-600 hover:bg-gray-100">
                           <Minus className="w-3 h-3" />
                         </button>
                         <span className="text-xs font-bold text-gray-800">{item.quantity}</span>
-                        <button onClick={() => onQty(item.product.id, 1)} className="p-1 rounded bg-white border text-gray-600 hover:bg-gray-100">
+                        <button onClick={() => props.onQty && props.onQty(item.product.id, 1)} className="p-1 rounded bg-white border text-gray-600 hover:bg-gray-100">
                           <Plus className="w-3 h-3" />
                         </button>
-                        <button onClick={() => onRemove(item.product.id)} className="p-1 text-rose-500 hover:bg-rose-50 rounded">
+                        <button onClick={() => props.onRemove && props.onRemove(item.product.id)} className="p-1 text-rose-500 hover:bg-rose-50 rounded">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
@@ -274,7 +288,7 @@ export default function Storefront({
         </div>
       )}
 
-      {/* Pop-up Prova Social */}
+      {/* Pop-up de Prova Social */}
       {socialProof && (
         <div className="fixed bottom-6 left-6 z-40 bg-white p-3.5 rounded-2xl shadow-xl border border-gray-100 flex items-center gap-3 animate-slide-up max-w-xs">
           <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
