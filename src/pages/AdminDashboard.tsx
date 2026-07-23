@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, TrendingUp, CheckCircle2, BarChart3, DollarSign, HelpCircle, ChevronDown, Download, Eye, MapPin, CreditCard } from 'lucide-react';
+import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, TrendingUp, CheckCircle2, BarChart3, DollarSign, HelpCircle, ChevronDown, Download, Eye, MapPin, CreditCard, AlertTriangle } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'products' | 'coupons' | 'orders' | 'analytics' | 'help' | 'settings'>('products');
@@ -29,7 +29,6 @@ export default function AdminDashboard() {
   const [abandonedLeads, setAbandonedLeads] = useState<any[]>([]);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  // Estado para o Modal de Detalhes do Pedido no Admin
   const [selectedOrderModal, setSelectedOrderModal] = useState<any>(null);
 
   const showToast = (msg: string) => {
@@ -55,7 +54,8 @@ export default function AdminDashboard() {
       setProducts(savedProducts);
     } else {
       const initial = [
-        { id: '1', name: 'Fone de Ouvido Bluetooth Pro', price: 149.90, stock: 3, image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', category: 'Eletrônicos' }
+        { id: '1', name: 'Fone de Ouvido Bluetooth Pro', price: 149.90, stock: 2, image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', category: 'Eletrônicos' },
+        { id: '2', name: 'Smartwatch 4K', price: 299.90, stock: 1, image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80', category: 'Eletrônicos' }
       ];
       setProducts(initial);
       localStorage.setItem(`store_products_${tenantId}`, JSON.stringify(initial));
@@ -186,10 +186,13 @@ export default function AdminDashboard() {
 
   const totalRevenue = orders.reduce((acc, curr) => acc + (curr.total || 0), 0);
   const averageTicket = orders.length > 0 ? totalRevenue / orders.length : 0;
+  
+  // Produtos com estoque crítico (menor ou igual a 3)
+  const lowStockProducts = products.filter(p => (p.stock || 0) <= 3);
 
   const faqList = [
     { q: 'Como faço para divulgar minha vitrine?', a: 'Basta copiar o link da sua vitrine clicando em "Ver Minha Vitrine ↗" no topo do painel.' },
-    { q: 'Como inspecionar um pedido?', a: 'Clique no botão de olho (Detalhes) na aba Pedidos para ver itens, endereço e forma de pagamento.' }
+    { q: 'Onde verifico itens com estoque baixo?', a: 'Na aba Relatórios, você encontra um painel dedicado alertando sobre produtos que precisam de reposição urgente.' }
   ];
 
   return (
@@ -207,7 +210,7 @@ export default function AdminDashboard() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 border border-slate-800 p-6 rounded-3xl">
           <div>
             <h1 className="text-2xl font-black text-white">Painel da Loja ({storeName})</h1>
-            <p className="text-xs text-slate-400">Gestão operacional de vendas, produtos e pedidos.</p>
+            <p className="text-xs text-slate-400">Gestão gerencial avançada, faturamento e controle de estoque.</p>
           </div>
           <a href={`#/loja/${tenantId}`} target="_blank" rel="noopener noreferrer" className="px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 font-black text-xs rounded-xl transition-all">
             Ver Minha Vitrine ↗
@@ -226,7 +229,7 @@ export default function AdminDashboard() {
             <ShoppingBag className="w-4 h-4" /> Pedidos
           </button>
           <button onClick={() => setActiveTab('analytics')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'analytics' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 text-slate-400'}`}>
-            <BarChart3 className="w-4 h-4" /> Relatórios
+            <BarChart3 className="w-4 h-4" /> Relatórios & Estoque
           </button>
           <button onClick={() => setActiveTab('help')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'help' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 text-slate-400'}`}>
             <HelpCircle className="w-4 h-4" /> Ajuda
@@ -299,7 +302,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* PEDIDOS COM MODAL DE DETALHES */}
+        {/* PEDIDOS */}
         {activeTab === 'orders' && (
           <div className="space-y-4">
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl flex justify-between items-center">
@@ -344,28 +347,20 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Modal de Detalhes do Pedido */}
+        {/* Modal Detalhes Pedido */}
         {selectedOrderModal && (
           <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
-              <button 
-                onClick={() => setSelectedOrderModal(null)}
-                className="absolute top-4 right-4 text-slate-400 hover:text-white font-bold text-xs bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800"
-              >
-                ✕ Fechar
-              </button>
-
+              <button onClick={() => setSelectedOrderModal(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white font-bold text-xs bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">✕ Fechar</button>
               <div className="space-y-1 border-b border-slate-800 pb-3">
                 <span className="text-xs font-black text-emerald-400">{selectedOrderModal.id}</span>
                 <h3 className="text-base font-black text-white">Pedido de {selectedOrderModal.customer}</h3>
                 <p className="text-xs text-slate-400 font-mono">WhatsApp: {selectedOrderModal.whatsapp || 'Não informado'}</p>
               </div>
-
               <div className="space-y-2 text-xs text-slate-300">
-                <p className="flex items-center gap-2"><MapPin className="w-4 h-4 text-emerald-400 shrink-0" /> <span className="text-white font-bold">Endereço:</span> {selectedOrderModal.address || 'Retirada na loja / Não informado'}</p>
+                <p className="flex items-center gap-2"><MapPin className="w-4 h-4 text-emerald-400 shrink-0" /> <span className="text-white font-bold">Endereço:</span> {selectedOrderModal.address || 'Retirada na loja'}</p>
                 <p className="flex items-center gap-2"><CreditCard className="w-4 h-4 text-emerald-400 shrink-0" /> <span className="text-white font-bold">Pagamento:</span> {selectedOrderModal.payment || 'Pix'}</p>
               </div>
-
               <div className="space-y-2 pt-2 border-t border-slate-800">
                 <h4 className="text-xs font-bold text-white uppercase">Itens do Pedido</h4>
                 <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
@@ -377,26 +372,25 @@ export default function AdminDashboard() {
                       </div>
                     ))
                   ) : (
-                    <div className="text-xs text-slate-500 bg-slate-950 p-3 rounded-xl">Itens registrados no chat do WhatsApp com o cliente.</div>
+                    <div className="text-xs text-slate-500 bg-slate-950 p-3 rounded-xl">Itens registrados no WhatsApp.</div>
                   )}
                 </div>
               </div>
-
               <div className="flex justify-between items-center pt-3 border-t border-slate-800 text-sm font-black">
-                <span className="text-slate-400">Total do Pedido:</span>
+                <span className="text-slate-400">Total:</span>
                 <span className="text-emerald-400">{formatBRL(selectedOrderModal.total)}</span>
               </div>
             </div>
           </div>
         )}
 
-        {/* RELATÓRIOS & EXPORTAÇÃO CSV */}
+        {/* RELATÓRIOS, FATURAMENTO E ALERTA DE ESTOQUE */}
         {activeTab === 'analytics' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center bg-slate-900 border border-slate-800 p-6 rounded-3xl">
               <div>
                 <h3 className="text-base font-black text-white">Relatórios e Faturamento</h3>
-                <p className="text-xs text-slate-400">Acompanhe as métricas e exporte seus relatórios.</p>
+                <p className="text-xs text-slate-400">Acompanhe as métricas e o estoque crítico da loja.</p>
               </div>
               <button 
                 onClick={handleExportCSV}
@@ -419,6 +413,27 @@ export default function AdminDashboard() {
                 <span className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><TrendingUp className="w-4 h-4 text-amber-400" /> Ticket Médio</span>
                 <h3 className="text-2xl font-black text-white">{formatBRL(averageTicket)}</h3>
               </div>
+            </div>
+
+            {/* Alerta de Produtos com Estoque Baixo */}
+            <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-400" /> Alerta de Estoque Crítico ({lowStockProducts.length} itens)
+              </h3>
+              {lowStockProducts.length === 0 ? (
+                <p className="text-xs text-slate-400">Todos os produtos possuem estoque adequado no momento.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {lowStockProducts.map(lp => (
+                    <div key={lp.id} className="bg-slate-950 border border-amber-500/20 p-3 rounded-2xl flex justify-between items-center text-xs">
+                      <span className="text-white font-bold truncate">{lp.name}</span>
+                      <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 font-bold rounded-xl border border-amber-500/20">
+                        Apenas {lp.stock} un.
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
