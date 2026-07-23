@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus } from 'lucide-react';
+import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, Truck, CheckCircle2 } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'coupons' | 'settings'>('products');
@@ -21,6 +21,9 @@ export default function AdminDashboard() {
   const [price, setPrice] = useState('');
   const [image, setImage] = useState('');
   const [category, setCategory] = useState('Geral');
+
+  // Estados de Pedidos (CRM)
+  const [orders, setOrders] = useState<any[]>([]);
 
   useEffect(() => {
     // Carrega as configurações salvas da loja
@@ -50,6 +53,19 @@ export default function AdminDashboard() {
       ];
       setProducts(initial);
       localStorage.setItem(`store_products_${tenantId}`, JSON.stringify(initial));
+    }
+
+    // Carrega pedidos salvos do tenant ou cria dados de exemplo se estiver vazio
+    const savedOrders = JSON.parse(localStorage.getItem(`store_orders_${tenantId}`) || '[]');
+    if (savedOrders.length > 0) {
+      setOrders(savedOrders);
+    } else {
+      const initialOrders = [
+        { id: 'ORD-101', customer: 'Mariana Souza', total: 149.90, status: 'Aguardando Pagamento', date: '2026-07-22' },
+        { id: 'ORD-102', customer: 'João Pedro', total: 299.90, status: 'Pago / Separando', date: '2026-07-23' }
+      ];
+      setOrders(initialOrders);
+      localStorage.setItem(`store_orders_${tenantId}`, JSON.stringify(initialOrders));
     }
   }, [tenantId]);
 
@@ -88,6 +104,12 @@ export default function AdminDashboard() {
     const updated = products.filter(p => p.id !== id);
     setProducts(updated);
     localStorage.setItem(`store_products_${tenantId}`, JSON.stringify(updated));
+  };
+
+  const updateOrderStatus = (id: string, newStatus: string) => {
+    const updated = orders.map(o => o.id === id ? { ...o, status: newStatus } : o);
+    setOrders(updated);
+    localStorage.setItem(`store_orders_${tenantId}`, JSON.stringify(updated));
   };
 
   const formatBRL = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
@@ -178,6 +200,67 @@ export default function AdminDashboard() {
           </div>
         )}
 
+        {/* CONTEÚDO: PEDIDOS (CRM) */}
+        {activeTab === 'orders' && (
+          <div className="space-y-6">
+            <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl flex justify-between items-center">
+              <div>
+                <h3 className="text-base font-black text-white">Gerenciamento de Pedidos</h3>
+                <p className="text-xs text-slate-400">Acompanhe e atualize o status das vendas realizadas na sua vitrine.</p>
+              </div>
+              <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl text-xs font-bold">
+                {orders.length} Pedido(s)
+              </span>
+            </div>
+
+            {orders.length === 0 ? (
+              <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl text-center space-y-2">
+                <ShoppingBag className="w-8 h-8 text-slate-600 mx-auto" />
+                <h3 className="text-sm font-bold text-white">Nenhum pedido recente</h3>
+                <p className="text-xs text-slate-400">Os pedidos feitos pelos clientes na sua vitrine aparecerão aqui.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4">
+                {orders.map(order => (
+                  <div key={order.id} className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-emerald-400">{order.id}</span>
+                        <span className="text-[10px] text-slate-500">• {order.date}</span>
+                      </div>
+                      <h4 className="text-sm font-bold text-white">Cliente: {order.customer}</h4>
+                      <p className="text-xs font-black text-slate-300">Total: {formatBRL(order.total)}</p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
+                      <span className="px-3 py-1.5 bg-slate-950 border border-slate-800 text-cyan-400 font-bold text-xs rounded-xl">
+                        {order.status}
+                      </span>
+                      
+                      <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 p-1 rounded-xl">
+                        <button 
+                          onClick={() => updateOrderStatus(order.id, 'Pago / Separando')}
+                          title="Marcar como Pago"
+                          className="p-2 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => updateOrderStatus(order.id, 'Enviado')}
+                          title="Marcar como Enviado"
+                          className="p-2 hover:bg-cyan-500/20 text-cyan-400 rounded-lg transition-colors"
+                        >
+                          <Truck className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* CONTEÚDO: CONFIGURAÇÕES E VISUAL */}
         {activeTab === 'settings' && (
           <form onSubmit={handleSaveSettings} className="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-2xl space-y-6">
@@ -224,14 +307,6 @@ export default function AdminDashboard() {
         )}
 
         {/* OUTRAS ABAS */}
-        {activeTab === 'orders' && (
-          <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl text-center space-y-2">
-            <ShoppingBag className="w-8 h-8 text-slate-600 mx-auto" />
-            <h3 className="text-sm font-bold text-white">Nenhum pedido recente</h3>
-            <p className="text-xs text-slate-400">Os pedidos feitos pelos clientes na sua vitrine aparecerão aqui.</p>
-          </div>
-        )}
-
         {activeTab === 'coupons' && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl text-center space-y-2">
             <Tag className="w-8 h-8 text-slate-600 mx-auto" />
