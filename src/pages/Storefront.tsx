@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard } from 'lucide-react';
+import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard, Search } from 'lucide-react';
 
 export default function Storefront() {
   const [storeConfig, setStoreConfig] = useState({ name: 'Minha Loja', about: 'Seja bem-vindo!', whatsapp: '5567999999999', color: '#10b981' });
@@ -7,6 +7,7 @@ export default function Storefront() {
   const [cart, setCart] = useState<any[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Todos');
+  const [searchQuery, setSearchQuery] = useState(''); // Estado para o filtro de busca
 
   // Estados de Cupom
   const [coupons, setCoupons] = useState<any[]>([]);
@@ -18,7 +19,7 @@ export default function Storefront() {
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientAddress, setClientAddress] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('Pix'); // Pix, Cartão ou Dinheiro
+  const [paymentMethod, setPaymentMethod] = useState('Pix');
 
   useEffect(() => {
     const config = JSON.parse(localStorage.getItem('store_config_lkd-imports') || '{}');
@@ -43,7 +44,13 @@ export default function Storefront() {
   }, []);
 
   const categories = ['Todos', ...Array.from(new Set(products.map(p => p.category || 'Geral')))];
-  const filteredProducts = selectedCategory === 'Todos' ? products : products.filter(p => (p.category || 'Geral') === selectedCategory);
+
+  // Filtra produtos por Categoria e Barra de Pesquisa simultaneamente
+  const filteredProducts = products.filter(product => {
+    const matchesCategory = selectedCategory === 'Todos' || (product.category || 'Geral') === selectedCategory;
+    const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   const addToCart = (product: any) => {
     setCart([...cart, product]);
@@ -132,10 +139,23 @@ export default function Storefront() {
         </button>
       </div>
 
-      {/* Filtros */}
-      <div className="max-w-4xl mx-auto px-4 pt-6">
-        <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          <span className="text-xs font-bold text-slate-400 flex items-center gap-1 shrink-0"><Filter className="w-3.5 h-3.5" /> Filtrar:</span>
+      {/* Barra de Pesquisa e Filtros */}
+      <div className="max-w-4xl mx-auto px-4 pt-6 space-y-4">
+        {/* Input de Busca */}
+        <div className="relative">
+          <Search className="w-4 h-4 text-slate-500 absolute left-4 top-3.5" />
+          <input 
+            type="text" 
+            placeholder="O que você está procurando?" 
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-11 pr-4 py-3 text-xs text-white outline-none focus:border-emerald-500 transition-all shadow-md"
+          />
+        </div>
+
+        {/* Categorias */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+          <span className="text-xs font-bold text-slate-400 flex items-center gap-1 shrink-0"><Filter className="w-3.5 h-3.5" /> Categoria:</span>
           {categories.map((cat, idx) => (
             <button
               key={idx}
@@ -150,31 +170,37 @@ export default function Storefront() {
 
       {/* Grid de Produtos */}
       <div className="max-w-4xl mx-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {filteredProducts.map(product => (
-          <div key={product.id} className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden p-4 flex flex-col justify-between space-y-4 shadow-lg">
-            <div className="space-y-3">
-              <img src={product.image} alt={product.name} className="w-full h-48 object-cover rounded-2xl bg-slate-950" />
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-emerald-400 uppercase">{product.category || 'Geral'}</span>
-                <h3 className="text-sm font-bold text-white truncate">{product.name}</h3>
-                <div className="flex items-center gap-1 text-amber-400">
-                  <Star className="w-3.5 h-3.5 fill-current" />
-                  <span className="text-xs font-black text-white ml-1">{product.rating}</span>
-                  <span className="text-[10px] text-slate-400">({product.reviewsCount})</span>
+        {filteredProducts.length === 0 ? (
+          <div className="col-span-full text-center py-12 text-xs text-slate-500 bg-slate-900 border border-slate-800 rounded-3xl">
+            Nenhum produto encontrado com essa busca.
+          </div>
+        ) : (
+          filteredProducts.map(product => (
+            <div key={product.id} className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden p-4 flex flex-col justify-between space-y-4 shadow-lg">
+              <div className="space-y-3">
+                <img src={product.image} alt={product.name} className="w-full h-48 object-cover rounded-2xl bg-slate-950" />
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold text-emerald-400 uppercase">{product.category || 'Geral'}</span>
+                  <h3 className="text-sm font-bold text-white truncate">{product.name}</h3>
+                  <div className="flex items-center gap-1 text-amber-400">
+                    <Star className="w-3.5 h-3.5 fill-current" />
+                    <span className="text-xs font-black text-white ml-1">{product.rating}</span>
+                    <span className="text-[10px] text-slate-400">({product.reviewsCount})</span>
+                  </div>
                 </div>
               </div>
+              <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                <span className="text-sm font-black text-emerald-400">{formatBRL(product.price)}</span>
+                <button onClick={() => addToCart(product)} className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all">
+                  Comprar 🛒
+                </button>
+              </div>
             </div>
-            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-              <span className="text-sm font-black text-emerald-400">{formatBRL(product.price)}</span>
-              <button onClick={() => addToCart(product)} className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all">
-                Comprar 🛒
-              </button>
-            </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
-      {/* Gaveta do Carrinho / Checkout com Pagamento */}
+      {/* Gaveta do Carrinho / Checkout */}
       {isCartOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end">
           <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 h-full p-6 flex flex-col justify-between overflow-y-auto">
@@ -211,7 +237,7 @@ export default function Storefront() {
                   {couponError && <p className="text-[10px] text-red-400 font-bold">{couponError}</p>}
                   {appliedCoupon && <p className="text-[10px] text-emerald-400 font-bold">✔ Cupom {appliedCoupon.code} aplicado (-{appliedCoupon.discount}%)</p>}
 
-                  {/* Dados de Entrega */}
+                  {/* Dados */}
                   <div className="space-y-3 pt-3 border-t border-slate-800">
                     <h3 className="text-xs font-bold text-slate-300 uppercase">Dados para Entrega</h3>
                     <input type="text" placeholder="Seu Nome Completo" value={clientName} onChange={e => setClientName(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required />
@@ -219,7 +245,7 @@ export default function Storefront() {
                     <input type="text" placeholder="Endereço / Bairro" value={clientAddress} onChange={e => setClientAddress(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required />
                   </div>
 
-                  {/* Seleção de Forma de Pagamento */}
+                  {/* Pagamento */}
                   <div className="space-y-2 pt-2">
                     <label className="text-xs font-bold text-slate-300 uppercase flex items-center gap-1.5"><CreditCard className="w-3.5 h-3.5 text-emerald-400" /> Forma de Pagamento</label>
                     <div className="grid grid-cols-3 gap-2">
