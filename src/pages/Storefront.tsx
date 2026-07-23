@@ -18,7 +18,6 @@ export default function Storefront({ tenantId }: { tenantId: string }) {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    // 1. Verifica se a loja está ativa pelo Super Admin
     const tenants = JSON.parse(localStorage.getItem('saas_tenants') || '[]');
     const currentTenant = tenants.find((t: any) => t.id === tenantId);
     
@@ -32,12 +31,10 @@ export default function Storefront({ tenantId }: { tenantId: string }) {
       return;
     }
 
-    // 2. Carrega as configurações personalizadas da loja
     const savedConfig = JSON.parse(localStorage.getItem(`store_config_${tenantId}`) || '{}');
     if (savedConfig.name) {
       setStoreConfig(savedConfig);
     } else {
-      // Fallback padrão amigável baseado no ID
       const defaultName = tenantId === 'lkd-imports' ? 'LKD Imports' : tenantId === 'carbura-ms' ? 'Carbura MS' : 'Loja Virtual';
       setStoreConfig({
         name: defaultName,
@@ -47,45 +44,32 @@ export default function Storefront({ tenantId }: { tenantId: string }) {
       });
     }
 
-    // 3. Carrega os produtos da loja
+    // Puxa estritamente os produtos salvos pelo lojista no painel
     const savedProducts = JSON.parse(localStorage.getItem(`store_products_${tenantId}`) || '[]');
-    if (savedProducts.length > 0) {
-      setProducts(savedProducts);
-    } else {
-      // Produtos iniciais de exemplo se estiver vazio
-      const initial = tenantId === 'lkd-imports' ? [
-        { id: '1', name: 'Fone de Ouvido Bluetooth Pro', price: 149.90, image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', category: 'Eletrônicos' },
-        { id: '2', name: 'Smartwatch Esportivo 4K', price: 299.90, image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80', category: 'Eletrônicos' }
-      ] : [
-        { id: '3', name: 'Capacete Moto Esportivo', price: 450.00, image: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=500&q=80', category: 'Acessórios' },
-        { id: '4', name: 'Luva de Couro Protetora', price: 120.00, image: 'https://images.unsplash.com/photo-1516750105099-4b8a83e217ee?w=500&q=80', category: 'Acessórios' }
-      ];
-      setProducts(initial);
-    }
+    setProducts(savedProducts);
   }, [tenantId]);
 
   const addToCart = (product: any) => {
     setCart(prev => {
-      const exists = prev.find(item => item.id === product.id);
+      const exists = prev.find(item => String(item.id) === String(product.id));
       if (exists) {
-        return prev.map(item => item.id === product.id ? { ...item, qty: item.qty + 1 } : item);
+        return prev.map(item => String(item.id) === String(product.id) ? { ...item, qty: item.qty + 1 } : item);
       }
       return [...prev, { ...product, qty: 1 }];
     });
   };
 
   const removeFromCart = (id: string) => {
-    setCart(prev => prev.filter(item => item.id !== id));
+    setCart(prev => prev.filter(item => String(item.id) !== String(id)));
   };
 
-  const cartTotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+  const cartTotal = cart.reduce((acc, item) => acc + (Number(item.price) * Number(item.qty)), 0);
 
   const handleCheckout = (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName) return;
 
-    // Monta a mensagem formatada para o WhatsApp do lojista
-    const itemsList = cart.map(i => `• ${i.qty}x ${i.name} - R$ ${(i.price * i.qty).toFixed(2)}`).join('\n');
+    const itemsList = cart.map(i => `• ${i.qty}x ${i.name} - R$ ${(Number(i.price) * Number(i.qty)).toFixed(2)}`).join('\n');
     const totalFormatted = `R$ ${cartTotal.toFixed(2)}`;
     
     const message = encodeURIComponent(
@@ -102,14 +86,13 @@ export default function Storefront({ tenantId }: { tenantId: string }) {
     setCart([]);
   };
 
-  const formatBRL = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+  const formatBRL = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(val));
 
   const filteredProducts = products.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500 selection:text-slate-950 pb-24">
       
-      {/* Header Dinâmico da Vitrine com a Cor Personalizada */}
       <header className="border-b border-slate-900 bg-slate-900/50 backdrop-blur-md sticky top-0 z-40">
         <div className="max-w-5xl mx-auto px-4 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -143,10 +126,7 @@ export default function Storefront({ tenantId }: { tenantId: string }) {
         </div>
       </header>
 
-      {/* Conteúdo Principal */}
       <main className="max-w-5xl mx-auto px-4 pt-8 space-y-8">
-        
-        {/* Barra de Pesquisa */}
         <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
           <input 
@@ -158,44 +138,49 @@ export default function Storefront({ tenantId }: { tenantId: string }) {
           />
         </div>
 
-        {/* Grade de Produtos */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {filteredProducts.map(product => (
-            <div key={product.id} className="bg-slate-900 border border-slate-800/80 rounded-3xl overflow-hidden flex flex-col group hover:border-slate-700 transition-all">
-              <div className="aspect-square bg-slate-950 overflow-hidden relative">
-                <img 
-                  src={product.image} 
-                  alt={product.name} 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                />
-                <span className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-bold text-slate-300 border border-slate-800">
-                  {product.category || 'Destaque'}
-                </span>
-              </div>
-
-              <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                <div>
-                  <h3 className="font-bold text-white text-sm line-clamp-2">{product.name}</h3>
-                  <p className="text-base font-black mt-1" style={{ color: storeConfig.color }}>
-                    {formatBRL(product.price)}
-                  </p>
+        {filteredProducts.length === 0 ? (
+          <div className="bg-slate-900 border border-slate-800 p-12 rounded-3xl text-center space-y-2">
+            <ShoppingBag className="w-8 h-8 text-slate-600 mx-auto" />
+            <h3 className="text-sm font-bold text-white">Nenhum produto cadastrado nesta vitrine</h3>
+            <p className="text-xs text-slate-400">Cadastre produtos pelo painel do lojista para exibi-los aqui.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {filteredProducts.map(product => (
+              <div key={product.id} className="bg-slate-900 border border-slate-800/80 rounded-3xl overflow-hidden flex flex-col group hover:border-slate-700 transition-all">
+                <div className="aspect-square bg-slate-950 overflow-hidden relative">
+                  <img 
+                    src={product.image || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&q=80'} 
+                    alt={product.name} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                  />
+                  <span className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-bold text-slate-300 border border-slate-800">
+                    {product.category || 'Geral'}
+                  </span>
                 </div>
 
-                <button 
-                  onClick={() => addToCart(product)}
-                  className="w-full py-2.5 rounded-xl font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 text-slate-950"
-                  style={{ backgroundColor: storeConfig.color }}
-                >
-                  <ShoppingBag className="w-3.5 h-3.5" /> Adicionar
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+                <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                  <div>
+                    <h3 className="font-bold text-white text-sm line-clamp-2">{product.name}</h3>
+                    <p className="text-base font-black mt-1" style={{ color: storeConfig.color }}>
+                      {formatBRL(product.price)}
+                    </p>
+                  </div>
 
+                  <button 
+                    onClick={() => addToCart(product)}
+                    className="w-full py-2.5 rounded-xl font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 text-slate-950"
+                    style={{ backgroundColor: storeConfig.color }}
+                  >
+                    <ShoppingBag className="w-3.5 h-3.5" /> Adicionar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </main>
 
-      {/* Drawer / Modal do Carrinho */}
       {isCheckoutOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex justify-end">
           <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 h-full p-6 flex flex-col justify-between overflow-y-auto">
@@ -217,7 +202,7 @@ export default function Storefront({ tenantId }: { tenantId: string }) {
                   {cart.map(item => (
                     <div key={item.id} className="bg-slate-950 border border-slate-800 p-3 rounded-2xl flex items-center justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded-xl bg-slate-900" />
+                        <img src={item.image || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&q=80'} alt={item.name} className="w-12 h-12 object-cover rounded-xl bg-slate-900" />
                         <div>
                           <h4 className="text-xs font-bold text-white line-clamp-1">{item.name}</h4>
                           <p className="text-xs font-black text-slate-300">{formatBRL(item.price)} x {item.qty}</p>
