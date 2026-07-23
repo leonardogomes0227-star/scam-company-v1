@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard, Search, Eye, Sparkles, Truck, CheckCircle2, Clock } from 'lucide-react';
+import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard, Search, Eye, Sparkles, Truck, Clock, Heart } from 'lucide-react';
 
 export default function Storefront() {
   const [storeConfig, setStoreConfig] = useState({ name: 'Minha Loja', about: 'Seja bem-vindo!', whatsapp: '5567999999999', color: '#10b981' });
   const [products, setProducts] = useState<any[]>([]);
   const [cart, setCart] = useState<any[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]); // IDs dos produtos favoritos
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false); // Modal/Gaveta de Favoritos
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -23,7 +25,7 @@ export default function Storefront() {
   const [clientAddress, setClientAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Pix');
 
-  // Estados de Rastreio de Pedido pelo Cliente
+  // Estados de Rastreio
   const [trackingCodeInput, setTrackingCodeInput] = useState('');
   const [trackedOrderResult, setTrackedOrderResult] = useState<any>(null);
   const [trackingSearched, setTrackingSearched] = useState(false);
@@ -47,6 +49,9 @@ export default function Storefront() {
       ]);
     }
 
+    const savedFavs = JSON.parse(localStorage.getItem('store_favorites_lkd-imports') || '[]');
+    setFavorites(savedFavs);
+
     const savedCoupons = JSON.parse(localStorage.getItem('store_coupons_lkd-imports') || '[]');
     setCoupons(savedCoupons);
   }, []);
@@ -58,6 +63,18 @@ export default function Storefront() {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  const toggleFavorite = (productId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    let updated;
+    if (favorites.includes(productId)) {
+      updated = favorites.filter(id => id !== productId);
+    } else {
+      updated = [...favorites, productId];
+    }
+    setFavorites(updated);
+    localStorage.setItem('store_favorites_lkd-imports', JSON.stringify(updated));
+  };
 
   const addToCart = (product: any) => {
     setCart([...cart, product]);
@@ -150,20 +167,38 @@ export default function Storefront() {
           <h1 className="text-xl font-black text-white">{storeConfig.name}</h1>
           <p className="text-xs text-slate-400">{storeConfig.about}</p>
         </div>
-        <button 
-          onClick={() => setIsCartOpen(true)}
-          className="relative px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20"
-        >
-          <ShoppingBag className="w-4 h-4" /> Carrinho
-          {cart.length > 0 && (
-            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold">
-              {cart.length}
-            </span>
-          )}
-        </button>
+        
+        <div className="flex items-center gap-2">
+          {/* Botão de Favoritos */}
+          <button 
+            onClick={() => setIsWishlistOpen(true)}
+            className="relative p-2.5 bg-slate-950 border border-slate-800 hover:border-emerald-500 text-rose-400 rounded-xl transition-all flex items-center justify-center"
+            title="Meus Favoritos"
+          >
+            <Heart className="w-4 h-4 fill-current" />
+            {favorites.length > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-rose-500 text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold">
+                {favorites.length}
+              </span>
+            )}
+          </button>
+
+          {/* Botão Carrinho */}
+          <button 
+            onClick={() => setIsCartOpen(true)}
+            className="relative px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+          >
+            <ShoppingBag className="w-4 h-4" /> Carrinho
+            {cart.length > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold">
+                {cart.length}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* Rastreio de Pedido para o Cliente */}
+      {/* Rastreio de Pedido */}
       <div className="max-w-4xl mx-auto px-4 pt-6">
         <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl space-y-3 shadow-lg">
           <h3 className="text-xs font-bold text-white flex items-center gap-2">
@@ -198,7 +233,7 @@ export default function Storefront() {
                 </div>
               ) : (
                 <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 p-3 rounded-xl text-center font-bold">
-                  Nenhum pedido encontrado com este código. Verifique e tente novamente.
+                  Nenhum pedido encontrado com este código.
                 </div>
               )}
             </div>
@@ -233,60 +268,102 @@ export default function Storefront() {
         </div>
       </div>
 
-      {/* Grid de Produtos */}
+      {/* Grid de Produtos com Botão Favorito */}
       <div className="max-w-4xl mx-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
         {filteredProducts.length === 0 ? (
           <div className="col-span-full text-center py-12 text-xs text-slate-500 bg-slate-900 border border-slate-800 rounded-3xl">
             Nenhum produto encontrado.
           </div>
         ) : (
-          filteredProducts.map(product => (
-            <div key={product.id} className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden p-4 flex flex-col justify-between space-y-4 shadow-lg">
-              <div className="space-y-3 cursor-pointer" onClick={() => setActiveProductModal(product)}>
-                <div className="relative group">
-                  <img src={product.image} alt={product.name} className="w-full h-48 object-cover rounded-2xl bg-slate-950" />
-                  <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
-                    <span className="px-3 py-1.5 bg-slate-900/90 text-white font-bold text-[10px] rounded-xl flex items-center gap-1 shadow-md">
-                      <Eye className="w-3.5 h-3.5 text-emerald-400" /> Ver Detalhes
-                    </span>
+          filteredProducts.map(product => {
+            const isFav = favorites.includes(product.id);
+            return (
+              <div key={product.id} className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden p-4 flex flex-col justify-between space-y-4 shadow-lg">
+                <div className="space-y-3 cursor-pointer relative" onClick={() => setActiveProductModal(product)}>
+                  
+                  {/* Botão de Favorito no Card */}
+                  <button 
+                    onClick={(e) => toggleFavorite(product.id, e)}
+                    className={`absolute top-3 right-3 z-10 p-2 rounded-xl border backdrop-blur-md transition-all ${isFav ? 'bg-rose-500/20 border-rose-500/40 text-rose-400' : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'}`}
+                  >
+                    <Heart className={`w-4 h-4 ${isFav ? 'fill-current' : ''}`} />
+                  </button>
+
+                  <div className="relative group">
+                    <img src={product.image} alt={product.name} className="w-full h-48 object-cover rounded-2xl bg-slate-950" />
+                    <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
+                      <span className="px-3 py-1.5 bg-slate-900/90 text-white font-bold text-[10px] rounded-xl flex items-center gap-1 shadow-md">
+                        <Eye className="w-3.5 h-3.5 text-emerald-400" /> Ver Detalhes
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-bold text-emerald-400 uppercase">{product.category || 'Geral'}</span>
+                    <h3 className="text-sm font-bold text-white truncate">{product.name}</h3>
+                    <div className="flex items-center gap-1 text-amber-400">
+                      <Star className="w-3.5 h-3.5 fill-current" />
+                      <span className="text-xs font-black text-white ml-1">{product.rating}</span>
+                      <span className="text-[10px] text-slate-400">({product.reviewsCount} avaliações)</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-emerald-400 uppercase">{product.category || 'Geral'}</span>
-                  <h3 className="text-sm font-bold text-white truncate">{product.name}</h3>
-                  <div className="flex items-center gap-1 text-amber-400">
-                    <Star className="w-3.5 h-3.5 fill-current" />
-                    <span className="text-xs font-black text-white ml-1">{product.rating}</span>
-                    <span className="text-[10px] text-slate-400">({product.reviewsCount} avaliações)</span>
-                  </div>
+                <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                  <span className="text-sm font-black text-emerald-400">{formatBRL(product.price)}</span>
+                  <button onClick={() => addToCart(product)} className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all shadow-md">
+                    Comprar 🛒
+                  </button>
                 </div>
               </div>
-
-              <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-                <span className="text-sm font-black text-emerald-400">{formatBRL(product.price)}</span>
-                <button onClick={() => addToCart(product)} className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all shadow-md">
-                  Comprar 🛒
-                </button>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
+
+      {/* Modal de Favoritos / Wishlist */}
+      {isWishlistOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end">
+          <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 h-full p-6 flex flex-col justify-between overflow-y-auto">
+            <div className="space-y-6">
+              <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+                <h2 className="text-base font-black text-white flex items-center gap-2">
+                  <Heart className="w-4 h-4 text-rose-400 fill-current" /> Seus Produtos Favoritos
+                </h2>
+                <button onClick={() => setIsWishlistOpen(false)} className="text-slate-400 hover:text-white font-bold text-sm">✕ Fechar</button>
+              </div>
+
+              {favorites.length === 0 ? (
+                <div className="text-center py-12 text-xs text-slate-500">Nenhum produto favoritado ainda.</div>
+              ) : (
+                <div className="space-y-3">
+                  {products.filter(p => favorites.includes(p.id)).map(favProd => (
+                    <div key={favProd.id} className="flex items-center justify-between bg-slate-950 border border-slate-800 p-3 rounded-2xl gap-3">
+                      <img src={favProd.image} alt={favProd.name} className="w-14 h-14 object-cover rounded-xl bg-slate-900" />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-xs font-bold text-white truncate">{favProd.name}</h4>
+                        <span className="text-xs font-black text-emerald-400">{formatBRL(favProd.price)}</span>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => addToCart(favProd)} className="px-3 py-2 bg-emerald-500 text-slate-950 font-bold text-[10px] rounded-xl">Comprar</button>
+                        <button onClick={(e) => toggleFavorite(favProd.id, e)} className="p-2 text-rose-400 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button onClick={() => setIsWishlistOpen(false)} className="w-full py-3 bg-slate-800 text-white font-bold text-xs rounded-xl mt-4">Continuar Comprando</button>
+          </div>
+        </div>
+      )}
 
       {/* Modal de Detalhes do Produto */}
       {activeProductModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl space-y-4 p-6 relative">
-            <button 
-              onClick={() => setActiveProductModal(null)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-white font-bold text-xs bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800"
-            >
-              ✕ Fechar
-            </button>
-
+            <button onClick={() => setActiveProductModal(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white font-bold text-xs bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">✕ Fechar</button>
             <img src={activeProductModal.image} alt={activeProductModal.name} className="w-full h-64 object-cover rounded-2xl bg-slate-950" />
-
             <div className="space-y-2">
               <span className="text-[10px] font-bold text-emerald-400 uppercase">{activeProductModal.category}</span>
               <h2 className="text-lg font-black text-white">{activeProductModal.name}</h2>
@@ -297,15 +374,9 @@ export default function Storefront() {
               </div>
               <p className="text-xs text-slate-300 leading-relaxed pt-2">{activeProductModal.description}</p>
             </div>
-
             <div className="flex items-center justify-between pt-4 border-t border-slate-800">
               <span className="text-base font-black text-emerald-400">{formatBRL(activeProductModal.price)}</span>
-              <button 
-                onClick={() => addToCart(activeProductModal)}
-                className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all shadow-lg"
-              >
-                Adicionar ao Carrinho 🛒
-              </button>
+              <button onClick={() => addToCart(activeProductModal)} className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all shadow-lg">Adicionar ao Carrinho 🛒</button>
             </div>
           </div>
         </div>
@@ -315,7 +386,6 @@ export default function Storefront() {
       {isCartOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end">
           <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 h-full p-6 flex flex-col justify-between overflow-y-auto">
-            
             <div className="space-y-6">
               <div className="flex justify-between items-center border-b border-slate-800 pb-4">
                 <h2 className="text-base font-black text-white flex items-center gap-2">
@@ -340,7 +410,6 @@ export default function Storefront() {
                     ))}
                   </div>
 
-                  {/* Cupom */}
                   <form onSubmit={handleApplyCoupon} className="flex gap-2">
                     <input type="text" placeholder="Cupom de desconto" value={couponInput} onChange={e => setCouponInput(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white uppercase outline-none focus:border-emerald-500" />
                     <button type="submit" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl">Aplicar</button>
@@ -348,7 +417,6 @@ export default function Storefront() {
                   {couponError && <p className="text-[10px] text-red-400 font-bold">{couponError}</p>}
                   {appliedCoupon && <p className="text-[10px] text-emerald-400 font-bold">✔ Cupom {appliedCoupon.code} aplicado (-{appliedCoupon.discount}%)</p>}
 
-                  {/* Dados */}
                   <div className="space-y-3 pt-3 border-t border-slate-800">
                     <h3 className="text-xs font-bold text-slate-300 uppercase">Dados para Entrega</h3>
                     <input type="text" placeholder="Seu Nome Completo" value={clientName} onChange={e => setClientName(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required />
@@ -356,7 +424,6 @@ export default function Storefront() {
                     <input type="text" placeholder="Endereço / Bairro" value={clientAddress} onChange={e => setClientAddress(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required />
                   </div>
 
-                  {/* Pagamento */}
                   <div className="space-y-2 pt-2">
                     <label className="text-xs font-bold text-slate-300 uppercase flex items-center gap-1.5"><CreditCard className="w-3.5 h-3.5 text-emerald-400" /> Forma de Pagamento</label>
                     <div className="grid grid-cols-3 gap-2">
@@ -365,23 +432,17 @@ export default function Storefront() {
                           key={method}
                           type="button"
                           onClick={() => setPaymentMethod(method)}
-                          className={`py-2.5 rounded-xl text-xs font-bold transition-all border ${
-                            paymentMethod === method 
-                              ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md' 
-                              : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
-                          }`}
+                          className={`py-2.5 rounded-xl text-xs font-bold transition-all border ${paymentMethod === method ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md' : 'bg-slate-950 border-slate-800 text-slate-300'}`}
                         >
                           {method}
                         </button>
                       ))}
                     </div>
                   </div>
-
                 </div>
               )}
             </div>
 
-            {/* Rodapé Totais */}
             {cart.length > 0 && (
               <div className="space-y-4 pt-4 border-t border-slate-800">
                 <div className="space-y-1 text-xs">
@@ -389,16 +450,11 @@ export default function Storefront() {
                   {appliedCoupon && <div className="flex justify-between text-emerald-400"><span>Desconto:</span> <span>-{formatBRL(discountAmount)}</span></div>}
                   <div className="flex justify-between text-sm font-black text-white pt-1 border-t border-slate-800"><span>Total:</span> <span className="text-emerald-400">{formatBRL(total)}</span></div>
                 </div>
-
-                <button 
-                  onClick={handleCheckoutWhatsApp}
-                  className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
-                >
+                <button onClick={handleCheckoutWhatsApp} className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20">
                   <MessageSquare className="w-4 h-4" /> Enviar Pedido via WhatsApp ↗
                 </button>
               </div>
             )}
-
           </div>
         </div>
       )}
