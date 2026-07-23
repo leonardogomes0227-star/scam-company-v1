@@ -2,9 +2,12 @@ import { useState, useEffect } from 'react';
 import { ShoppingBag, MessageCircle, CheckCircle2, Search, Store } from 'lucide-react';
 
 export default function Storefront({ tenantId }: { tenantId: string }) {
+  // Limpa possíveis barras invertidas ou erros no ID da loja vindo da URL
+  const cleanTenantId = (tenantId || 'lkd-imports').replace(/\\/g, '').replace(/\/$/, '');
+
   const [storeConfig, setStoreConfig] = useState({
-    name: 'Carregando...',
-    about: '',
+    name: 'LKD Imports',
+    about: 'Os melhores produtos com envio rápido e seguro direto no seu WhatsApp.',
     whatsapp: '5567999999999',
     color: '#10b981'
   });
@@ -18,36 +21,32 @@ export default function Storefront({ tenantId }: { tenantId: string }) {
   const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
-    const tenants = JSON.parse(localStorage.getItem('saas_tenants') || '[]');
-    const currentTenant = tenants.find((t: any) => t.id === tenantId);
-    
-    if (currentTenant && currentTenant.active === false) {
-      setStoreConfig({
-        name: 'Loja Temporariamente Indisponível',
-        about: 'Esta vitrine está com o acesso suspenso por questões administrativas.',
-        whatsapp: '',
-        color: '#ef4444'
-      });
-      return;
-    }
-
-    const savedConfig = JSON.parse(localStorage.getItem(`store_config_${tenantId}`) || '{}');
+    // 1. Carrega as configurações salvas ou usa padrão fixo da LKD
+    const savedConfig = JSON.parse(localStorage.getItem(`store_config_${cleanTenantId}`) || '{}');
     if (savedConfig.name) {
       setStoreConfig(savedConfig);
     } else {
-      const defaultName = tenantId === 'lkd-imports' ? 'LKD Imports' : tenantId === 'carbura-ms' ? 'Carbura MS' : 'Loja Virtual';
       setStoreConfig({
-        name: defaultName,
-        about: 'Os melhores produtos com envio rápido e seguro direto no seu WhatsApp.',
+        name: cleanTenantId === 'carbura-ms' ? 'Carbura MS' : 'LKD Imports',
+        about: 'Encontre os melhores produtos com entrega garantida.',
         whatsapp: '5567999999999',
         color: '#10b981'
       });
     }
 
-    // Puxa exatamente o que está salvo no localStorage da loja do lojista
-    const savedProducts = JSON.parse(localStorage.getItem(`store_products_${tenantId}`) || '[]');
-    setProducts(savedProducts);
-  }, [tenantId]);
+    // 2. Puxa os produtos salvos pelo painel do lojista
+    const savedProducts = JSON.parse(localStorage.getItem(`store_products_${cleanTenantId}`) || '[]');
+    if (savedProducts.length > 0) {
+      setProducts(savedProducts);
+    } else {
+      // Produto de fallback inicial caso o localStorage esteja vazio
+      const initial = [
+        { id: '1', name: 'IGNITE V80', price: 100.00, image: 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&q=80', category: 'Geral' }
+      ];
+      setProducts(initial);
+      localStorage.setItem(`store_products_${cleanTenantId}`, JSON.stringify(initial));
+    }
+  }, [cleanTenantId]);
 
   const addToCart = (product: any) => {
     setCart(prev => {
@@ -138,47 +137,39 @@ export default function Storefront({ tenantId }: { tenantId: string }) {
           />
         </div>
 
-        {filteredProducts.length === 0 ? (
-          <div className="bg-slate-900 border border-slate-800 p-12 rounded-3xl text-center space-y-2">
-            <ShoppingBag className="w-8 h-8 text-slate-600 mx-auto" />
-            <h3 className="text-sm font-bold text-white">Nenhum produto cadastrado nesta vitrine</h3>
-            <p className="text-xs text-slate-400">Cadastre produtos pelo painel do lojista para exibi-los aqui.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {filteredProducts.map(product => (
-              <div key={product.id} className="bg-slate-900 border border-slate-800/80 rounded-3xl overflow-hidden flex flex-col group hover:border-slate-700 transition-all">
-                <div className="aspect-square bg-slate-950 overflow-hidden relative">
-                  <img 
-                    src={product.image || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&q=80'} 
-                    alt={product.name} 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                  />
-                  <span className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-bold text-slate-300 border border-slate-800">
-                    {product.category || 'Geral'}
-                  </span>
-                </div>
-
-                <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
-                  <div>
-                    <h3 className="font-bold text-white text-sm line-clamp-2">{product.name}</h3>
-                    <p className="text-base font-black mt-1" style={{ color: storeConfig.color }}>
-                      {formatBRL(product.price)}
-                    </p>
-                  </div>
-
-                  <button 
-                    onClick={() => addToCart(product)}
-                    className="w-full py-2.5 rounded-xl font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 text-slate-950"
-                    style={{ backgroundColor: storeConfig.color }}
-                  >
-                    <ShoppingBag className="w-3.5 h-3.5" /> Adicionar
-                  </button>
-                </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {filteredProducts.map(product => (
+            <div key={product.id} className="bg-slate-900 border border-slate-800/80 rounded-3xl overflow-hidden flex flex-col group hover:border-slate-700 transition-all">
+              <div className="aspect-square bg-slate-950 overflow-hidden relative">
+                <img 
+                  src={product.image || 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=500&q=80'} 
+                  alt={product.name} 
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                />
+                <span className="absolute top-3 left-3 bg-slate-950/80 backdrop-blur-md px-2.5 py-1 rounded-lg text-[10px] font-bold text-slate-300 border border-slate-800">
+                  {product.category || 'Geral'}
+                </span>
               </div>
-            ))}
-          </div>
-        )}
+
+              <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                <div>
+                  <h3 className="font-bold text-white text-sm line-clamp-2">{product.name}</h3>
+                  <p className="text-base font-black mt-1" style={{ color: storeConfig.color }}>
+                    {formatBRL(product.price)}
+                  </p>
+                </div>
+
+                <button 
+                  onClick={() => addToCart(product)}
+                  className="w-full py-2.5 rounded-xl font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 text-slate-950"
+                  style={{ backgroundColor: storeConfig.color }}
+                >
+                  <ShoppingBag className="w-3.5 h-3.5" /> Adicionar
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </main>
 
       {isCheckoutOpen && (
