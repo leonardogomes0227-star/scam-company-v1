@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, AlertTriangle, Users, TrendingUp, ShieldCheck, BarChart3, MessageCircle } from 'lucide-react';
+import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, TrendingUp, Users } from 'lucide-react';
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'abandoned' | 'settings'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'coupons' | 'abandoned' | 'settings'>('products');
   
   const currentUser = JSON.parse(localStorage.getItem('saas_auth_user') || '{}');
   const tenantId = currentUser.tenantId || 'lkd-imports';
@@ -20,7 +20,11 @@ export default function AdminDashboard() {
   const [image, setImage] = useState('');
   const [category, setCategory] = useState('Geral');
 
-  const [orders, setOrders] = useState<any[]>([]);
+  // Estados de Cupons
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [couponCode, setCouponCode] = useState('');
+  const [couponDiscount, setCouponDiscount] = useState('');
+
   const [abandonedLeads, setAbandonedLeads] = useState<any[]>([]);
 
   useEffect(() => {
@@ -47,16 +51,20 @@ export default function AdminDashboard() {
       localStorage.setItem(`store_products_${tenantId}`, JSON.stringify(initial));
     }
 
-    // Carrega leads de carrinhos abandonados salvos no navegador
-    const leadCart = JSON.parse(localStorage.getItem('scam_abandoned_lead') || 'null');
-    if (leadCart) {
-      setAbandonedLeads([leadCart]);
+    // Carrega cupons salvos
+    const savedCoupons = JSON.parse(localStorage.getItem(`store_coupons_${tenantId}`) || '[]');
+    if (savedCoupons.length > 0) {
+      setCoupons(savedCoupons);
     } else {
-      // Exemplo para testes caso esteja vazio
-      setAbandonedLeads([
-        { name: 'Carlos Eduardo', whatsapp: '67999887766', items: [{ name: 'Fone Pro' }], timestamp: new Date().toISOString() }
-      ]);
+      const initialCoupons = [
+        { id: '1', code: 'BEMVINDO10', discount: 10 }
+      ];
+      setCoupons(initialCoupons);
+      localStorage.setItem(`store_coupons_${tenantId}`, JSON.stringify(initialCoupons));
     }
+
+    const leadCart = JSON.parse(localStorage.getItem('scam_abandoned_lead') || 'null');
+    if (leadCart) setAbandonedLeads([leadCart]);
   }, [tenantId]);
 
   const handleSaveSettings = (e: React.FormEvent) => {
@@ -93,6 +101,27 @@ export default function AdminDashboard() {
     localStorage.setItem(`store_products_${tenantId}`, JSON.stringify(updated));
   };
 
+  const handleAddCoupon = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!couponCode || !couponDiscount) return;
+    const newCoupon = {
+      id: Date.now().toString(),
+      code: couponCode.toUpperCase().trim(),
+      discount: parseFloat(couponDiscount)
+    };
+    const updated = [newCoupon, ...coupons];
+    setCoupons(updated);
+    localStorage.setItem(`store_coupons_${tenantId}`, JSON.stringify(updated));
+    setCouponCode('');
+    setCouponDiscount('');
+  };
+
+  const handleDeleteCoupon = (id: string) => {
+    const updated = coupons.filter(c => c.id !== id);
+    setCoupons(updated);
+    localStorage.setItem(`store_coupons_${tenantId}`, JSON.stringify(updated));
+  };
+
   const formatBRL = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   return (
@@ -103,7 +132,7 @@ export default function AdminDashboard() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 border border-slate-800 p-6 rounded-3xl">
           <div>
             <h1 className="text-2xl font-black text-white">Painel da Loja ({storeName})</h1>
-            <p className="text-xs text-slate-400">Gestão de estoque e recuperação de carrinhos abandonados.</p>
+            <p className="text-xs text-slate-400">Gestão de catálogo, cupons promocionais e carrinhos.</p>
           </div>
           <a href={`#/loja/${tenantId}`} target="_blank" rel="noopener noreferrer" className="px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 font-black text-xs rounded-xl transition-all">
             Ver Minha Vitrine ↗
@@ -113,13 +142,13 @@ export default function AdminDashboard() {
         {/* Abas */}
         <div className="flex flex-wrap gap-2 border-b border-slate-800 pb-4">
           <button onClick={() => setActiveTab('products')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'products' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 text-slate-400'}`}>
-            <Package className="w-4 h-4" /> Produtos & Estoque
+            <Package className="w-4 h-4" /> Produtos
+          </button>
+          <button onClick={() => setActiveTab('coupons')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'coupons' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 text-slate-400'}`}>
+            <Tag className="w-4 h-4" /> Cupons de Desconto
           </button>
           <button onClick={() => setActiveTab('abandoned')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'abandoned' ? 'bg-amber-500 text-slate-950' : 'bg-slate-900 text-slate-400'}`}>
-            <TrendingUp className="w-4 h-4" /> Carrinhos Abandonados ({abandonedLeads.length})
-          </button>
-          <button onClick={() => setActiveTab('orders')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'orders' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 text-slate-400'}`}>
-            <ShoppingBag className="w-4 h-4" /> Pedidos
+            <TrendingUp className="w-4 h-4" /> Carrinhos Abandonados
           </button>
           <button onClick={() => setActiveTab('settings')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'settings' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 text-slate-400'}`}>
             <Settings className="w-4 h-4" /> Configurações
@@ -163,56 +192,41 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* CARRINHOS ABANDONADOS (RECUPERAÇÃO ATIVA) */}
-        {activeTab === 'abandoned' && (
+        {/* CUPONS DE DESCONTO */}
+        {activeTab === 'coupons' && (
           <div className="space-y-6">
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl flex justify-between items-center">
-              <div>
-                <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-amber-400" /> Recuperação de Vendas Perdidas
-                </h3>
-                <p className="text-xs text-slate-400">Clientes que iniciaram o checkout mas não finalizaram. Resgate pelo WhatsApp com 1 clique.</p>
+            <form onSubmit={handleAddCoupon} className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4 max-w-xl">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2"><Tag className="w-4 h-4 text-emerald-400" /> Criar Cupom Promocional</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <input type="text" placeholder="Código (ex: DESCONTO10)" value={couponCode} onChange={e => setCouponCode(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-emerald-500 uppercase" required />
+                <input type="number" placeholder="Desconto em % (ex: 10)" value={couponDiscount} onChange={e => setCouponDiscount(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-emerald-500" required />
               </div>
-            </div>
+              <button type="submit" className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all">Salvar Cupom</button>
+            </form>
 
-            {abandonedLeads.length === 0 ? (
-              <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl text-center text-xs text-slate-500">
-                Nenhum carrinho abandonado registrado recentemente.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4">
-                {abandonedLeads.map((lead, idx) => (
-                  <div key={idx} className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div className="space-y-1">
-                      <span className="text-[10px] font-bold text-amber-400 uppercase">Lead Quente 🛒</span>
-                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                        <Users className="w-4 h-4 text-slate-400" /> {lead.name}
-                      </h4>
-                      <p className="text-xs font-mono text-slate-300">WhatsApp: {lead.whatsapp}</p>
-                    </div>
-
-                    <a 
-                      href={`https://wa.me/55${lead.whatsapp.replace(/\D/g, '')}?text=Olá%20${encodeURIComponent(lead.name)},%20notamos%20que%20você%20quase%20garantiu%20seu%20pedido%20na%20${encodeURIComponent(storeName)}!%20Ainda%20tem%20interesse?`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20"
-                    >
-                      <MessageCircle className="w-4 h-4" /> Resgatar no WhatsApp ↗
-                    </a>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {coupons.map(coupon => (
+                <div key={coupon.id} className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex justify-between items-center">
+                  <div>
+                    <span className="text-[10px] font-bold text-emerald-400 uppercase">Cupom Ativo</span>
+                    <h4 className="text-base font-black text-white">{coupon.code}</h4>
+                    <p className="text-xs text-slate-300 font-bold">{coupon.discount}% de desconto</p>
                   </div>
-                ))}
-              </div>
-            )}
+                  <button onClick={() => handleDeleteCoupon(coupon.id)} className="p-2 text-slate-500 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
-        {/* OUTRAS ABAS */}
-        {activeTab === 'orders' && (
+        {/* CARRINHOS ABANDONADOS */}
+        {activeTab === 'abandoned' && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl text-center text-xs text-slate-400">
-            Painel de pedidos integrado.
+            {abandonedLeads.length} lead(s) de carrinho capturado(s).
           </div>
         )}
 
+        {/* CONFIGURAÇÕES */}
         {activeTab === 'settings' && (
           <form onSubmit={handleSaveSettings} className="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-2xl space-y-4">
             <h3 className="text-base font-black text-white">Configurações da Loja</h3>
