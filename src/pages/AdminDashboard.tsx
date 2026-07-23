@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, TrendingUp, CheckCircle2, BarChart3, DollarSign, HelpCircle, ChevronDown, Download, Eye, MapPin, CreditCard, AlertTriangle } from 'lucide-react';
+import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, TrendingUp, CheckCircle2, BarChart3, DollarSign, HelpCircle, ChevronDown, Download, Eye, MapPin, CreditCard, AlertTriangle, Edit3, X } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'products' | 'coupons' | 'orders' | 'analytics' | 'help' | 'settings'>('products');
@@ -20,6 +20,11 @@ export default function AdminDashboard() {
   const [stock, setStock] = useState('10');
   const [image, setImage] = useState('');
   const [category, setCategory] = useState('Geral');
+
+  // Estados para Edição de Produto
+  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editPrice, setEditPrice] = useState('');
+  const [editStock, setEditStock] = useState('');
 
   const [coupons, setCoupons] = useState<any[]>([]);
   const [couponCode, setCouponCode] = useState('');
@@ -130,6 +135,33 @@ export default function AdminDashboard() {
     showToast('Produto removido!');
   };
 
+  const handleOpenEditModal = (prod: any) => {
+    setEditingProduct(prod);
+    setEditPrice(prod.price.toString());
+    setEditStock(prod.stock.toString());
+  };
+
+  const handleSaveEditProduct = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingProduct) return;
+
+    const updatedProducts = products.map(p => {
+      if (p.id === editingProduct.id) {
+        return {
+          ...p,
+          price: parseFloat(editPrice) || p.price,
+          stock: parseInt(editStock) || 0
+        };
+      }
+      return p;
+    });
+
+    setProducts(updatedProducts);
+    localStorage.setItem(`store_products_${tenantId}`, JSON.stringify(updatedProducts));
+    setEditingProduct(null);
+    showToast('Produto atualizado com sucesso!');
+  };
+
   const handleAddCoupon = (e: React.FormEvent) => {
     e.preventDefault();
     if (!couponCode || !couponDiscount) return;
@@ -186,13 +218,11 @@ export default function AdminDashboard() {
 
   const totalRevenue = orders.reduce((acc, curr) => acc + (curr.total || 0), 0);
   const averageTicket = orders.length > 0 ? totalRevenue / orders.length : 0;
-  
-  // Produtos com estoque crítico (menor ou igual a 3)
   const lowStockProducts = products.filter(p => (p.stock || 0) <= 3);
 
   const faqList = [
     { q: 'Como faço para divulgar minha vitrine?', a: 'Basta copiar o link da sua vitrine clicando em "Ver Minha Vitrine ↗" no topo do painel.' },
-    { q: 'Onde verifico itens com estoque baixo?', a: 'Na aba Relatórios, você encontra um painel dedicado alertando sobre produtos que precisam de reposição urgente.' }
+    { q: 'Como editar um produto existente?', a: 'Na aba Produtos, clique no ícone de edição (lápis) no card do produto para alterar preço e estoque.' }
   ];
 
   return (
@@ -210,7 +240,7 @@ export default function AdminDashboard() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 border border-slate-800 p-6 rounded-3xl">
           <div>
             <h1 className="text-2xl font-black text-white">Painel da Loja ({storeName})</h1>
-            <p className="text-xs text-slate-400">Gestão gerencial avançada, faturamento e controle de estoque.</p>
+            <p className="text-xs text-slate-400">Gestão gerencial avançada, catálogo e controle de estoque.</p>
           </div>
           <a href={`#/loja/${tenantId}`} target="_blank" rel="noopener noreferrer" className="px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 font-black text-xs rounded-xl transition-all">
             Ver Minha Vitrine ↗
@@ -263,16 +293,43 @@ export default function AdminDashboard() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {products.map(p => (
-                <div key={p.id} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden p-4 flex gap-4 items-center">
-                  <img src={p.image} alt={p.name} className="w-16 h-16 object-cover rounded-xl bg-slate-950" />
+                <div key={p.id} className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden p-4 flex gap-4 items-center justify-between">
+                  <img src={p.image} alt={p.name} className="w-16 h-16 object-cover rounded-xl bg-slate-950 shrink-0" />
                   <div className="flex-1 min-w-0 space-y-1">
                     <h4 className="text-sm font-bold text-white truncate">{p.name}</h4>
                     <span className="text-xs font-black text-slate-300">{formatBRL(p.price)} | Estoque: {p.stock}</span>
                   </div>
-                  <button onClick={() => handleDeleteProduct(p.id)} className="p-2 text-slate-500 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
+                  <div className="flex items-center gap-1">
+                    <button onClick={() => handleOpenEditModal(p)} className="p-2 text-slate-400 hover:text-emerald-400" title="Editar Produto"><Edit3 className="w-4 h-4" /></button>
+                    <button onClick={() => handleDeleteProduct(p.id)} className="p-2 text-slate-500 hover:text-red-400" title="Excluir"><Trash2 className="w-4 h-4" /></button>
+                  </div>
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Modal de Edição de Produto */}
+        {editingProduct && (
+          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <form onSubmit={handleSaveEditProduct} className="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-6 space-y-4 shadow-2xl relative">
+              <button type="button" onClick={() => setEditingProduct(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white font-bold text-xs bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">✕</button>
+              <h3 className="text-base font-black text-white">Editar Produto</h3>
+              <p className="text-xs text-slate-400 truncate">{editingProduct.name}</p>
+              
+              <div className="space-y-3 pt-2">
+                <div>
+                  <label className="text-[11px] font-bold text-slate-300 uppercase">Preço (R$)</label>
+                  <input type="number" step="0.01" value={editPrice} onChange={e => setEditPrice(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500 mt-1" required />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-slate-300 uppercase">Estoque</label>
+                  <input type="number" value={editStock} onChange={e => setEditStock(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500 mt-1" required />
+                </div>
+              </div>
+
+              <button type="submit" className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all shadow-lg">Salvar Alterações</button>
+            </form>
           </div>
         )}
 
@@ -384,7 +441,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* RELATÓRIOS, FATURAMENTO E ALERTA DE ESTOQUE */}
+        {/* RELATÓRIOS & ESTOQUE */}
         {activeTab === 'analytics' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center bg-slate-900 border border-slate-800 p-6 rounded-3xl">
@@ -415,7 +472,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* Alerta de Produtos com Estoque Baixo */}
+            {/* Alerta de Estoque Crítico */}
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-400" /> Alerta de Estoque Crítico ({lowStockProducts.length} itens)
