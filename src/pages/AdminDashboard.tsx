@@ -141,7 +141,14 @@ export default function AdminDashboard() {
     showToast('Cupom removido!');
   };
 
-  // Função para exportar pedidos em arquivo CSV
+  // Função para atualizar o status do pedido na lista
+  const handleUpdateOrderStatus = (orderId: string, newStatus: string) => {
+    const updatedOrders = orders.map(ord => ord.id === orderId ? { ...ord, status: newStatus } : ord);
+    setOrders(updatedOrders);
+    localStorage.setItem(`store_orders_${tenantId}`, JSON.stringify(updatedOrders));
+    showToast(`Status do pedido ${orderId} atualizado para: ${newStatus}`);
+  };
+
   const handleExportCSV = () => {
     if (orders.length === 0) {
       showToast('Nenhum pedido para exportar.');
@@ -171,7 +178,7 @@ export default function AdminDashboard() {
 
   const faqList = [
     { q: 'Como faço para divulgar minha vitrine?', a: 'Basta copiar o link da sua vitrine clicando em "Ver Minha Vitrine ↗" no topo do painel.' },
-    { q: 'Como funcionam os relatórios?', a: 'Agora você pode exportar o extrato completo das suas vendas em CSV direto para o Excel.' }
+    { q: 'Como alterar o status de um pedido?', a: 'Na aba Pedidos, selecione a nova etapa desejada diretamente no menu seletor de cada pedido.' }
   ];
 
   return (
@@ -189,7 +196,7 @@ export default function AdminDashboard() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 border border-slate-800 p-6 rounded-3xl">
           <div>
             <h1 className="text-2xl font-black text-white">Painel da Loja ({storeName})</h1>
-            <p className="text-xs text-slate-400">Gestão de vendas, catálogo e exportação de dados.</p>
+            <p className="text-xs text-slate-400">Gestão de vendas, catálogo e alteração de status em tempo real.</p>
           </div>
           <a href={`#/loja/${tenantId}`} target="_blank" rel="noopener noreferrer" className="px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 font-black text-xs rounded-xl transition-all">
             Ver Minha Vitrine ↗
@@ -281,22 +288,38 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* PEDIDOS */}
+        {/* PEDIDOS COM ALTERAÇÃO DE STATUS */}
         {activeTab === 'orders' && (
           <div className="space-y-4">
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl flex justify-between items-center">
-              <h3 className="text-base font-black text-white">Pedidos Recebidos</h3>
+              <div>
+                <h3 className="text-base font-black text-white">Pedidos Recebidos da Vitrine</h3>
+                <p className="text-xs text-slate-400">Atualize o status dos pedidos para refletir no rastreio do cliente.</p>
+              </div>
               <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl text-xs font-bold">{orders.length} Pedido(s)</span>
             </div>
+
             <div className="grid grid-cols-1 gap-4">
               {orders.map(order => (
-                <div key={order.id} className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex justify-between items-center">
+                <div key={order.id} className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div>
                     <span className="text-xs font-black text-emerald-400">{order.id} - {order.date}</span>
                     <h4 className="text-sm font-bold text-white">Cliente: {order.customer}</h4>
                     <span className="text-xs text-slate-300 font-bold">Total: {formatBRL(order.total)}</span>
                   </div>
-                  <span className="px-3 py-1.5 bg-slate-950 border border-slate-800 text-cyan-400 font-bold text-xs rounded-xl">{order.status}</span>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <select
+                      value={order.status}
+                      onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
+                      className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs font-bold text-cyan-400 outline-none cursor-pointer w-full sm:w-auto"
+                    >
+                      <option value="Aguardando Pagamento">Aguardando Pagamento</option>
+                      <option value="Pago / Separando">Pago / Separando</option>
+                      <option value="Enviado / A Caminho">Enviado / A Caminho</option>
+                      <option value="Entregue com Sucesso">Entregue com Sucesso</option>
+                    </select>
+                  </div>
                 </div>
               ))}
             </div>
