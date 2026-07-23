@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, Sparkles } from 'lucide-react';
+import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus } from 'lucide-react';
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'coupons' | 'ai' | 'settings'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'coupons' | 'settings'>('products');
   
   // Descobre qual é a loja do lojista logado através da sessão
   const currentUser = JSON.parse(localStorage.getItem('saas_auth_user') || '{}');
@@ -41,7 +41,6 @@ export default function AdminDashboard() {
     if (savedProducts.length > 0) {
       setProducts(savedProducts);
     } else {
-      // Produtos padrão iniciais
       const initial = tenantId === 'lkd-imports' ? [
         { id: '1', name: 'Fone de Ouvido Bluetooth Pro', price: 149.90, image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', category: 'Eletrônicos' },
         { id: '2', name: 'Smartwatch Esportivo 4K', price: 299.90, image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80', category: 'Eletrônicos' }
@@ -59,7 +58,6 @@ export default function AdminDashboard() {
     const configData = { name: storeName, about: storeAbout, whatsapp: storeWhatsapp, color: storeColor };
     localStorage.setItem(`store_config_${tenantId}`, JSON.stringify(configData));
     
-    // Atualiza também na lista global de tenants para refletir no Super Admin
     const tenants = JSON.parse(localStorage.getItem('saas_tenants') || '[]');
     const updated = tenants.map((t: any) => t.id === tenantId ? { ...t, name: storeName } : t);
     localStorage.setItem('saas_tenants', JSON.stringify(updated));
@@ -138,7 +136,27 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <input type="text" placeholder="Nome do Produto" value={name} onChange={e => setName(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-emerald-500" required />
                 <input type="number" step="0.01" placeholder="Preço (R$)" value={price} onChange={e => setPrice(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-emerald-500" required />
-                <input type="text" placeholder="URL da Imagem" value={image} onChange={e => setImage(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-emerald-500" />
+                
+                {/* Seletor de arquivo direto do PC/Celular */}
+                <div className="flex flex-col justify-center bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-xs text-slate-400">
+                  <span className="text-[10px] font-bold uppercase text-slate-500 mb-1">Foto do Produto</span>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setImage(reader.result as string);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }} 
+                    className="text-[11px] text-slate-300 file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-bold file:bg-emerald-500/10 file:text-emerald-400 hover:file:bg-emerald-500/20 cursor-pointer"
+                  />
+                </div>
+
                 <input type="text" placeholder="Categoria" value={category} onChange={e => setCategory(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-emerald-500" />
               </div>
               <button type="submit" className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all">Salvar Produto</button>
@@ -205,7 +223,7 @@ export default function AdminDashboard() {
           </form>
         )}
 
-        {/* OUTRAS ABAS SIMPLIFICADAS */}
+        {/* OUTRAS ABAS */}
         {activeTab === 'orders' && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl text-center space-y-2">
             <ShoppingBag className="w-8 h-8 text-slate-600 mx-auto" />
