@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, TrendingUp, CheckCircle2, BarChart3, DollarSign, HelpCircle, ChevronDown } from 'lucide-react';
+import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, TrendingUp, CheckCircle2, BarChart3, DollarSign, HelpCircle, ChevronDown, Download } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'products' | 'coupons' | 'orders' | 'analytics' | 'help' | 'settings'>('products');
@@ -27,8 +27,6 @@ export default function AdminDashboard() {
 
   const [orders, setOrders] = useState<any[]>([]);
   const [abandonedLeads, setAbandonedLeads] = useState<any[]>([]);
-
-  // Estado para acordeão do FAQ de Ajuda
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const showToast = (msg: string) => {
@@ -74,7 +72,8 @@ export default function AdminDashboard() {
       setOrders(savedOrders);
     } else {
       const initialOrders = [
-        { id: 'ORD-101', customer: 'Mariana Souza', total: 149.90, status: 'Aguardando Pagamento', date: '2026-07-22' }
+        { id: 'ORD-101', customer: 'Mariana Souza', total: 149.90, status: 'Aguardando Pagamento', date: '2026-07-22' },
+        { id: 'ORD-102', customer: 'Carlos Silva', total: 299.90, status: 'Pago / Separando', date: '2026-07-23' }
       ];
       setOrders(initialOrders);
       localStorage.setItem(`store_orders_${tenantId}`, JSON.stringify(initialOrders));
@@ -142,16 +141,37 @@ export default function AdminDashboard() {
     showToast('Cupom removido!');
   };
 
+  // Função para exportar pedidos em arquivo CSV
+  const handleExportCSV = () => {
+    if (orders.length === 0) {
+      showToast('Nenhum pedido para exportar.');
+      return;
+    }
+
+    let csvContent = "data:text/csv;charset=utf-8,ID do Pedido,Cliente,Data,Status,Total (R$)\n";
+    orders.forEach(ord => {
+      csvContent += `${ord.id},"${ord.customer}",${ord.date},"${ord.status}",${ord.total}\n`;
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `relatorio_vendas_${tenantId}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    showToast('Relatório CSV exportado com sucesso!');
+  };
+
   const formatBRL = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   const totalRevenue = orders.reduce((acc, curr) => acc + (curr.total || 0), 0);
   const averageTicket = orders.length > 0 ? totalRevenue / orders.length : 0;
 
   const faqList = [
-    { q: 'Como faço para divulgar minha vitrine?', a: 'Basta copiar o link da sua vitrine clicando em "Ver Minha Vitrine ↗" no topo do painel e colar na sua bio do Instagram, grupos de WhatsApp ou campanhas.' },
-    { q: 'Como os clientes me pagam?', a: 'Os pedidos gerados na vitrine vão direto para o seu WhatsApp com todos os itens, valores e dados do cliente para você combinar o Pix ou envio.' },
-    { q: 'Como funcionam os cupons de desconto?', a: 'Na aba Cupons, você define um código (ex: PROMO10) e a porcentagem de desconto. O cliente pode digitar esse código na gaveta do carrinho na vitrine.' },
-    { q: 'O estoque atualiza sozinho?', a: 'Sim! Cada cadastro define a quantidade inicial disponível para controle interno e aviso de ruptura.' }
+    { q: 'Como faço para divulgar minha vitrine?', a: 'Basta copiar o link da sua vitrine clicando em "Ver Minha Vitrine ↗" no topo do painel.' },
+    { q: 'Como funcionam os relatórios?', a: 'Agora você pode exportar o extrato completo das suas vendas em CSV direto para o Excel.' }
   ];
 
   return (
@@ -169,7 +189,7 @@ export default function AdminDashboard() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 border border-slate-800 p-6 rounded-3xl">
           <div>
             <h1 className="text-2xl font-black text-white">Painel da Loja ({storeName})</h1>
-            <p className="text-xs text-slate-400">Gestão completa de vendas, catálogo e suporte.</p>
+            <p className="text-xs text-slate-400">Gestão de vendas, catálogo e exportação de dados.</p>
           </div>
           <a href={`#/loja/${tenantId}`} target="_blank" rel="noopener noreferrer" className="px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 font-black text-xs rounded-xl transition-all">
             Ver Minha Vitrine ↗
@@ -191,7 +211,7 @@ export default function AdminDashboard() {
             <BarChart3 className="w-4 h-4" /> Relatórios
           </button>
           <button onClick={() => setActiveTab('help')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'help' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 text-slate-400'}`}>
-            <HelpCircle className="w-4 h-4" /> Ajuda & Suporte
+            <HelpCircle className="w-4 h-4" /> Ajuda
           </button>
           <button onClick={() => setActiveTab('settings')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'settings' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 text-slate-400'}`}>
             <Settings className="w-4 h-4" /> Configurações
@@ -265,7 +285,7 @@ export default function AdminDashboard() {
         {activeTab === 'orders' && (
           <div className="space-y-4">
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl flex justify-between items-center">
-              <h3 className="text-base font-black text-white">Pedidos Recebidos da Vitrine</h3>
+              <h3 className="text-base font-black text-white">Pedidos Recebidos</h3>
               <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl text-xs font-bold">{orders.length} Pedido(s)</span>
             </div>
             <div className="grid grid-cols-1 gap-4">
@@ -283,9 +303,22 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* RELATÓRIOS */}
+        {/* RELATÓRIOS & EXPORTAÇÃO CSV */}
         {activeTab === 'analytics' && (
           <div className="space-y-6">
+            <div className="flex justify-between items-center bg-slate-900 border border-slate-800 p-6 rounded-3xl">
+              <div>
+                <h3 className="text-base font-black text-white">Relatórios e Faturamento</h3>
+                <p className="text-xs text-slate-400">Acompanhe as métricas e exporte seus relatórios.</p>
+              </div>
+              <button 
+                onClick={handleExportCSV}
+                className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+              >
+                <Download className="w-4 h-4" /> Exportar Vendas (CSV)
+              </button>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-2">
                 <span className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1"><DollarSign className="w-4 h-4 text-emerald-400" /> Faturamento Total</span>
@@ -303,31 +336,18 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* AJUDA & SUPORTE (FAQ) */}
+        {/* AJUDA */}
         {activeTab === 'help' && (
           <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-3xl space-y-6">
-            <div>
-              <h3 className="text-base font-black text-white flex items-center gap-2">
-                <HelpCircle className="w-5 h-5 text-emerald-400" /> Central de Ajuda do Lojista
-              </h3>
-              <p className="text-xs text-slate-400 mt-1">Tire suas dúvidas rapidamente sobre como extrair o máximo da sua vitrine.</p>
-            </div>
-
+            <h3 className="text-base font-black text-white flex items-center gap-2"><HelpCircle className="w-5 h-5 text-emerald-400" /> Central de Ajuda</h3>
             <div className="space-y-3">
               {faqList.map((item, idx) => (
                 <div key={idx} className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden">
-                  <button 
-                    onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                    className="w-full p-4 text-left flex justify-between items-center text-xs font-bold text-white hover:text-emerald-400 transition-colors"
-                  >
+                  <button onClick={() => setOpenFaq(openFaq === idx ? null : idx)} className="w-full p-4 text-left flex justify-between items-center text-xs font-bold text-white">
                     <span>{item.q}</span>
-                    <ChevronDown className={`w-4 h-4 transition-transform ${openFaq === idx ? 'rotate-180 text-emerald-400' : 'text-slate-500'}`} />
+                    <ChevronDown className="w-4 h-4 text-slate-500" />
                   </button>
-                  {openFaq === idx && (
-                    <div className="p-4 pt-0 text-xs text-slate-400 border-t border-slate-900 leading-relaxed">
-                      {item.a}
-                    </div>
-                  )}
+                  {openFaq === idx && <div className="p-4 pt-0 text-xs text-slate-400 border-t border-slate-900">{item.a}</div>}
                 </div>
               ))}
             </div>
