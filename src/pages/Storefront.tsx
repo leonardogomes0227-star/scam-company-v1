@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Star, Filter, Trash2, CheckCircle2, MessageSquare } from 'lucide-react';
+import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard } from 'lucide-react';
 
 export default function Storefront() {
   const [storeConfig, setStoreConfig] = useState({ name: 'Minha Loja', about: 'Seja bem-vindo!', whatsapp: '5567999999999', color: '#10b981' });
@@ -8,19 +8,19 @@ export default function Storefront() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Todos');
 
-  // Estados de Cupom no Carrinho
+  // Estados de Cupom
   const [coupons, setCoupons] = useState<any[]>([]);
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [couponError, setCouponError] = useState('');
 
-  // Estados de Checkout do Cliente
+  // Estados de Checkout e Pagamento
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientAddress, setClientAddress] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('Pix'); // Pix, Cartão ou Dinheiro
 
   useEffect(() => {
-    // Carrega configurações e produtos da loja
     const config = JSON.parse(localStorage.getItem('store_config_lkd-imports') || '{}');
     if (config.name) setStoreConfig(config);
 
@@ -38,7 +38,6 @@ export default function Storefront() {
       ]);
     }
 
-    // Carrega cupons criados pelo lojista
     const savedCoupons = JSON.parse(localStorage.getItem('store_coupons_lkd-imports') || '[]');
     setCoupons(savedCoupons);
   }, []);
@@ -77,7 +76,6 @@ export default function Storefront() {
     e.preventDefault();
     if (!clientName || !clientPhone || cart.length === 0) return;
 
-    // Registra lead de carrinho/pedido para o lojista
     const newOrder = {
       id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
       customer: clientName,
@@ -90,10 +88,10 @@ export default function Storefront() {
     const existingOrders = JSON.parse(localStorage.getItem('store_orders_lkd-imports') || '[]');
     localStorage.setItem('store_orders_lkd-imports', JSON.stringify([newOrder, ...existingOrders]));
 
-    // Monta mensagem do WhatsApp
     let msg = `🛒 *NOVO PEDIDO - ${storeConfig.name}*\n\n` +
       `👤 *Cliente:* ${clientName}\n` +
-      `📍 *Endereço:* ${clientAddress}\n\n` +
+      `📍 *Endereço:* ${clientAddress}\n` +
+      `💳 *Forma de Pagamento:* ${paymentMethod}\n\n` +
       `📦 *Itens do Pedido:*\n`;
 
     cart.forEach(item => {
@@ -101,10 +99,10 @@ export default function Storefront() {
     });
 
     if (appliedCoupon) {
-      msg += `\n🎟 *Cupom Aplicado:* ${appliedCoupon.code} (-${appliedCoupon.discount}%)\n`;
+      msg += `\n🎟 *Cupom:* ${appliedCoupon.code} (-${appliedCoupon.discount}%)\n`;
     }
 
-    msg += `\n💰 *Total a Pagar:* *${formatBRL(total)}*`;
+    msg += `\n💰 *Total:* *${formatBRL(total)}*`;
 
     const whatsNumber = storeConfig.whatsapp || '5567999999999';
     const url = `https://wa.me/${whatsNumber}?text=${encodeURIComponent(msg)}`;
@@ -176,7 +174,7 @@ export default function Storefront() {
         ))}
       </div>
 
-      {/* Gaveta do Carrinho / Checkout */}
+      {/* Gaveta do Carrinho / Checkout com Pagamento */}
       {isCartOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end">
           <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 h-full p-6 flex flex-col justify-between overflow-y-auto">
@@ -193,7 +191,7 @@ export default function Storefront() {
                 <div className="text-center py-12 text-xs text-slate-500">Seu carrinho está vazio.</div>
               ) : (
                 <div className="space-y-4">
-                  <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
+                  <div className="space-y-3 max-h-40 overflow-y-auto pr-1">
                     {cart.map((item, idx) => (
                       <div key={idx} className="flex justify-between items-center bg-slate-950 border border-slate-800 p-3 rounded-xl">
                         <div>
@@ -205,7 +203,7 @@ export default function Storefront() {
                     ))}
                   </div>
 
-                  {/* Input de Cupom */}
+                  {/* Cupom */}
                   <form onSubmit={handleApplyCoupon} className="flex gap-2">
                     <input type="text" placeholder="Cupom de desconto" value={couponInput} onChange={e => setCouponInput(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white uppercase outline-none focus:border-emerald-500" />
                     <button type="submit" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl">Aplicar</button>
@@ -213,23 +211,45 @@ export default function Storefront() {
                   {couponError && <p className="text-[10px] text-red-400 font-bold">{couponError}</p>}
                   {appliedCoupon && <p className="text-[10px] text-emerald-400 font-bold">✔ Cupom {appliedCoupon.code} aplicado (-{appliedCoupon.discount}%)</p>}
 
-                  {/* Formulário de Dados para o WhatsApp */}
-                  <form onSubmit={handleCheckoutWhatsApp} className="space-y-3 pt-4 border-t border-slate-800">
-                    <h3 className="text-xs font-bold text-slate-300 uppercase">Seus Dados para Entrega</h3>
+                  {/* Dados de Entrega */}
+                  <div className="space-y-3 pt-3 border-t border-slate-800">
+                    <h3 className="text-xs font-bold text-slate-300 uppercase">Dados para Entrega</h3>
                     <input type="text" placeholder="Seu Nome Completo" value={clientName} onChange={e => setClientName(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required />
                     <input type="text" placeholder="Seu WhatsApp (com DDD)" value={clientPhone} onChange={e => setClientPhone(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required />
-                    <input type="text" placeholder="Endereço de Entrega / Bairro" value={clientAddress} onChange={e => setClientAddress(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required />
-                  </form>
+                    <input type="text" placeholder="Endereço / Bairro" value={clientAddress} onChange={e => setClientAddress(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required />
+                  </div>
+
+                  {/* Seleção de Forma de Pagamento */}
+                  <div className="space-y-2 pt-2">
+                    <label className="text-xs font-bold text-slate-300 uppercase flex items-center gap-1.5"><CreditCard className="w-3.5 h-3.5 text-emerald-400" /> Forma de Pagamento</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {['Pix', 'Cartão', 'Dinheiro'].map((method) => (
+                        <button
+                          key={method}
+                          type="button"
+                          onClick={() => setPaymentMethod(method)}
+                          className={`py-2.5 rounded-xl text-xs font-bold transition-all border ${
+                            paymentMethod === method 
+                              ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md' 
+                              : 'bg-slate-950 border-slate-800 text-slate-300 hover:border-slate-700'
+                          }`}
+                        >
+                          {method}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                 </div>
               )}
             </div>
 
-            {/* Rodapé do Carrinho com Totais */}
+            {/* Rodapé Totais */}
             {cart.length > 0 && (
               <div className="space-y-4 pt-4 border-t border-slate-800">
                 <div className="space-y-1 text-xs">
                   <div className="flex justify-between text-slate-400"><span>Subtotal:</span> <span>{formatBRL(subtotal)}</span></div>
-                  {appliedCoupon && <div className="flex justify-between text-emerald-400"><span>Desconto ({appliedCoupon.discount}%):</span> <span>-{formatBRL(discountAmount)}</span></div>}
+                  {appliedCoupon && <div className="flex justify-between text-emerald-400"><span>Desconto:</span> <span>-{formatBRL(discountAmount)}</span></div>}
                   <div className="flex justify-between text-sm font-black text-white pt-1 border-t border-slate-800"><span>Total:</span> <span className="text-emerald-400">{formatBRL(total)}</span></div>
                 </div>
 
@@ -237,7 +257,7 @@ export default function Storefront() {
                   onClick={handleCheckoutWhatsApp}
                   className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
                 >
-                  <MessageSquare className="w-4 h-4" /> Finalizar Pedido via WhatsApp ↗
+                  <MessageSquare className="w-4 h-4" /> Enviar Pedido via WhatsApp ↗
                 </button>
               </div>
             )}
