@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard, Search, Eye, Sparkles, Truck, Clock, Heart, Zap, MapPin } from 'lucide-react';
+import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard, Search, Eye, Sparkles, Truck, Clock, Heart, Zap, MapPin, Send } from 'lucide-react';
 
 export default function Storefront() {
   const [storeConfig, setStoreConfig] = useState({ name: 'Minha Loja', about: 'Seja bem-vindo!', whatsapp: '5567999999999', color: '#10b981' });
@@ -11,10 +11,13 @@ export default function Storefront() {
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Estado para animar o botão do carrinho ao adicionar item
   const [cartPulse, setCartPulse] = useState(false);
-
   const [activeProductModal, setActiveProductModal] = useState<any>(null);
+
+  // Estados para nova avaliação dentro do modal do produto
+  const [reviewName, setReviewName] = useState('');
+  const [reviewComment, setReviewComment] = useState('');
+  const [reviewRating, setReviewRating] = useState(5);
 
   // Estados de Cupom
   const [coupons, setCoupons] = useState<any[]>([]);
@@ -58,13 +61,26 @@ export default function Storefront() {
       const prodsWithDetails = prods.map((p: any) => ({
         ...p,
         description: p.description || 'Produto de alta qualidade, original e com garantia de entrega rápida.',
-        rating: 4.8,
-        reviewsCount: Math.floor(Math.random() * 25) + 5
+        rating: p.rating || 4.8,
+        reviewsCount: p.reviewsCount || 12,
+        customerReviews: p.customerReviews || [
+          { name: 'Mariana S.', comment: 'Excelente produto, chegou super rápido!', rating: 5 }
+        ]
       }));
       setProducts(prodsWithDetails);
     } else {
       setProducts([
-        { id: '1', name: 'Fone Bluetooth Pro', price: 149.90, category: 'Eletrônicos', description: 'Fone sem fio de alta fidelidade.', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', rating: 4.9, reviewsCount: 12 }
+        { 
+          id: '1', 
+          name: 'Fone Bluetooth Pro', 
+          price: 149.90, 
+          category: 'Eletrônicos', 
+          description: 'Fone sem fio de alta fidelidade.', 
+          image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', 
+          rating: 4.9, 
+          reviewsCount: 12,
+          customerReviews: [{ name: 'Carlos E.', comment: 'Muito bom, recomendo!', rating: 5 }]
+        }
       ]);
     }
 
@@ -98,11 +114,8 @@ export default function Storefront() {
   const addToCart = (product: any) => {
     setCart([...cart, product]);
     setActiveProductModal(null);
-    
-    // Dispara animação visual no carrinho
     setCartPulse(true);
     setTimeout(() => setCartPulse(false), 800);
-
     setIsCartOpen(true);
   };
 
@@ -110,6 +123,39 @@ export default function Storefront() {
     const updated = [...cart];
     updated.splice(index, 1);
     setCart(updated);
+  };
+
+  const handleAddReview = (e: React.FormEvent, productId: string) => {
+    e.preventDefault();
+    if (!reviewName || !reviewComment) return;
+
+    const newRev = { name: reviewName, comment: reviewComment, rating: reviewRating };
+    
+    const updatedProducts = products.map(p => {
+      if (p.id === productId) {
+        const currentReviews = p.customerReviews || [];
+        const newReviewsList = [newRev, ...currentReviews];
+        const newRating = Number((newReviewsList.reduce((acc, r) => acc + r.rating, 0) / newReviewsList.length).toFixed(1));
+        
+        const updatedProd = {
+          ...p,
+          rating: newRating,
+          reviewsCount: newReviewsList.length,
+          customerReviews: newReviewsList
+        };
+
+        if (activeProductModal && activeProductModal.id === productId) {
+          setActiveProductModal(updatedProd);
+        }
+        return updatedProd;
+      }
+      return p;
+    });
+
+    setProducts(updatedProducts);
+    localStorage.setItem('store_products_lkd-imports', JSON.stringify(updatedProducts));
+    setReviewName('');
+    setReviewComment('');
   };
 
   const handleApplyCoupon = (e: React.FormEvent) => {
@@ -157,7 +203,7 @@ export default function Storefront() {
     });
 
     if (appliedCoupon) {
-      msg += `\n🎟 *Cupom:* ${appliedCoupon.code} (-${appliedCoupon.discount}%)\n`;
+      msg += `\n🎟 *Cupom:* ${appliedCoupon.code} (-{appliedCoupon.discount}%)\n`;
     }
 
     msg += `\n💰 *Total Geral:* *${formatBRL(total)}*`;
@@ -210,7 +256,6 @@ export default function Storefront() {
             )}
           </button>
 
-          {/* Botão Carrinho com Efeito Pulse */}
           <button 
             onClick={() => setIsCartOpen(true)}
             className={`relative px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20 ${cartPulse ? 'scale-110 ring-4 ring-emerald-400/50' : ''}`}
@@ -384,22 +429,69 @@ export default function Storefront() {
         </div>
       )}
 
-      {/* Modal Detalhes */}
+      {/* Modal Detalhes do Produto com Envio de Avaliações */}
       {activeProductModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl space-y-4 p-6 relative">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 relative space-y-6">
             <button onClick={() => setActiveProductModal(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white font-bold text-xs bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">✕ Fechar</button>
-            <img src={activeProductModal.image} alt={activeProductModal.name} className="w-full h-64 object-cover rounded-2xl bg-slate-950" />
-            <div className="space-y-2">
-              <span className="text-[10px] font-bold text-emerald-400 uppercase">{activeProductModal.category}</span>
-              <h2 className="text-lg font-black text-white">{activeProductModal.name}</h2>
-              <div className="flex items-center gap-1 text-amber-400">
-                <Star className="w-3.5 h-3.5 fill-current" />
-                <span className="text-xs font-black text-white ml-1">{activeProductModal.rating}</span>
-                <span className="text-[10px] text-slate-400">({activeProductModal.reviewsCount} avaliações)</span>
+            
+            <div className="space-y-3">
+              <img src={activeProductModal.image} alt={activeProductModal.name} className="w-full h-56 object-cover rounded-2xl bg-slate-950" />
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-emerald-400 uppercase">{activeProductModal.category}</span>
+                <h2 className="text-lg font-black text-white">{activeProductModal.name}</h2>
+                <div className="flex items-center gap-1 text-amber-400">
+                  <Star className="w-3.5 h-3.5 fill-current" />
+                  <span className="text-xs font-black text-white ml-1">{activeProductModal.rating}</span>
+                  <span className="text-[10px] text-slate-400">({activeProductModal.reviewsCount} avaliações)</span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed pt-1">{activeProductModal.description}</p>
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed pt-2">{activeProductModal.description}</p>
             </div>
+
+            {/* Lista de Avaliações */}
+            <div className="space-y-3 pt-3 border-t border-slate-800">
+              <h3 className="text-xs font-bold text-white uppercase">Avaliações de Clientes</h3>
+              <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                {activeProductModal.customerReviews && activeProductModal.customerReviews.length > 0 ? (
+                  activeProductModal.customerReviews.map((rev: any, i: number) => (
+                    <div key={i} className="bg-slate-950 border border-slate-800 p-3 rounded-xl space-y-1 text-xs">
+                      <div className="flex justify-between items-center">
+                        <span className="font-bold text-white">{rev.name}</span>
+                        <div className="flex text-amber-400">
+                          {Array.from({ length: rev.rating }).map((_, idx) => (
+                            <Star key={idx} className="w-3 h-3 fill-current" />
+                          ))}
+                        </div>
+                      </div>
+                      <p className="text-slate-400 text-[11px]">{rev.comment}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-500">Seja o primeiro a avaliar este produto!</p>
+                )}
+              </div>
+
+              {/* Formulário de Enviar Avaliação */}
+              <form onSubmit={(e) => handleAddReview(e, activeProductModal.id)} className="space-y-3 pt-2">
+                <h4 className="text-[11px] font-bold text-emerald-400 uppercase">Deixe sua avaliação</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="text" placeholder="Seu Nome" value={reviewName} onChange={e => setReviewName(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none" required />
+                  <select value={reviewRating} onChange={e => setReviewRating(Number(e.target.value))} className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none">
+                    <option value={5}>⭐⭐⭐⭐⭐ (5/5)</option>
+                    <option value={4}>⭐⭐⭐⭐ (4/5)</option>
+                    <option value={3}>⭐⭐⭐ (3/5)</option>
+                    <option value={2}>⭐⭐ (2/5)</option>
+                    <option value={1}>⭐ (1/5)</option>
+                  </select>
+                </div>
+                <textarea placeholder="O que você achou do produto?" value={reviewComment} onChange={e => setReviewComment(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white outline-none h-16 resize-none" required />
+                <button type="submit" className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2">
+                  <Send className="w-3.5 h-3.5 text-emerald-400" /> Enviar Avaliação
+                </button>
+              </form>
+            </div>
+
             <div className="flex items-center justify-between pt-4 border-t border-slate-800">
               <span className="text-base font-black text-emerald-400">{formatBRL(activeProductModal.price)}</span>
               <button onClick={() => addToCart(activeProductModal)} className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all shadow-lg">Adicionar ao Carrinho 🛒</button>
