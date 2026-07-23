@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard, Search, Eye, Sparkles, Truck, Clock, Heart, Zap } from 'lucide-react';
+import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard, Search, Eye, Sparkles, Truck, Clock, Heart, Zap, MapPin } from 'lucide-react';
 
 export default function Storefront() {
   const [storeConfig, setStoreConfig] = useState({ name: 'Minha Loja', about: 'Seja bem-vindo!', whatsapp: '5567999999999', color: '#10b981' });
@@ -19,10 +19,11 @@ export default function Storefront() {
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [couponError, setCouponError] = useState('');
 
-  // Estados de Checkout
+  // Estados de Checkout e Frete
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientAddress, setClientAddress] = useState('');
+  const [shippingFee, setShippingFee] = useState<number>(10.00); // Frete padrão
   const [paymentMethod, setPaymentMethod] = useState('Pix');
 
   // Estados de Rastreio
@@ -30,19 +31,15 @@ export default function Storefront() {
   const [trackedOrderResult, setTrackedOrderResult] = useState<any>(null);
   const [trackingSearched, setTrackingSearched] = useState(false);
 
-  // Cronômetro Regressivo (Oferta Relâmpago)
+  // Cronômetro Regressivo
   const [timeLeft, setTimeLeft] = useState({ hours: 4, minutes: 35, seconds: 12 });
 
   useEffect(() => {
     const timer = setInterval(() => {
       setTimeLeft(prev => {
-        if (prev.seconds > 0) {
-          return { ...prev, seconds: prev.seconds - 1 };
-        } else if (prev.minutes > 0) {
-          return { ...prev, minutes: 59, seconds: 59 };
-        } else if (prev.hours > 0) {
-          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        }
+        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
+        if (prev.minutes > 0) return { ...prev, minutes: 59, seconds: 59 };
+        if (prev.hours > 0) return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
         return { hours: 4, minutes: 0, seconds: 0 };
       });
     }, 1000);
@@ -121,7 +118,7 @@ export default function Storefront() {
 
   const subtotal = cart.reduce((acc, curr) => acc + curr.price, 0);
   const discountAmount = appliedCoupon ? (subtotal * appliedCoupon.discount) / 100 : 0;
-  const total = subtotal - discountAmount;
+  const total = subtotal - discountAmount + shippingFee;
 
   const handleCheckoutWhatsApp = (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,6 +140,7 @@ export default function Storefront() {
     let msg = `🛒 *NOVO PEDIDO (${orderId}) - ${storeConfig.name}*\n\n` +
       `👤 *Cliente:* ${clientName}\n` +
       `📍 *Endereço:* ${clientAddress}\n` +
+      `🚚 *Frete:* ${formatBRL(shippingFee)}\n` +
       `💳 *Pagamento:* ${paymentMethod}\n\n` +
       `📦 *Itens:*\n`;
 
@@ -151,10 +149,10 @@ export default function Storefront() {
     });
 
     if (appliedCoupon) {
-      msg += `\n🎟 *Cupom:* ${appliedCoupon.code} (-${appliedCoupon.discount}%)\n`;
+      msg += `\n🎟 *Cupom:* ${appliedCoupon.code} (-{appliedCoupon.discount}%)\n`;
     }
 
-    msg += `\n💰 *Total:* *${formatBRL(total)}*`;
+    msg += `\n💰 *Total Geral:* *${formatBRL(total)}*`;
 
     const whatsNumber = storeConfig.whatsapp || '5567999999999';
     const url = `https://wa.me/${whatsNumber}?text=${encodeURIComponent(msg)}`;
@@ -175,7 +173,7 @@ export default function Storefront() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-24">
       
-      {/* Banner de Oferta Relâmpago com Cronômetro */}
+      {/* Banner de Oferta Relâmpago */}
       <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 py-2.5 px-4 text-center font-black text-xs flex flex-wrap items-center justify-center gap-3 shadow-lg">
         <span className="flex items-center gap-1"><Zap className="w-4 h-4 fill-current" /> OFERTA RELÂMPAGO DA SEMANA:</span>
         <div className="bg-slate-950 text-white px-2.5 py-1 rounded-xl text-[11px] font-mono tracking-widest shadow-inner">
@@ -218,7 +216,7 @@ export default function Storefront() {
         </div>
       </div>
 
-      {/* Rastreio de Pedido */}
+      {/* Rastreio */}
       <div className="max-w-4xl mx-auto px-4 pt-6">
         <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl space-y-3 shadow-lg">
           <h3 className="text-xs font-bold text-white flex items-center gap-2">
@@ -340,7 +338,7 @@ export default function Storefront() {
         )}
       </div>
 
-      {/* Modal de Favoritos */}
+      {/* Modal Favoritos */}
       {isWishlistOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end">
           <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 h-full p-6 flex flex-col justify-between overflow-y-auto">
@@ -377,7 +375,7 @@ export default function Storefront() {
         </div>
       )}
 
-      {/* Modal Detalhes do Produto */}
+      {/* Modal Detalhes */}
       {activeProductModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl space-y-4 p-6 relative">
@@ -401,7 +399,7 @@ export default function Storefront() {
         </div>
       )}
 
-      {/* Gaveta do Carrinho / Checkout */}
+      {/* Gaveta do Carrinho / Checkout com Frete */}
       {isCartOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end">
           <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 h-full p-6 flex flex-col justify-between overflow-y-auto">
@@ -417,7 +415,7 @@ export default function Storefront() {
                 <div className="text-center py-12 text-xs text-slate-500">Seu carrinho está vazio.</div>
               ) : (
                 <div className="space-y-4">
-                  <div className="space-y-3 max-h-40 overflow-y-auto pr-1">
+                  <div className="space-y-3 max-h-36 overflow-y-auto pr-1">
                     {cart.map((item, idx) => (
                       <div key={idx} className="flex justify-between items-center bg-slate-950 border border-slate-800 p-3 rounded-xl">
                         <div>
@@ -429,6 +427,7 @@ export default function Storefront() {
                     ))}
                   </div>
 
+                  {/* Cupom */}
                   <form onSubmit={handleApplyCoupon} className="flex gap-2">
                     <input type="text" placeholder="Cupom de desconto" value={couponInput} onChange={e => setCouponInput(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white uppercase outline-none focus:border-emerald-500" />
                     <button type="submit" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl">Aplicar</button>
@@ -436,6 +435,7 @@ export default function Storefront() {
                   {couponError && <p className="text-[10px] text-red-400 font-bold">{couponError}</p>}
                   {appliedCoupon && <p className="text-[10px] text-emerald-400 font-bold">✔ Cupom {appliedCoupon.code} aplicado (-{appliedCoupon.discount}%)</p>}
 
+                  {/* Dados de Entrega */}
                   <div className="space-y-3 pt-3 border-t border-slate-800">
                     <h3 className="text-xs font-bold text-slate-300 uppercase">Dados para Entrega</h3>
                     <input type="text" placeholder="Seu Nome Completo" value={clientName} onChange={e => setClientName(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required />
@@ -443,7 +443,28 @@ export default function Storefront() {
                     <input type="text" placeholder="Endereço / Bairro" value={clientAddress} onChange={e => setClientAddress(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required />
                   </div>
 
-                  <div className="space-y-2 pt-2">
+                  {/* Seleção de Região / Frete */}
+                  <div className="space-y-2 pt-1">
+                    <label className="text-xs font-bold text-slate-300 uppercase flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-emerald-400" /> Região de Entrega (Frete)</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { label: 'Centro / Local (R$ 10)', fee: 10.00 },
+                        { label: 'Bairros Distantes (R$ 18)', fee: 18.00 }
+                      ].map((reg, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setShippingFee(reg.fee)}
+                          className={`py-2 px-3 rounded-xl text-[11px] font-bold transition-all border text-left ${shippingFee === reg.fee ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md' : 'bg-slate-950 border-slate-800 text-slate-300'}`}
+                        >
+                          {reg.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Pagamento */}
+                  <div className="space-y-2 pt-1">
                     <label className="text-xs font-bold text-slate-300 uppercase flex items-center gap-1.5"><CreditCard className="w-3.5 h-3.5 text-emerald-400" /> Forma de Pagamento</label>
                     <div className="grid grid-cols-3 gap-2">
                       {['Pix', 'Cartão', 'Dinheiro'].map((method) => (
@@ -467,6 +488,7 @@ export default function Storefront() {
                 <div className="space-y-1 text-xs">
                   <div className="flex justify-between text-slate-400"><span>Subtotal:</span> <span>{formatBRL(subtotal)}</span></div>
                   {appliedCoupon && <div className="flex justify-between text-emerald-400"><span>Desconto:</span> <span>-{formatBRL(discountAmount)}</span></div>}
+                  <div className="flex justify-between text-slate-400"><span>Frete:</span> <span>{formatBRL(shippingFee)}</span></div>
                   <div className="flex justify-between text-sm font-black text-white pt-1 border-t border-slate-800"><span>Total:</span> <span className="text-emerald-400">{formatBRL(total)}</span></div>
                 </div>
                 <button onClick={handleCheckoutWhatsApp} className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20">
