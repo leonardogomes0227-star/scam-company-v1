@@ -11,6 +11,9 @@ export default function Storefront() {
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Estado para animar o botão do carrinho ao adicionar item
+  const [cartPulse, setCartPulse] = useState(false);
+
   const [activeProductModal, setActiveProductModal] = useState<any>(null);
 
   // Estados de Cupom
@@ -23,7 +26,7 @@ export default function Storefront() {
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientAddress, setClientAddress] = useState('');
-  const [shippingFee, setShippingFee] = useState<number>(10.00); // Frete padrão
+  const [shippingFee, setShippingFee] = useState<number>(10.00);
   const [paymentMethod, setPaymentMethod] = useState('Pix');
 
   // Estados de Rastreio
@@ -95,6 +98,11 @@ export default function Storefront() {
   const addToCart = (product: any) => {
     setCart([...cart, product]);
     setActiveProductModal(null);
+    
+    // Dispara animação visual no carrinho
+    setCartPulse(true);
+    setTimeout(() => setCartPulse(false), 800);
+
     setIsCartOpen(true);
   };
 
@@ -149,7 +157,7 @@ export default function Storefront() {
     });
 
     if (appliedCoupon) {
-      msg += `\n🎟 *Cupom:* ${appliedCoupon.code} (-{appliedCoupon.discount}%)\n`;
+      msg += `\n🎟 *Cupom:* ${appliedCoupon.code} (-${appliedCoupon.discount}%)\n`;
     }
 
     msg += `\n💰 *Total Geral:* *${formatBRL(total)}*`;
@@ -173,7 +181,7 @@ export default function Storefront() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-24">
       
-      {/* Banner de Oferta Relâmpago */}
+      {/* Banner Oferta Relâmpago */}
       <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 py-2.5 px-4 text-center font-black text-xs flex flex-wrap items-center justify-center gap-3 shadow-lg">
         <span className="flex items-center gap-1"><Zap className="w-4 h-4 fill-current" /> OFERTA RELÂMPAGO DA SEMANA:</span>
         <div className="bg-slate-950 text-white px-2.5 py-1 rounded-xl text-[11px] font-mono tracking-widest shadow-inner">
@@ -202,9 +210,10 @@ export default function Storefront() {
             )}
           </button>
 
+          {/* Botão Carrinho com Efeito Pulse */}
           <button 
             onClick={() => setIsCartOpen(true)}
-            className="relative px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20"
+            className={`relative px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20 ${cartPulse ? 'scale-110 ring-4 ring-emerald-400/50' : ''}`}
           >
             <ShoppingBag className="w-4 h-4" /> Carrinho
             {cart.length > 0 && (
@@ -399,7 +408,7 @@ export default function Storefront() {
         </div>
       )}
 
-      {/* Gaveta do Carrinho / Checkout com Frete */}
+      {/* Gaveta do Carrinho / Checkout */}
       {isCartOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end">
           <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 h-full p-6 flex flex-col justify-between overflow-y-auto">
@@ -427,7 +436,6 @@ export default function Storefront() {
                     ))}
                   </div>
 
-                  {/* Cupom */}
                   <form onSubmit={handleApplyCoupon} className="flex gap-2">
                     <input type="text" placeholder="Cupom de desconto" value={couponInput} onChange={e => setCouponInput(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white uppercase outline-none focus:border-emerald-500" />
                     <button type="submit" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl">Aplicar</button>
@@ -435,7 +443,6 @@ export default function Storefront() {
                   {couponError && <p className="text-[10px] text-red-400 font-bold">{couponError}</p>}
                   {appliedCoupon && <p className="text-[10px] text-emerald-400 font-bold">✔ Cupom {appliedCoupon.code} aplicado (-{appliedCoupon.discount}%)</p>}
 
-                  {/* Dados de Entrega */}
                   <div className="space-y-3 pt-3 border-t border-slate-800">
                     <h3 className="text-xs font-bold text-slate-300 uppercase">Dados para Entrega</h3>
                     <input type="text" placeholder="Seu Nome Completo" value={clientName} onChange={e => setClientName(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required />
@@ -443,7 +450,6 @@ export default function Storefront() {
                     <input type="text" placeholder="Endereço / Bairro" value={clientAddress} onChange={e => setClientAddress(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required />
                   </div>
 
-                  {/* Seleção de Região / Frete */}
                   <div className="space-y-2 pt-1">
                     <label className="text-xs font-bold text-slate-300 uppercase flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-emerald-400" /> Região de Entrega (Frete)</label>
                     <div className="grid grid-cols-2 gap-2">
@@ -463,7 +469,6 @@ export default function Storefront() {
                     </div>
                   </div>
 
-                  {/* Pagamento */}
                   <div className="space-y-2 pt-1">
                     <label className="text-xs font-bold text-slate-300 uppercase flex items-center gap-1.5"><CreditCard className="w-3.5 h-3.5 text-emerald-400" /> Forma de Pagamento</label>
                     <div className="grid grid-cols-3 gap-2">
