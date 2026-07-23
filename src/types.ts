@@ -5,7 +5,7 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  tenantId?: string; // Vazio para SUPER_ADMIN, obrigatório para LOJISTA e CLIENTE
+  tenantId?: string; // Nulo para Super Admin; ID da loja para Lojistas e Clientes
 }
 
 export interface StoreTenant {
@@ -16,34 +16,41 @@ export interface StoreTenant {
   active: boolean;
   createdAt: string;
   config: {
+    about: string;
     whatsapp: string;
     pixKey: string;
     fixedFreight: number;
     freeFreightThreshold: number;
-    primaryColor?: string;
     logoUrl?: string;
   };
 }
 
-export interface MultiTenantProduct {
+export interface Product {
   id: string;
-  tenantId: string; // Garantia de isolamento
+  tenantId: string; // Garantia de isolamento por loja
   name: string;
   price: number;
   promoPrice?: number;
-  category: string;
   image: string;
+  category: string;
   variants?: string[];
   stock: number;
 }
 
-export interface MultiTenantOrder {
+export interface Order {
   id: string;
   tenantId: string;
-  customerId?: string;
   customerName: string;
   total: number;
   status: 'Pendente' | 'Pago' | 'Enviado' | 'Cancelado';
   date: string;
-  items: any[];
+  items?: any[];
+}
+
+export interface Coupon {
+  id: string;
+  tenantId: string;
+  code: string;
+  discount: number;
+  type: 'percent' | 'fixed';
 }
