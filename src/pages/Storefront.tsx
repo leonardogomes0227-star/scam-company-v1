@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard, Search, Eye, Sparkles, Truck, Clock, Heart, Zap, MapPin, Send } from 'lucide-react';
+import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard, Search, Eye, Truck, Clock, Heart, Zap, MapPin, Send } from 'lucide-react';
 
 export default function Storefront() {
-  const [storeConfig, setStoreConfig] = useState({ name: 'Minha Loja', about: 'Seja bem-vindo!', whatsapp: '5567999999999', color: '#10b981' });
+  const [storeConfig, setStoreConfig] = useState({ name: 'STCK Company', about: 'Seja bem-vindo! The World Is Yours.', whatsapp: '5567999999999', color: '#f59e0b' });
   const [products, setProducts] = useState<any[]>([]);
   const [cart, setCart] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -203,7 +203,7 @@ export default function Storefront() {
     });
 
     if (appliedCoupon) {
-      msg += `\n🎟 *Cupom:* ${appliedCoupon.code} (-{appliedCoupon.discount}%)\n`;
+      msg += `\n🎟 *Cupom:* ${appliedCoupon.code} (-${appliedCoupon.discount}%)\n`;
     }
 
     msg += `\n💰 *Total Geral:* *${formatBRL(total)}*`;
@@ -225,27 +225,27 @@ export default function Storefront() {
   const formatBRL = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-24">
+    <div className="min-h-screen bg-black text-slate-100 font-sans pb-24 selection:bg-amber-500 selection:text-black">
       
       {/* Banner Oferta Relâmpago */}
-      <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 py-2.5 px-4 text-center font-black text-xs flex flex-wrap items-center justify-center gap-3 shadow-lg">
+      <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-black py-2.5 px-4 text-center font-black text-xs flex flex-wrap items-center justify-center gap-3 shadow-lg">
         <span className="flex items-center gap-1"><Zap className="w-4 h-4 fill-current" /> OFERTA RELÂMPAGO DA SEMANA:</span>
-        <div className="bg-slate-950 text-white px-2.5 py-1 rounded-xl text-[11px] font-mono tracking-widest shadow-inner">
+        <div className="bg-black text-amber-400 px-2.5 py-1 rounded-xl text-[11px] font-mono tracking-widest shadow-inner border border-amber-500/20">
           {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
         </div>
       </div>
 
       {/* Header */}
-      <div className="bg-slate-900 border-b border-slate-800 p-6 flex justify-between items-center max-w-4xl mx-auto rounded-b-3xl shadow-lg mt-2">
+      <div className="bg-zinc-900 border-b border-zinc-800 p-6 flex justify-between items-center max-w-4xl mx-auto rounded-b-3xl shadow-xl mt-2">
         <div>
           <h1 className="text-xl font-black text-white">{storeConfig.name}</h1>
-          <p className="text-xs text-slate-400">{storeConfig.about}</p>
+          <p className="text-xs text-zinc-400">{storeConfig.about} <span className="text-amber-400 italic">"The World Is Yours"</span></p>
         </div>
         
         <div className="flex items-center gap-2">
           <button 
             onClick={() => setIsWishlistOpen(true)}
-            className="relative p-2.5 bg-slate-950 border border-slate-800 hover:border-emerald-500 text-rose-400 rounded-xl transition-all flex items-center justify-center"
+            className="relative p-2.5 bg-black border border-zinc-800 hover:border-amber-500 text-rose-400 rounded-xl transition-all flex items-center justify-center"
             title="Meus Favoritos"
           >
             <Heart className="w-4 h-4 fill-current" />
@@ -258,7 +258,7 @@ export default function Storefront() {
 
           <button 
             onClick={() => setIsCartOpen(true)}
-            className={`relative px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20 ${cartPulse ? 'scale-110 ring-4 ring-emerald-400/50' : ''}`}
+            className={`relative px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-amber-500/10 ${cartPulse ? 'scale-110 ring-4 ring-amber-400/50' : ''}`}
           >
             <ShoppingBag className="w-4 h-4" /> Carrinho
             {cart.length > 0 && (
@@ -272,9 +272,9 @@ export default function Storefront() {
 
       {/* Rastreio */}
       <div className="max-w-4xl mx-auto px-4 pt-6">
-        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl space-y-3 shadow-lg">
+        <div className="bg-zinc-900 border border-zinc-800 p-5 rounded-3xl space-y-3 shadow-xl">
           <h3 className="text-xs font-bold text-white flex items-center gap-2">
-            <Truck className="w-4 h-4 text-emerald-400" /> Acompanhe o Status do seu Pedido
+            <Truck className="w-4 h-4 text-amber-400" /> Acompanhe o Status do seu Pedido
           </h3>
           <form onSubmit={handleTrackOrder} className="flex gap-2">
             <input 
@@ -282,10 +282,10 @@ export default function Storefront() {
               placeholder="Digite o código do pedido (ex: ORD-1234)" 
               value={trackingCodeInput}
               onChange={e => setTrackingCodeInput(e.target.value)}
-              className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white uppercase outline-none focus:border-emerald-500"
+              className="flex-1 bg-black border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white uppercase outline-none focus:border-amber-500"
               required
             />
-            <button type="submit" className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all">
+            <button type="submit" className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-xl transition-all shadow-md">
               Consultar
             </button>
           </form>
@@ -293,13 +293,13 @@ export default function Storefront() {
           {trackingSearched && (
             <div className="pt-2">
               {trackedOrderResult ? (
-                <div className="bg-slate-950 border border-emerald-500/30 p-4 rounded-2xl flex justify-between items-center text-xs">
+                <div className="bg-black border border-amber-500/30 p-4 rounded-2xl flex justify-between items-center text-xs">
                   <div>
-                    <span className="text-emerald-400 font-bold">{trackedOrderResult.id}</span>
+                    <span className="text-amber-400 font-bold">{trackedOrderResult.id}</span>
                     <h4 className="font-bold text-white">Cliente: {trackedOrderResult.customer}</h4>
-                    <span className="text-slate-400">Total: {formatBRL(trackedOrderResult.total)}</span>
+                    <span className="text-zinc-400">Total: {formatBRL(trackedOrderResult.total)}</span>
                   </div>
-                  <span className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold rounded-xl flex items-center gap-1.5">
+                  <span className="px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold rounded-xl flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5" /> {trackedOrderResult.status}
                   </span>
                 </div>
@@ -316,23 +316,23 @@ export default function Storefront() {
       {/* Busca e Filtros */}
       <div className="max-w-4xl mx-auto px-4 pt-6 space-y-4">
         <div className="relative">
-          <Search className="w-4 h-4 text-slate-500 absolute left-4 top-3.5" />
+          <Search className="w-4 h-4 text-zinc-500 absolute left-4 top-3.5" />
           <input 
             type="text" 
             placeholder="O que você está procurando?" 
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-900 border border-slate-800 rounded-2xl pl-11 pr-4 py-3 text-xs text-white outline-none focus:border-emerald-500 transition-all shadow-md"
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl pl-11 pr-4 py-3 text-xs text-white outline-none focus:border-amber-500 transition-all shadow-md"
           />
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-          <span className="text-xs font-bold text-slate-400 flex items-center gap-1 shrink-0"><Filter className="w-3.5 h-3.5" /> Categoria:</span>
+          <span className="text-xs font-bold text-zinc-400 flex items-center gap-1 shrink-0"><Filter className="w-3.5 h-3.5" /> Categoria:</span>
           {categories.map((cat, idx) => (
             <button
               key={idx}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold shrink-0 transition-all ${selectedCategory === cat ? 'bg-emerald-500 text-slate-950 shadow-md' : 'bg-slate-900 border border-slate-800 text-slate-300'}`}
+              className={`px-4 py-2 rounded-xl text-xs font-bold shrink-0 transition-all ${selectedCategory === cat ? 'bg-amber-500 text-black shadow-md font-black' : 'bg-zinc-900 border border-zinc-800 text-zinc-300 hover:text-white'}`}
             >
               {cat}
             </button>
@@ -343,46 +343,46 @@ export default function Storefront() {
       {/* Grid de Produtos */}
       <div className="max-w-4xl mx-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
         {filteredProducts.length === 0 ? (
-          <div className="col-span-full text-center py-12 text-xs text-slate-500 bg-slate-900 border border-slate-800 rounded-3xl">
+          <div className="col-span-full text-center py-12 text-xs text-zinc-500 bg-zinc-900 border border-zinc-800 rounded-3xl">
             Nenhum produto encontrado.
           </div>
         ) : (
           filteredProducts.map(product => {
             const isFav = favorites.includes(product.id);
             return (
-              <div key={product.id} className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden p-4 flex flex-col justify-between space-y-4 shadow-lg">
+              <div key={product.id} className="bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden p-4 flex flex-col justify-between space-y-4 shadow-xl">
                 <div className="space-y-3 cursor-pointer relative" onClick={() => setActiveProductModal(product)}>
                   
                   <button 
                     onClick={(e) => toggleFavorite(product.id, e)}
-                    className={`absolute top-3 right-3 z-10 p-2 rounded-xl border backdrop-blur-md transition-all ${isFav ? 'bg-rose-500/20 border-rose-500/40 text-rose-400' : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'}`}
+                    className={`absolute top-3 right-3 z-10 p-2 rounded-xl border backdrop-blur-md transition-all ${isFav ? 'bg-rose-500/20 border-rose-500/40 text-rose-400' : 'bg-black/60 border-zinc-800 text-zinc-400 hover:text-white'}`}
                   >
                     <Heart className={`w-4 h-4 ${isFav ? 'fill-current' : ''}`} />
                   </button>
 
                   <div className="relative group">
-                    <img src={product.image} alt={product.name} className="w-full h-48 object-cover rounded-2xl bg-slate-950" />
-                    <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
-                      <span className="px-3 py-1.5 bg-slate-900/90 text-white font-bold text-[10px] rounded-xl flex items-center gap-1 shadow-md">
-                        <Eye className="w-3.5 h-3.5 text-emerald-400" /> Ver Detalhes
+                    <img src={product.image} alt={product.name} className="w-full h-48 object-cover rounded-2xl bg-black border border-zinc-800" />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
+                      <span className="px-3 py-1.5 bg-zinc-900/90 text-white font-bold text-[10px] rounded-xl flex items-center gap-1 shadow-md border border-zinc-700">
+                        <Eye className="w-3.5 h-3.5 text-amber-400" /> Ver Detalhes
                       </span>
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-emerald-400 uppercase">{product.category || 'Geral'}</span>
+                    <span className="text-[10px] font-bold text-amber-400 uppercase">{product.category || 'Geral'}</span>
                     <h3 className="text-sm font-bold text-white truncate">{product.name}</h3>
                     <div className="flex items-center gap-1 text-amber-400">
                       <Star className="w-3.5 h-3.5 fill-current" />
                       <span className="text-xs font-black text-white ml-1">{product.rating}</span>
-                      <span className="text-[10px] text-slate-400">({product.reviewsCount} avaliações)</span>
+                      <span className="text-[10px] text-zinc-400">({product.reviewsCount} avaliações)</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-                  <span className="text-sm font-black text-emerald-400">{formatBRL(product.price)}</span>
-                  <button onClick={() => addToCart(product)} className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all shadow-md">
+                <div className="flex items-center justify-between pt-3 border-t border-zinc-800">
+                  <span className="text-sm font-black text-amber-400">{formatBRL(product.price)}</span>
+                  <button onClick={() => addToCart(product)} className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-xl transition-all shadow-md">
                     Comprar 🛒
                   </button>
                 </div>
@@ -394,29 +394,29 @@ export default function Storefront() {
 
       {/* Modal Favoritos */}
       {isWishlistOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end">
-          <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 h-full p-6 flex flex-col justify-between overflow-y-auto">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex justify-end">
+          <div className="w-full max-w-md bg-zinc-900 border-l border-zinc-800 h-full p-6 flex flex-col justify-between overflow-y-auto">
             <div className="space-y-6">
-              <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+              <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
                 <h2 className="text-base font-black text-white flex items-center gap-2">
                   <Heart className="w-4 h-4 text-rose-400 fill-current" /> Seus Produtos Favoritos
                 </h2>
-                <button onClick={() => setIsWishlistOpen(false)} className="text-slate-400 hover:text-white font-bold text-sm">✕ Fechar</button>
+                <button onClick={() => setIsWishlistOpen(false)} className="text-zinc-400 hover:text-white font-bold text-sm">✕ Fechar</button>
               </div>
 
               {favorites.length === 0 ? (
-                <div className="text-center py-12 text-xs text-slate-500">Nenhum produto favoritado ainda.</div>
+                <div className="text-center py-12 text-xs text-zinc-500">Nenhum produto favoritado ainda.</div>
               ) : (
                 <div className="space-y-3">
                   {products.filter(p => favorites.includes(p.id)).map(favProd => (
-                    <div key={favProd.id} className="flex items-center justify-between bg-slate-950 border border-slate-800 p-3 rounded-2xl gap-3">
-                      <img src={favProd.image} alt={favProd.name} className="w-14 h-14 object-cover rounded-xl bg-slate-900" />
+                    <div key={favProd.id} className="flex items-center justify-between bg-black border border-zinc-800 p-3 rounded-2xl gap-3">
+                      <img src={favProd.image} alt={favProd.name} className="w-14 h-14 object-cover rounded-xl bg-zinc-900 border border-zinc-800" />
                       <div className="flex-1 min-w-0">
                         <h4 className="text-xs font-bold text-white truncate">{favProd.name}</h4>
-                        <span className="text-xs font-black text-emerald-400">{formatBRL(favProd.price)}</span>
+                        <span className="text-xs font-black text-amber-400">{formatBRL(favProd.price)}</span>
                       </div>
                       <div className="flex gap-2">
-                        <button onClick={() => addToCart(favProd)} className="px-3 py-2 bg-emerald-500 text-slate-950 font-bold text-[10px] rounded-xl">Comprar</button>
+                        <button onClick={() => addToCart(favProd)} className="px-3 py-2 bg-amber-500 text-black font-bold text-[10px] rounded-xl">Comprar</button>
                         <button onClick={(e) => toggleFavorite(favProd.id, e)} className="p-2 text-rose-400 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     </div>
@@ -424,38 +424,38 @@ export default function Storefront() {
                 </div>
               )}
             </div>
-            <button onClick={() => setIsWishlistOpen(false)} className="w-full py-3 bg-slate-800 text-white font-bold text-xs rounded-xl mt-4">Continuar Comprando</button>
+            <button onClick={() => setIsWishlistOpen(false)} className="w-full py-3 bg-zinc-800 text-white font-bold text-xs rounded-xl mt-4">Continuar Comprando</button>
           </div>
         </div>
       )}
 
       {/* Modal Detalhes do Produto com Envio de Avaliações */}
       {activeProductModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 relative space-y-6">
-            <button onClick={() => setActiveProductModal(null)} className="absolute top-4 right-4 text-slate-400 hover:text-white font-bold text-xs bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">✕ Fechar</button>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 relative space-y-6">
+            <button onClick={() => setActiveProductModal(null)} className="absolute top-4 right-4 text-zinc-400 hover:text-white font-bold text-xs bg-black px-3 py-1.5 rounded-xl border border-zinc-800">✕ Fechar</button>
             
             <div className="space-y-3">
-              <img src={activeProductModal.image} alt={activeProductModal.name} className="w-full h-56 object-cover rounded-2xl bg-slate-950" />
+              <img src={activeProductModal.image} alt={activeProductModal.name} className="w-full h-56 object-cover rounded-2xl bg-black border border-zinc-800" />
               <div className="space-y-1">
-                <span className="text-[10px] font-bold text-emerald-400 uppercase">{activeProductModal.category}</span>
+                <span className="text-[10px] font-bold text-amber-400 uppercase">{activeProductModal.category}</span>
                 <h2 className="text-lg font-black text-white">{activeProductModal.name}</h2>
                 <div className="flex items-center gap-1 text-amber-400">
                   <Star className="w-3.5 h-3.5 fill-current" />
                   <span className="text-xs font-black text-white ml-1">{activeProductModal.rating}</span>
-                  <span className="text-[10px] text-slate-400">({activeProductModal.reviewsCount} avaliações)</span>
+                  <span className="text-[10px] text-zinc-400">({activeProductModal.reviewsCount} avaliações)</span>
                 </div>
-                <p className="text-xs text-slate-300 leading-relaxed pt-1">{activeProductModal.description}</p>
+                <p className="text-xs text-zinc-300 leading-relaxed pt-1">{activeProductModal.description}</p>
               </div>
             </div>
 
             {/* Lista de Avaliações */}
-            <div className="space-y-3 pt-3 border-t border-slate-800">
+            <div className="space-y-3 pt-3 border-t border-zinc-800">
               <h3 className="text-xs font-bold text-white uppercase">Avaliações de Clientes</h3>
               <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
                 {activeProductModal.customerReviews && activeProductModal.customerReviews.length > 0 ? (
                   activeProductModal.customerReviews.map((rev: any, i: number) => (
-                    <div key={i} className="bg-slate-950 border border-slate-800 p-3 rounded-xl space-y-1 text-xs">
+                    <div key={i} className="bg-black border border-zinc-800 p-3 rounded-xl space-y-1 text-xs">
                       <div className="flex justify-between items-center">
                         <span className="font-bold text-white">{rev.name}</span>
                         <div className="flex text-amber-400">
@@ -464,20 +464,20 @@ export default function Storefront() {
                           ))}
                         </div>
                       </div>
-                      <p className="text-slate-400 text-[11px]">{rev.comment}</p>
+                      <p className="text-zinc-400 text-[11px]">{rev.comment}</p>
                     </div>
                   ))
                 ) : (
-                  <p className="text-xs text-slate-500">Seja o primeiro a avaliar este produto!</p>
+                  <p className="text-xs text-zinc-500">Seja o primeiro a avaliar este produto!</p>
                 )}
               </div>
 
               {/* Formulário de Enviar Avaliação */}
               <form onSubmit={(e) => handleAddReview(e, activeProductModal.id)} className="space-y-3 pt-2">
-                <h4 className="text-[11px] font-bold text-emerald-400 uppercase">Deixe sua avaliação</h4>
+                <h4 className="text-[11px] font-bold text-amber-400 uppercase">Deixe sua avaliação</h4>
                 <div className="grid grid-cols-2 gap-2">
-                  <input type="text" placeholder="Seu Nome" value={reviewName} onChange={e => setReviewName(e.target.value)} className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none" required />
-                  <select value={reviewRating} onChange={e => setReviewRating(Number(e.target.value))} className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none">
+                  <input type="text" placeholder="Seu Nome" value={reviewName} onChange={e => setReviewName(e.target.value)} className="bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500" required />
+                  <select value={reviewRating} onChange={e => setReviewRating(Number(e.target.value))} className="bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-amber-500">
                     <option value={5}>⭐⭐⭐⭐⭐ (5/5)</option>
                     <option value={4}>⭐⭐⭐⭐ (4/5)</option>
                     <option value={3}>⭐⭐⭐ (3/5)</option>
@@ -485,16 +485,16 @@ export default function Storefront() {
                     <option value={1}>⭐ (1/5)</option>
                   </select>
                 </div>
-                <textarea placeholder="O que você achou do produto?" value={reviewComment} onChange={e => setReviewComment(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-white outline-none h-16 resize-none" required />
-                <button type="submit" className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2">
-                  <Send className="w-3.5 h-3.5 text-emerald-400" /> Enviar Avaliação
+                <textarea placeholder="O que você achou do produto?" value={reviewComment} onChange={e => setReviewComment(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-white outline-none h-16 resize-none focus:border-amber-500" required />
+                <button type="submit" className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2">
+                  <Send className="w-3.5 h-3.5 text-amber-400" /> Enviar Avaliação
                 </button>
               </form>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-slate-800">
-              <span className="text-base font-black text-emerald-400">{formatBRL(activeProductModal.price)}</span>
-              <button onClick={() => addToCart(activeProductModal)} className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all shadow-lg">Adicionar ao Carrinho 🛒</button>
+            <div className="flex items-center justify-between pt-4 border-t border-zinc-800">
+              <span className="text-base font-black text-amber-400">{formatBRL(activeProductModal.price)}</span>
+              <button onClick={() => addToCart(activeProductModal)} className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-xl transition-all shadow-lg">Adicionar ao Carrinho 🛒</button>
             </div>
           </div>
         </div>
@@ -502,48 +502,48 @@ export default function Storefront() {
 
       {/* Gaveta do Carrinho / Checkout */}
       {isCartOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end">
-          <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 h-full p-6 flex flex-col justify-between overflow-y-auto">
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex justify-end">
+          <div className="w-full max-w-md bg-zinc-900 border-l border-zinc-800 h-full p-6 flex flex-col justify-between overflow-y-auto">
             <div className="space-y-6">
-              <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+              <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
                 <h2 className="text-base font-black text-white flex items-center gap-2">
-                  <ShoppingBag className="w-4 h-4 text-emerald-400" /> Seu Carrinho
+                  <ShoppingBag className="w-4 h-4 text-amber-400" /> Seu Carrinho
                 </h2>
-                <button onClick={() => setIsCartOpen(false)} className="text-slate-400 hover:text-white font-bold text-sm">✕ Fechar</button>
+                <button onClick={() => setIsCartOpen(false)} className="text-zinc-400 hover:text-white font-bold text-sm">✕ Fechar</button>
               </div>
 
               {cart.length === 0 ? (
-                <div className="text-center py-12 text-xs text-slate-500">Seu carrinho está vazio.</div>
+                <div className="text-center py-12 text-xs text-zinc-500">Seu carrinho está vazio.</div>
               ) : (
                 <div className="space-y-4">
                   <div className="space-y-3 max-h-36 overflow-y-auto pr-1">
                     {cart.map((item, idx) => (
-                      <div key={idx} className="flex justify-between items-center bg-slate-950 border border-slate-800 p-3 rounded-xl">
+                      <div key={idx} className="flex justify-between items-center bg-black border border-zinc-800 p-3 rounded-xl">
                         <div>
                           <h4 className="text-xs font-bold text-white">{item.name}</h4>
-                          <span className="text-xs font-black text-emerald-400">{formatBRL(item.price)}</span>
+                          <span className="text-xs font-black text-amber-400">{formatBRL(item.price)}</span>
                         </div>
-                        <button onClick={() => removeFromCart(idx)} className="text-slate-500 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
+                        <button onClick={() => removeFromCart(idx)} className="text-zinc-500 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
                       </div>
                     ))}
                   </div>
 
                   <form onSubmit={handleApplyCoupon} className="flex gap-2">
-                    <input type="text" placeholder="Cupom de desconto" value={couponInput} onChange={e => setCouponInput(e.target.value)} className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white uppercase outline-none focus:border-emerald-500" />
-                    <button type="submit" className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl">Aplicar</button>
+                    <input type="text" placeholder="Cupom de desconto" value={couponInput} onChange={e => setCouponInput(e.target.value)} className="flex-1 bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white uppercase outline-none focus:border-amber-500" />
+                    <button type="submit" className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs rounded-xl">Aplicar</button>
                   </form>
                   {couponError && <p className="text-[10px] text-red-400 font-bold">{couponError}</p>}
-                  {appliedCoupon && <p className="text-[10px] text-emerald-400 font-bold">✔ Cupom {appliedCoupon.code} aplicado (-{appliedCoupon.discount}%)</p>}
+                  {appliedCoupon && <p className="text-[10px] text-amber-400 font-bold">✔ Cupom {appliedCoupon.code} aplicado (-{appliedCoupon.discount}%)</p>}
 
-                  <div className="space-y-3 pt-3 border-t border-slate-800">
-                    <h3 className="text-xs font-bold text-slate-300 uppercase">Dados para Entrega</h3>
-                    <input type="text" placeholder="Seu Nome Completo" value={clientName} onChange={e => setClientName(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required />
-                    <input type="text" placeholder="Seu WhatsApp (com DDD)" value={clientPhone} onChange={e => setClientPhone(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required />
-                    <input type="text" placeholder="Endereço / Bairro" value={clientAddress} onChange={e => setClientAddress(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-emerald-500" required />
+                  <div className="space-y-3 pt-3 border-t border-zinc-800">
+                    <h3 className="text-xs font-bold text-zinc-300 uppercase">Dados para Entrega</h3>
+                    <input type="text" placeholder="Seu Nome Completo" value={clientName} onChange={e => setClientName(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-amber-500" required />
+                    <input type="text" placeholder="Seu WhatsApp (com DDD)" value={clientPhone} onChange={e => setClientPhone(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-amber-500" required />
+                    <input type="text" placeholder="Endereço / Bairro" value={clientAddress} onChange={e => setClientAddress(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-amber-500" required />
                   </div>
 
                   <div className="space-y-2 pt-1">
-                    <label className="text-xs font-bold text-slate-300 uppercase flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-emerald-400" /> Região de Entrega (Frete)</label>
+                    <label className="text-xs font-bold text-zinc-300 uppercase flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-amber-400" /> Região de Entrega (Frete)</label>
                     <div className="grid grid-cols-2 gap-2">
                       {[
                         { label: 'Centro / Local (R$ 10)', fee: 10.00 },
@@ -553,7 +553,7 @@ export default function Storefront() {
                           key={idx}
                           type="button"
                           onClick={() => setShippingFee(reg.fee)}
-                          className={`py-2 px-3 rounded-xl text-[11px] font-bold transition-all border text-left ${shippingFee === reg.fee ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md' : 'bg-slate-950 border-slate-800 text-slate-300'}`}
+                          className={`py-2 px-3 rounded-xl text-[11px] font-bold transition-all border text-left ${shippingFee === reg.fee ? 'bg-amber-500 text-black border-amber-400 shadow-md font-black' : 'bg-black border-zinc-800 text-zinc-300'}`}
                         >
                           {reg.label}
                         </button>
@@ -562,14 +562,14 @@ export default function Storefront() {
                   </div>
 
                   <div className="space-y-2 pt-1">
-                    <label className="text-xs font-bold text-slate-300 uppercase flex items-center gap-1.5"><CreditCard className="w-3.5 h-3.5 text-emerald-400" /> Forma de Pagamento</label>
+                    <label className="text-xs font-bold text-zinc-300 uppercase flex items-center gap-1.5"><CreditCard className="w-3.5 h-3.5 text-amber-400" /> Forma de Pagamento</label>
                     <div className="grid grid-cols-3 gap-2">
                       {['Pix', 'Cartão', 'Dinheiro'].map((method) => (
                         <button
                           key={method}
                           type="button"
                           onClick={() => setPaymentMethod(method)}
-                          className={`py-2.5 rounded-xl text-xs font-bold transition-all border ${paymentMethod === method ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-md' : 'bg-slate-950 border-slate-800 text-slate-300'}`}
+                          className={`py-2.5 rounded-xl text-xs font-bold transition-all border ${paymentMethod === method ? 'bg-amber-500 text-black border-amber-400 shadow-md font-black' : 'bg-black border-zinc-800 text-zinc-300'}`}
                         >
                           {method}
                         </button>
@@ -581,14 +581,14 @@ export default function Storefront() {
             </div>
 
             {cart.length > 0 && (
-              <div className="space-y-4 pt-4 border-t border-slate-800">
+              <div className="space-y-4 pt-4 border-t border-zinc-800">
                 <div className="space-y-1 text-xs">
-                  <div className="flex justify-between text-slate-400"><span>Subtotal:</span> <span>{formatBRL(subtotal)}</span></div>
-                  {appliedCoupon && <div className="flex justify-between text-emerald-400"><span>Desconto:</span> <span>-{formatBRL(discountAmount)}</span></div>}
-                  <div className="flex justify-between text-slate-400"><span>Frete:</span> <span>{formatBRL(shippingFee)}</span></div>
-                  <div className="flex justify-between text-sm font-black text-white pt-1 border-t border-slate-800"><span>Total:</span> <span className="text-emerald-400">{formatBRL(total)}</span></div>
+                  <div className="flex justify-between text-zinc-400"><span>Subtotal:</span> <span>{formatBRL(subtotal)}</span></div>
+                  {appliedCoupon && <div className="flex justify-between text-amber-400"><span>Desconto:</span> <span>-{formatBRL(discountAmount)}</span></div>}
+                  <div className="flex justify-between text-zinc-400"><span>Frete:</span> <span>{formatBRL(shippingFee)}</span></div>
+                  <div className="flex justify-between text-sm font-black text-white pt-1 border-t border-zinc-800"><span>Total:</span> <span className="text-amber-400">{formatBRL(total)}</span></div>
                 </div>
-                <button onClick={handleCheckoutWhatsApp} className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20">
+                <button onClick={handleCheckoutWhatsApp} className="w-full py-3.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/10">
                   <MessageSquare className="w-4 h-4" /> Enviar Pedido via WhatsApp ↗
                 </button>
               </div>
