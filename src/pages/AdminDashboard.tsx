@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, Truck, CheckCircle2 } from 'lucide-react';
+import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, Truck, CheckCircle2, TrendingUp, Users, BarChart3, ShieldCheck } from 'lucide-react';
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'coupons' | 'settings'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'coupons' | 'settings' | 'analytics'>('products');
   
   // Descobre qual é a loja do lojista logado através da sessão
   const currentUser = JSON.parse(localStorage.getItem('saas_auth_user') || '{}');
@@ -22,8 +22,9 @@ export default function AdminDashboard() {
   const [image, setImage] = useState('');
   const [category, setCategory] = useState('Geral');
 
-  // Estados de Pedidos (CRM)
+  // Estados de Pedidos e Carrinhos Abandonados
   const [orders, setOrders] = useState<any[]>([]);
+  const [abandonedLeads, setAbandonedLeads] = useState<any[]>([]);
 
   useEffect(() => {
     // Carrega as configurações salvas da loja
@@ -55,7 +56,7 @@ export default function AdminDashboard() {
       localStorage.setItem(`store_products_${tenantId}`, JSON.stringify(initial));
     }
 
-    // Carrega pedidos salvos do tenant ou cria dados de exemplo se estiver vazio
+    // Carrega pedidos salvos do tenant ou cria dados de exemplo
     const savedOrders = JSON.parse(localStorage.getItem(`store_orders_${tenantId}`) || '[]');
     if (savedOrders.length > 0) {
       setOrders(savedOrders);
@@ -66,6 +67,12 @@ export default function AdminDashboard() {
       ];
       setOrders(initialOrders);
       localStorage.setItem(`store_orders_${tenantId}`, JSON.stringify(initialOrders));
+    }
+
+    // Carrega leads de carrinhos abandonados
+    const leadCart = JSON.parse(localStorage.getItem('scam_abandoned_lead') || 'null');
+    if (leadCart) {
+      setAbandonedLeads([leadCart]);
     }
   }, [tenantId]);
 
@@ -114,6 +121,9 @@ export default function AdminDashboard() {
 
   const formatBRL = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
+  // Cálculo de métricas rápidas para a nova aba de Analytics
+  const totalRevenue = orders.reduce((acc, curr) => acc + (curr.status !== 'Cancelado' ? curr.total : 0), 0);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-4 sm:p-8">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -121,8 +131,8 @@ export default function AdminDashboard() {
         {/* Header do Painel */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 border border-slate-800 p-6 rounded-3xl">
           <div>
-            <h1 className="text-2xl font-black text-white">Painel da Loja</h1>
-            <p className="text-xs text-slate-400">Gerencie sua vitrine, produtos e identidade visual.</p>
+            <h1 className="text-2xl font-black text-white">Painel da Loja ({storeName})</h1>
+            <p className="text-xs text-slate-400">Gerencie sua vitrine, estoque, carrinhos abandonados e relatórios.</p>
           </div>
           <a 
             href={`#/loja/${tenantId}`} 
@@ -140,7 +150,10 @@ export default function AdminDashboard() {
             <Package className="w-4 h-4" /> Produtos
           </button>
           <button onClick={() => setActiveTab('orders')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'orders' ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'bg-slate-900 text-slate-400 hover:text-white'}`}>
-            <ShoppingBag className="w-4 h-4" /> Pedidos (CRM)
+            <ShoppingBag className="w-4 h-4" /> Pedidos & CRM
+          </button>
+          <button onClick={() => setActiveTab('analytics')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'analytics' ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'bg-slate-900 text-slate-400 hover:text-white'}`}>
+            <BarChart3 className="w-4 h-4" /> Relatórios & Vendas
           </button>
           <button onClick={() => setActiveTab('coupons')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'coupons' ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'bg-slate-900 text-slate-400 hover:text-white'}`}>
             <Tag className="w-4 h-4" /> Cupons
@@ -200,68 +213,148 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* CONTEÚDO: PEDIDOS (CRM) */}
+        {/* CONTEÚDO: PEDIDOS & CRM + RECUPERAÇÃO */}
         {activeTab === 'orders' && (
-          <div className="space-y-6">
-            <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl flex justify-between items-center">
-              <div>
-                <h3 className="text-base font-black text-white">Gerenciamento de Pedidos</h3>
-                <p className="text-xs text-slate-400">Acompanhe e atualize o status das vendas realizadas na sua vitrine.</p>
+          <div className="space-y-8">
+            <div className="space-y-4">
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl flex justify-between items-center">
+                <div>
+                  <h3 className="text-base font-black text-white">Gerenciamento de Pedidos</h3>
+                  <p className="text-xs text-slate-400">Acompanhe e atualize o status das vendas realizadas na sua vitrine.</p>
+                </div>
+                <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl text-xs font-bold">
+                  {orders.length} Pedido(s)
+                </span>
               </div>
-              <span className="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl text-xs font-bold">
-                {orders.length} Pedido(s)
-              </span>
+
+              {orders.length === 0 ? (
+                <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl text-center space-y-2">
+                  <ShoppingBag className="w-8 h-8 text-slate-600 mx-auto" />
+                  <h3 className="text-sm font-bold text-white">Nenhum pedido recente</h3>
+                  <p className="text-xs text-slate-400">Os pedidos feitos pelos clientes na sua vitrine aparecerão aqui.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {orders.map(order => (
+                    <div key={order.id} className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-black text-emerald-400">{order.id}</span>
+                          <span className="text-[10px] text-slate-500">• {order.date}</span>
+                        </div>
+                        <h4 className="text-sm font-bold text-white">Cliente: {order.customer}</h4>
+                        <p className="text-xs font-black text-slate-300">Total: {formatBRL(order.total)}</p>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
+                        <span className="px-3 py-1.5 bg-slate-950 border border-slate-800 text-cyan-400 font-bold text-xs rounded-xl">
+                          {order.status}
+                        </span>
+                        
+                        <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 p-1 rounded-xl">
+                          <button 
+                            onClick={() => updateOrderStatus(order.id, 'Pago / Separando')}
+                            title="Marcar como Pago"
+                            className="p-2 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => updateOrderStatus(order.id, 'Enviado')}
+                            title="Marcar como Enviado"
+                            className="p-2 hover:bg-cyan-500/20 text-cyan-400 rounded-lg transition-colors"
+                          >
+                            <Truck className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
-            {orders.length === 0 ? (
-              <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl text-center space-y-2">
-                <ShoppingBag className="w-8 h-8 text-slate-600 mx-auto" />
-                <h3 className="text-sm font-bold text-white">Nenhum pedido recente</h3>
-                <p className="text-xs text-slate-400">Os pedidos feitos pelos clientes na sua vitrine aparecerão aqui.</p>
+            {/* Bloco de Carrinhos Abandonados */}
+            <div className="space-y-4 pt-4 border-t border-slate-800">
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl flex justify-between items-center">
+                <div>
+                  <h3 className="text-base font-black text-white flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-amber-400" /> Carrinhos Abandonados (Recuperação)
+                  </h3>
+                  <p className="text-xs text-slate-400">Clientes que preencheram dados no checkout mas saíram antes de fechar.</p>
+                </div>
+                <span className="px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl text-xs font-bold">
+                  {abandonedLeads.length} Lead(s)
+                </span>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4">
-                {orders.map(order => (
-                  <div key={order.id} className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-emerald-400">{order.id}</span>
-                        <span className="text-[10px] text-slate-500">• {order.date}</span>
-                      </div>
-                      <h4 className="text-sm font-bold text-white">Cliente: {order.customer}</h4>
-                      <p className="text-xs font-black text-slate-300">Total: {formatBRL(order.total)}</p>
-                    </div>
 
-                    <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
-                      <span className="px-3 py-1.5 bg-slate-950 border border-slate-800 text-cyan-400 font-bold text-xs rounded-xl">
-                        {order.status}
-                      </span>
-                      
-                      <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 p-1 rounded-xl">
-                        <button 
-                          onClick={() => updateOrderStatus(order.id, 'Pago / Separando')}
-                          title="Marcar como Pago"
-                          className="p-2 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors"
-                        >
-                          <CheckCircle2 className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => updateOrderStatus(order.id, 'Enviado')}
-                          title="Marcar como Enviado"
-                          className="p-2 hover:bg-cyan-500/20 text-cyan-400 rounded-lg transition-colors"
-                        >
-                          <Truck className="w-4 h-4" />
-                        </button>
+              {abandonedLeads.length === 0 ? (
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl text-center text-xs text-slate-500">
+                  Nenhum carrinho abandonado capturado recentemente.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {abandonedLeads.map((lead, idx) => (
+                    <div key={idx} className="bg-slate-900 border border-slate-800 p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-amber-400 uppercase">Lead Capturado</span>
+                        <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                          <Users className="w-4 h-4 text-slate-400" /> {lead.name}
+                        </h4>
+                        <p className="text-xs font-mono text-slate-300">WhatsApp: {lead.whatsapp}</p>
                       </div>
+
+                      <a 
+                        href={`https://wa.me/${lead.whatsapp}?text=Olá%20${encodeURIComponent(lead.name)},%20notamos%20que%20você%20quase%20finalizou%20sua%20compra%20na%20${encodeURIComponent(storeName)}!`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 font-black text-xs rounded-xl transition-all flex items-center gap-2"
+                      >
+                        Chamar no WhatsApp ↗
+                      </a>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* CONTEÚDO: CONFIGURAÇÕES E VISUAL */}
+        {/* CONTEÚDO NOVO: RELATÓRIOS & ANALYTICS */}
+        {activeTab === 'analytics' && (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-2">
+                <span className="text-xs font-bold text-slate-400 uppercase">Faturamento Total</span>
+                <h3 className="text-2xl font-black text-emerald-400">{formatBRL(totalRevenue)}</h3>
+                <p className="text-[11px] text-slate-500">Calculado sobre os pedidos registrados.</p>
+              </div>
+
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-2">
+                <span className="text-xs font-bold text-slate-400 uppercase">Total de Pedidos</span>
+                <h3 className="text-2xl font-black text-white">{orders.length}</h3>
+                <p className="text-[11px] text-slate-500">Vendas geradas na sua vitrine mobile.</p>
+              </div>
+
+              <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-2">
+                <span className="text-xs font-bold text-slate-400 uppercase">Produtos no Catálogo</span>
+                <h3 className="text-2xl font-black text-cyan-400">{products.length}</h3>
+                <p className="text-[11px] text-slate-500">Itens ativos para venda imediata.</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl space-y-4">
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" /> Saúde do Sistema e Conversão
+              </h3>
+              <p className="text-xs text-slate-400">
+                Sua vitrine está otimizada para conversões diretas via WhatsApp com emissão de Pix instantâneo e captura automática de leads.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* CONTEÚDO: CONFIGURAÇÕES & VISUAL */}
         {activeTab === 'settings' && (
           <form onSubmit={handleSaveSettings} className="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-2xl space-y-6">
             <div>
