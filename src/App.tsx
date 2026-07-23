@@ -4,6 +4,7 @@ import Storefront from './pages/Storefront';
 import AdminDashboard from './pages/AdminDashboard';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LogOut } from 'lucide-react';
 
@@ -22,33 +23,26 @@ function AppRoutes() {
   };
 
   // ============================================
-  // 1. ROTAS PÚBLICAS (Vitrines Dinâmicas)
+  // 1. ROTAS PÚBLICAS
   // ============================================
   
-  // Lê a URL. Se começar com "#/loja/", extrai o ID da loja e abre a vitrine correta.
   if (route.startsWith('#/loja/')) {
     const tenantId = route.replace('#/loja/', '');
     return <Storefront tenantId={tenantId} />;
   }
   
-  // Se acessar apenas "#/loja" sem informar de quem é a loja
-  if (route === '#/loja') {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
-        <h1 className="text-2xl font-black text-red-400 mb-2">Link Inválido</h1>
-        <p className="text-slate-400 text-sm">Você precisa acessar o link completo da loja. Ex: #/loja/lkd-imports</p>
-      </div>
-    );
-  }
-  
   if (route === '#/login') return <LoginPage />;
+  if (route === '#/register') return <RegisterPage />;
   
   if (route === '#/' || route === '') {
-    return <LandingPage onNavigate={(p: string) => navigateTo(`#/${p}`)} />;
+    return <LandingPage onNavigate={(p: string) => {
+      if (p === 'register') navigateTo('#/register');
+      else navigateTo(`#/${p}`);
+    }} />;
   }
 
   // ============================================
-  // 2. ROTAS PROTEGIDAS (Painéis de Gestão)
+  // 2. ROTAS PROTEGIDAS
   // ============================================
 
   if (route === '#/admin-global') {
