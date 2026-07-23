@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard, Search, Eye, Sparkles, Truck, Clock, Heart } from 'lucide-react';
+import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard, Search, Eye, Sparkles, Truck, Clock, Heart, Zap } from 'lucide-react';
 
 export default function Storefront() {
   const [storeConfig, setStoreConfig] = useState({ name: 'Minha Loja', about: 'Seja bem-vindo!', whatsapp: '5567999999999', color: '#10b981' });
   const [products, setProducts] = useState<any[]>([]);
   const [cart, setCart] = useState<any[]>([]);
-  const [favorites, setFavorites] = useState<string[]>([]); // IDs dos produtos favoritos
+  const [favorites, setFavorites] = useState<string[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isWishlistOpen, setIsWishlistOpen] = useState(false); // Modal/Gaveta de Favoritos
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -29,6 +29,25 @@ export default function Storefront() {
   const [trackingCodeInput, setTrackingCodeInput] = useState('');
   const [trackedOrderResult, setTrackedOrderResult] = useState<any>(null);
   const [trackingSearched, setTrackingSearched] = useState(false);
+
+  // Cronômetro Regressivo (Oferta Relâmpago)
+  const [timeLeft, setTimeLeft] = useState({ hours: 4, minutes: 35, seconds: 12 });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev.seconds > 0) {
+          return { ...prev, seconds: prev.seconds - 1 };
+        } else if (prev.minutes > 0) {
+          return { ...prev, minutes: 59, seconds: 59 };
+        } else if (prev.hours > 0) {
+          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        }
+        return { hours: 4, minutes: 0, seconds: 0 };
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const config = JSON.parse(localStorage.getItem('store_config_lkd-imports') || '{}');
@@ -156,9 +175,12 @@ export default function Storefront() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-24">
       
-      {/* Banner Topo */}
-      <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-slate-950 py-2 px-4 text-center font-black text-[11px] flex items-center justify-center gap-2 shadow-md">
-        <Sparkles className="w-3.5 h-3.5" /> Entrega rápida na região e pagamento facilitado!
+      {/* Banner de Oferta Relâmpago com Cronômetro */}
+      <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 py-2.5 px-4 text-center font-black text-xs flex flex-wrap items-center justify-center gap-3 shadow-lg">
+        <span className="flex items-center gap-1"><Zap className="w-4 h-4 fill-current" /> OFERTA RELÂMPAGO DA SEMANA:</span>
+        <div className="bg-slate-950 text-white px-2.5 py-1 rounded-xl text-[11px] font-mono tracking-widest shadow-inner">
+          {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
+        </div>
       </div>
 
       {/* Header */}
@@ -169,7 +191,6 @@ export default function Storefront() {
         </div>
         
         <div className="flex items-center gap-2">
-          {/* Botão de Favoritos */}
           <button 
             onClick={() => setIsWishlistOpen(true)}
             className="relative p-2.5 bg-slate-950 border border-slate-800 hover:border-emerald-500 text-rose-400 rounded-xl transition-all flex items-center justify-center"
@@ -183,7 +204,6 @@ export default function Storefront() {
             )}
           </button>
 
-          {/* Botão Carrinho */}
           <button 
             onClick={() => setIsCartOpen(true)}
             className="relative px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-emerald-500/20"
@@ -268,7 +288,7 @@ export default function Storefront() {
         </div>
       </div>
 
-      {/* Grid de Produtos com Botão Favorito */}
+      {/* Grid de Produtos */}
       <div className="max-w-4xl mx-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
         {filteredProducts.length === 0 ? (
           <div className="col-span-full text-center py-12 text-xs text-slate-500 bg-slate-900 border border-slate-800 rounded-3xl">
@@ -281,7 +301,6 @@ export default function Storefront() {
               <div key={product.id} className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden p-4 flex flex-col justify-between space-y-4 shadow-lg">
                 <div className="space-y-3 cursor-pointer relative" onClick={() => setActiveProductModal(product)}>
                   
-                  {/* Botão de Favorito no Card */}
                   <button 
                     onClick={(e) => toggleFavorite(product.id, e)}
                     className={`absolute top-3 right-3 z-10 p-2 rounded-xl border backdrop-blur-md transition-all ${isFav ? 'bg-rose-500/20 border-rose-500/40 text-rose-400' : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:text-white'}`}
@@ -321,7 +340,7 @@ export default function Storefront() {
         )}
       </div>
 
-      {/* Modal de Favoritos / Wishlist */}
+      {/* Modal de Favoritos */}
       {isWishlistOpen && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex justify-end">
           <div className="w-full max-w-md bg-slate-900 border-l border-slate-800 h-full p-6 flex flex-col justify-between overflow-y-auto">
@@ -358,7 +377,7 @@ export default function Storefront() {
         </div>
       )}
 
-      {/* Modal de Detalhes do Produto */}
+      {/* Modal Detalhes do Produto */}
       {activeProductModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl space-y-4 p-6 relative">
