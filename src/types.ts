@@ -1,44 +1,49 @@
-export interface Product {
+export type UserRole = 'SUPER_ADMIN' | 'STORE_OWNER' | 'CUSTOMER';
+
+export interface User {
   id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  tenantId?: string; // Vazio para SUPER_ADMIN, obrigatório para LOJISTA e CLIENTE
+}
+
+export interface StoreTenant {
+  id: string; // Ex: 'lkd-imports', 'carbura-ms'
+  name: string;
+  ownerEmail: string;
+  plan: 'BASIC' | 'PRO' | 'ENTERPRISE';
+  active: boolean;
+  createdAt: string;
+  config: {
+    whatsapp: string;
+    pixKey: string;
+    fixedFreight: number;
+    freeFreightThreshold: number;
+    primaryColor?: string;
+    logoUrl?: string;
+  };
+}
+
+export interface MultiTenantProduct {
+  id: string;
+  tenantId: string; // Garantia de isolamento
   name: string;
   price: number;
   promoPrice?: number;
-  image: string;
   category: string;
+  image: string;
   variants?: string[];
-  active?: boolean;
-  description?: string;
+  stock: number;
 }
 
-export interface StoreConfig {
-  name: string;
-  about: string;
-  whatsapp: string;
-  pixKey: string;
-  bannerUrl?: string;
-  logoUrl?: string;
-  fixedFreight?: number;
-  freeFreightThreshold?: number;
-}
-
-export interface Coupon {
+export interface MultiTenantOrder {
   id: string;
-  code: string;
-  discount: number;
-  type: 'percent' | 'fixed';
-}
-
-export interface Order {
-  id: string;
-  customer: string;
+  tenantId: string;
+  customerId?: string;
+  customerName: string;
   total: number;
-  status: string;
+  status: 'Pendente' | 'Pago' | 'Enviado' | 'Cancelado';
   date: string;
-}
-
-export interface Testimonial {
-  id: string;
-  name: string;
-  stars: number;
-  comment: string;
+  items: any[];
 }
