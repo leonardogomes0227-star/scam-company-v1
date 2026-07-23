@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, TrendingUp, CheckCircle2, BarChart3, DollarSign, Users } from 'lucide-react';
+import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, TrendingUp, CheckCircle2, BarChart3, DollarSign, HelpCircle, ChevronDown } from 'lucide-react';
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'products' | 'coupons' | 'orders' | 'analytics' | 'settings'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'coupons' | 'orders' | 'analytics' | 'help' | 'settings'>('products');
   
   const currentUser = JSON.parse(localStorage.getItem('saas_auth_user') || '{}');
   const tenantId = currentUser.tenantId || 'lkd-imports';
@@ -27,6 +27,9 @@ export default function AdminDashboard() {
 
   const [orders, setOrders] = useState<any[]>([]);
   const [abandonedLeads, setAbandonedLeads] = useState<any[]>([]);
+
+  // Estado para acordeão do FAQ de Ajuda
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -71,8 +74,7 @@ export default function AdminDashboard() {
       setOrders(savedOrders);
     } else {
       const initialOrders = [
-        { id: 'ORD-101', customer: 'Mariana Souza', total: 149.90, status: 'Aguardando Pagamento', date: '2026-07-22' },
-        { id: 'ORD-102', customer: 'Carlos Silva', total: 299.90, status: 'Pago / Separando', date: '2026-07-23' }
+        { id: 'ORD-101', customer: 'Mariana Souza', total: 149.90, status: 'Aguardando Pagamento', date: '2026-07-22' }
       ];
       setOrders(initialOrders);
       localStorage.setItem(`store_orders_${tenantId}`, JSON.stringify(initialOrders));
@@ -142,9 +144,15 @@ export default function AdminDashboard() {
 
   const formatBRL = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
-  // Cálculos de Analytics / Relatório
   const totalRevenue = orders.reduce((acc, curr) => acc + (curr.total || 0), 0);
   const averageTicket = orders.length > 0 ? totalRevenue / orders.length : 0;
+
+  const faqList = [
+    { q: 'Como faço para divulgar minha vitrine?', a: 'Basta copiar o link da sua vitrine clicando em "Ver Minha Vitrine ↗" no topo do painel e colar na sua bio do Instagram, grupos de WhatsApp ou campanhas.' },
+    { q: 'Como os clientes me pagam?', a: 'Os pedidos gerados na vitrine vão direto para o seu WhatsApp com todos os itens, valores e dados do cliente para você combinar o Pix ou envio.' },
+    { q: 'Como funcionam os cupons de desconto?', a: 'Na aba Cupons, você define um código (ex: PROMO10) e a porcentagem de desconto. O cliente pode digitar esse código na gaveta do carrinho na vitrine.' },
+    { q: 'O estoque atualiza sozinho?', a: 'Sim! Cada cadastro define a quantidade inicial disponível para controle interno e aviso de ruptura.' }
+  ];
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-4 sm:p-8 relative">
@@ -161,7 +169,7 @@ export default function AdminDashboard() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 border border-slate-800 p-6 rounded-3xl">
           <div>
             <h1 className="text-2xl font-black text-white">Painel da Loja ({storeName})</h1>
-            <p className="text-xs text-slate-400">Gestão gerencial de vendas, produtos e relatórios.</p>
+            <p className="text-xs text-slate-400">Gestão completa de vendas, catálogo e suporte.</p>
           </div>
           <a href={`#/loja/${tenantId}`} target="_blank" rel="noopener noreferrer" className="px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 font-black text-xs rounded-xl transition-all">
             Ver Minha Vitrine ↗
@@ -180,7 +188,10 @@ export default function AdminDashboard() {
             <ShoppingBag className="w-4 h-4" /> Pedidos
           </button>
           <button onClick={() => setActiveTab('analytics')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'analytics' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 text-slate-400'}`}>
-            <BarChart3 className="w-4 h-4" /> Relatórios & Faturamento
+            <BarChart3 className="w-4 h-4" /> Relatórios
+          </button>
+          <button onClick={() => setActiveTab('help')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'help' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 text-slate-400'}`}>
+            <HelpCircle className="w-4 h-4" /> Ajuda & Suporte
           </button>
           <button onClick={() => setActiveTab('settings')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'settings' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-900 text-slate-400'}`}>
             <Settings className="w-4 h-4" /> Configurações
@@ -272,7 +283,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* RELATÓRIOS & ANALYTICS */}
+        {/* RELATÓRIOS */}
         {activeTab === 'analytics' && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -289,10 +300,36 @@ export default function AdminDashboard() {
                 <h3 className="text-2xl font-black text-white">{formatBRL(averageTicket)}</h3>
               </div>
             </div>
+          </div>
+        )}
 
-            <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl space-y-4">
-              <h3 className="text-sm font-bold text-white">Desempenho Geral do Ecossistema</h3>
-              <p className="text-xs text-slate-400">Sua loja virtual está operando com alta performance de conversão e rastreio de faturamento em tempo real.</p>
+        {/* AJUDA & SUPORTE (FAQ) */}
+        {activeTab === 'help' && (
+          <div className="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-3xl space-y-6">
+            <div>
+              <h3 className="text-base font-black text-white flex items-center gap-2">
+                <HelpCircle className="w-5 h-5 text-emerald-400" /> Central de Ajuda do Lojista
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">Tire suas dúvidas rapidamente sobre como extrair o máximo da sua vitrine.</p>
+            </div>
+
+            <div className="space-y-3">
+              {faqList.map((item, idx) => (
+                <div key={idx} className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden">
+                  <button 
+                    onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
+                    className="w-full p-4 text-left flex justify-between items-center text-xs font-bold text-white hover:text-emerald-400 transition-colors"
+                  >
+                    <span>{item.q}</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${openFaq === idx ? 'rotate-180 text-emerald-400' : 'text-slate-500'}`} />
+                  </button>
+                  {openFaq === idx && (
+                    <div className="p-4 pt-0 text-xs text-slate-400 border-t border-slate-900 leading-relaxed">
+                      {item.a}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         )}
