@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, Truck, CheckCircle2, TrendingUp, Users, BarChart3, ShieldCheck } from 'lucide-react';
+import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, Truck, CheckCircle2, TrendingUp, Users, BarChart3, ShieldCheck, MessageSquare } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'coupons' | 'settings' | 'analytics'>('products');
@@ -62,8 +62,8 @@ export default function AdminDashboard() {
       setOrders(savedOrders);
     } else {
       const initialOrders = [
-        { id: 'ORD-101', customer: 'Mariana Souza', total: 149.90, status: 'Aguardando Pagamento', date: '2026-07-22' },
-        { id: 'ORD-102', customer: 'João Pedro', total: 299.90, status: 'Pago / Separando', date: '2026-07-23' }
+        { id: 'ORD-101', customer: 'Mariana Souza', whatsapp: '67999999999', total: 149.90, status: 'Aguardando Pagamento', date: '2026-07-22' },
+        { id: 'ORD-102', customer: 'João Pedro', whatsapp: '67988888888', total: 299.90, status: 'Pago / Separando', date: '2026-07-23' }
       ];
       setOrders(initialOrders);
       localStorage.setItem(`store_orders_${tenantId}`, JSON.stringify(initialOrders));
@@ -119,9 +119,17 @@ export default function AdminDashboard() {
     localStorage.setItem(`store_orders_${tenantId}`, JSON.stringify(updated));
   };
 
+  // Função auxiliar para gerar link do WhatsApp para o cliente do pedido
+  const gerarLinkWhatsAppNotificacao = (telefone: string, nomeCliente: string, numeroPedido: string, status: string) => {
+    const foneLimpo = (telefone || '67999999999').replace(/\D/g, '');
+    const textoMensagem = `Olá, *${nomeCliente}*! Passando para atualizar sobre o seu pedido *${numeroPedido}* na ${storeName}.\n\n` +
+      `Status atual: *${status}* 📦\n\nQualquer dúvida, estamos à disposição!`;
+    return `https://wa.me/55${foneLimpo}?text=${encodeURIComponent(textoMensagem)}`;
+  };
+
   const formatBRL = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
-  // Cálculo de métricas rápidas para a nova aba de Analytics
+  // Cálculo de métricas rápidas para a aba de Analytics
   const totalRevenue = orders.reduce((acc, curr) => acc + (curr.status !== 'Cancelado' ? curr.total : 0), 0);
 
   return (
@@ -266,6 +274,17 @@ export default function AdminDashboard() {
                           >
                             <Truck className="w-4 h-4" />
                           </button>
+                          
+                          {/* Botão de Disparo Automático via WhatsApp */}
+                          <a 
+                            href={gerarLinkWhatsAppNotificacao(order.whatsapp, order.customer, order.id, order.status)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Enviar status via WhatsApp"
+                            className="p-2 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-colors flex items-center gap-1 text-xs font-bold"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                          </a>
                         </div>
                       </div>
                     </div>
@@ -320,7 +339,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* CONTEÚDO NOVO: RELATÓRIOS & ANALYTICS */}
+        {/* CONTEÚDO: RELATÓRIOS & ANALYTICS */}
         {activeTab === 'analytics' && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -348,7 +367,7 @@ export default function AdminDashboard() {
                 <ShieldCheck className="w-4 h-4 text-emerald-400" /> Saúde do Sistema e Conversão
               </h3>
               <p className="text-xs text-slate-400">
-                Sua vitrine está otimizada para conversões diretas via WhatsApp com emissão de Pix instantâneo e captura automática de leads.
+                Sua vitrine está otimizada para conversões diretas via WhatsApp com emissão de Pix instantâneo e automação de mensagens de status.
               </p>
             </div>
           </div>
