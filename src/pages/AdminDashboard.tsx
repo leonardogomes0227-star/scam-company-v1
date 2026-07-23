@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, TrendingUp, Users } from 'lucide-react';
+import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, TrendingUp, CheckCircle2 } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'products' | 'coupons' | 'abandoned' | 'settings'>('products');
@@ -11,7 +11,9 @@ export default function AdminDashboard() {
   const [storeAbout, setStoreAbout] = useState('');
   const [storeWhatsapp, setStoreWhatsapp] = useState('');
   const [storeColor, setStoreColor] = useState('#10b981');
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  
+  // Sistema de Toast Global para Feedback
+  const [toastMessage, setToastMessage] = useState('');
 
   const [products, setProducts] = useState<any[]>([]);
   const [name, setName] = useState('');
@@ -20,12 +22,16 @@ export default function AdminDashboard() {
   const [image, setImage] = useState('');
   const [category, setCategory] = useState('Geral');
 
-  // Estados de Cupons
   const [coupons, setCoupons] = useState<any[]>([]);
   const [couponCode, setCouponCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState('');
 
   const [abandonedLeads, setAbandonedLeads] = useState<any[]>([]);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(''), 3000);
+  };
 
   useEffect(() => {
     const savedConfig = JSON.parse(localStorage.getItem(`store_config_${tenantId}`) || '{}');
@@ -51,7 +57,6 @@ export default function AdminDashboard() {
       localStorage.setItem(`store_products_${tenantId}`, JSON.stringify(initial));
     }
 
-    // Carrega cupons salvos
     const savedCoupons = JSON.parse(localStorage.getItem(`store_coupons_${tenantId}`) || '[]');
     if (savedCoupons.length > 0) {
       setCoupons(savedCoupons);
@@ -71,8 +76,7 @@ export default function AdminDashboard() {
     e.preventDefault();
     const configData = { name: storeName, about: storeAbout, whatsapp: storeWhatsapp, color: storeColor };
     localStorage.setItem(`store_config_${tenantId}`, JSON.stringify(configData));
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+    showToast('Configurações da loja salvas com sucesso!');
   };
 
   const handleAddProduct = (e: React.FormEvent) => {
@@ -93,12 +97,14 @@ export default function AdminDashboard() {
     setPrice('');
     setStock('10');
     setImage('');
+    showToast('Produto cadastrado com sucesso!');
   };
 
   const handleDeleteProduct = (id: string) => {
     const updated = products.filter(p => p.id !== id);
     setProducts(updated);
     localStorage.setItem(`store_products_${tenantId}`, JSON.stringify(updated));
+    showToast('Produto removido com sucesso!');
   };
 
   const handleAddCoupon = (e: React.FormEvent) => {
@@ -114,25 +120,35 @@ export default function AdminDashboard() {
     localStorage.setItem(`store_coupons_${tenantId}`, JSON.stringify(updated));
     setCouponCode('');
     setCouponDiscount('');
+    showToast('Cupom promocional criado com sucesso!');
   };
 
   const handleDeleteCoupon = (id: string) => {
     const updated = coupons.filter(c => c.id !== id);
     setCoupons(updated);
     localStorage.setItem(`store_coupons_${tenantId}`, JSON.stringify(updated));
+    showToast('Cupom removido!');
   };
 
   const formatBRL = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-4 sm:p-8">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans p-4 sm:p-8 relative">
+      
+      {/* Toast de Notificação Flutuante */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-emerald-500 text-slate-950 px-4 py-3 rounded-2xl font-black text-xs shadow-2xl flex items-center gap-2 animate-bounce">
+          <CheckCircle2 className="w-4 h-4" /> {toastMessage}
+        </div>
+      )}
+
       <div className="max-w-6xl mx-auto space-y-8">
         
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 border border-slate-800 p-6 rounded-3xl">
           <div>
             <h1 className="text-2xl font-black text-white">Painel da Loja ({storeName})</h1>
-            <p className="text-xs text-slate-400">Gestão de catálogo, cupons promocionais e carrinhos.</p>
+            <p className="text-xs text-slate-400">Gestão integrada de catálogo, cupons e carrinhos.</p>
           </div>
           <a href={`#/loja/${tenantId}`} target="_blank" rel="noopener noreferrer" className="px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 font-black text-xs rounded-xl transition-all">
             Ver Minha Vitrine ↗
@@ -192,7 +208,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* CUPONS DE DESCONTO */}
+        {/* CUPONS */}
         {activeTab === 'coupons' && (
           <div className="space-y-6">
             <form onSubmit={handleAddCoupon} className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4 max-w-xl">
@@ -231,7 +247,9 @@ export default function AdminDashboard() {
           <form onSubmit={handleSaveSettings} className="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-2xl space-y-4">
             <h3 className="text-base font-black text-white">Configurações da Loja</h3>
             <input type="text" value={storeName} onChange={e => setStoreName(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-xs text-white" />
-            <button type="submit" className="w-full py-3 bg-emerald-500 text-slate-950 font-black text-xs rounded-xl">Salvar</button>
+            <button type="submit" className="w-full py-3.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl flex items-center justify-center gap-2">
+              <Save className="w-4 h-4" /> Salvar Configurações
+            </button>
           </form>
         )}
 
