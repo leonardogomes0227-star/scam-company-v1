@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard, Search } from 'lucide-react';
+import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard, Search, Eye } from 'lucide-react';
 
 export default function Storefront() {
   const [storeConfig, setStoreConfig] = useState({ name: 'Minha Loja', about: 'Seja bem-vindo!', whatsapp: '5567999999999', color: '#10b981' });
@@ -7,7 +7,10 @@ export default function Storefront() {
   const [cart, setCart] = useState<any[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('Todos');
-  const [searchQuery, setSearchQuery] = useState(''); // Estado para o filtro de busca
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Estado para o Modal de Detalhes do Produto
+  const [activeProductModal, setActiveProductModal] = useState<any>(null);
 
   // Estados de Cupom
   const [coupons, setCoupons] = useState<any[]>([]);
@@ -15,7 +18,7 @@ export default function Storefront() {
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [couponError, setCouponError] = useState('');
 
-  // Estados de Checkout e Pagamento
+  // Estados de Checkout
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientAddress, setClientAddress] = useState('');
@@ -27,15 +30,16 @@ export default function Storefront() {
 
     const prods = JSON.parse(localStorage.getItem('store_products_lkd-imports') || '[]');
     if (prods.length > 0) {
-      const prodsWithReviews = prods.map((p: any) => ({
+      const prodsWithDetails = prods.map((p: any) => ({
         ...p,
+        description: p.description || 'Produto de alta qualidade, original e com garantia de entrega rápida na sua região.',
         rating: 4.8,
         reviewsCount: Math.floor(Math.random() * 25) + 5
       }));
-      setProducts(prodsWithReviews);
+      setProducts(prodsWithDetails);
     } else {
       setProducts([
-        { id: '1', name: 'Fone Bluetooth Pro', price: 149.90, category: 'Eletrônicos', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', rating: 4.9, reviewsCount: 12 }
+        { id: '1', name: 'Fone Bluetooth Pro', price: 149.90, category: 'Eletrônicos', description: 'Fone sem fio de alta fidelidade com cancelamento de ruído e bateria de longa duração.', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', rating: 4.9, reviewsCount: 12 }
       ]);
     }
 
@@ -45,7 +49,6 @@ export default function Storefront() {
 
   const categories = ['Todos', ...Array.from(new Set(products.map(p => p.category || 'Geral')))];
 
-  // Filtra produtos por Categoria e Barra de Pesquisa simultaneamente
   const filteredProducts = products.filter(product => {
     const matchesCategory = selectedCategory === 'Todos' || (product.category || 'Geral') === selectedCategory;
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -54,6 +57,7 @@ export default function Storefront() {
 
   const addToCart = (product: any) => {
     setCart([...cart, product]);
+    setActiveProductModal(null);
     setIsCartOpen(true);
   };
 
@@ -98,7 +102,7 @@ export default function Storefront() {
     let msg = `🛒 *NOVO PEDIDO - ${storeConfig.name}*\n\n` +
       `👤 *Cliente:* ${clientName}\n` +
       `📍 *Endereço:* ${clientAddress}\n` +
-      `💳 *Forma de Pagamento:* ${paymentMethod}\n\n` +
+      `💳 *Pagamento:* ${paymentMethod}\n\n` +
       `📦 *Itens do Pedido:*\n`;
 
     cart.forEach(item => {
@@ -121,7 +125,7 @@ export default function Storefront() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-24">
       {/* Header */}
-      <div className="bg-slate-900 border-b border-slate-800 p-6 flex justify-between items-center max-w-4xl mx-auto rounded-b-3xl">
+      <div className="bg-slate-900 border-b border-slate-800 p-6 flex justify-between items-center max-w-4xl mx-auto rounded-b-3xl shadow-lg">
         <div>
           <h1 className="text-xl font-black text-white">{storeConfig.name}</h1>
           <p className="text-xs text-slate-400">{storeConfig.about}</p>
@@ -139,9 +143,8 @@ export default function Storefront() {
         </button>
       </div>
 
-      {/* Barra de Pesquisa e Filtros */}
+      {/* Busca e Filtros */}
       <div className="max-w-4xl mx-auto px-4 pt-6 space-y-4">
-        {/* Input de Busca */}
         <div className="relative">
           <Search className="w-4 h-4 text-slate-500 absolute left-4 top-3.5" />
           <input 
@@ -153,7 +156,6 @@ export default function Storefront() {
           />
         </div>
 
-        {/* Categorias */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
           <span className="text-xs font-bold text-slate-400 flex items-center gap-1 shrink-0"><Filter className="w-3.5 h-3.5" /> Categoria:</span>
           {categories.map((cat, idx) => (
@@ -172,26 +174,35 @@ export default function Storefront() {
       <div className="max-w-4xl mx-auto p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
         {filteredProducts.length === 0 ? (
           <div className="col-span-full text-center py-12 text-xs text-slate-500 bg-slate-900 border border-slate-800 rounded-3xl">
-            Nenhum produto encontrado com essa busca.
+            Nenhum produto encontrado.
           </div>
         ) : (
           filteredProducts.map(product => (
             <div key={product.id} className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden p-4 flex flex-col justify-between space-y-4 shadow-lg">
-              <div className="space-y-3">
-                <img src={product.image} alt={product.name} className="w-full h-48 object-cover rounded-2xl bg-slate-950" />
+              <div className="space-y-3 cursor-pointer" onClick={() => setActiveProductModal(product)}>
+                <div className="relative group">
+                  <img src={product.image} alt={product.name} className="w-full h-48 object-cover rounded-2xl bg-slate-950" />
+                  <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
+                    <span className="px-3 py-1.5 bg-slate-900/90 text-white font-bold text-[10px] rounded-xl flex items-center gap-1 shadow-md">
+                      <Eye className="w-3.5 h-3.5 text-emerald-400" /> Ver Detalhes
+                    </span>
+                  </div>
+                </div>
+
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold text-emerald-400 uppercase">{product.category || 'Geral'}</span>
                   <h3 className="text-sm font-bold text-white truncate">{product.name}</h3>
                   <div className="flex items-center gap-1 text-amber-400">
                     <Star className="w-3.5 h-3.5 fill-current" />
                     <span className="text-xs font-black text-white ml-1">{product.rating}</span>
-                    <span className="text-[10px] text-slate-400">({product.reviewsCount})</span>
+                    <span className="text-[10px] text-slate-400">({product.reviewsCount} avaliações)</span>
                   </div>
                 </div>
               </div>
+
               <div className="flex items-center justify-between pt-3 border-t border-slate-800">
                 <span className="text-sm font-black text-emerald-400">{formatBRL(product.price)}</span>
-                <button onClick={() => addToCart(product)} className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all">
+                <button onClick={() => addToCart(product)} className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all shadow-md">
                   Comprar 🛒
                 </button>
               </div>
@@ -199,6 +210,43 @@ export default function Storefront() {
           ))
         )}
       </div>
+
+      {/* Modal de Detalhes do Produto */}
+      {activeProductModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl space-y-4 p-6 relative">
+            <button 
+              onClick={() => setActiveProductModal(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white font-bold text-xs bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800"
+            >
+              ✕ Fechar
+            </button>
+
+            <img src={activeProductModal.image} alt={activeProductModal.name} className="w-full h-64 object-cover rounded-2xl bg-slate-950" />
+
+            <div className="space-y-2">
+              <span className="text-[10px] font-bold text-emerald-400 uppercase">{activeProductModal.category}</span>
+              <h2 className="text-lg font-black text-white">{activeProductModal.name}</h2>
+              <div className="flex items-center gap-1 text-amber-400">
+                <Star className="w-3.5 h-3.5 fill-current" />
+                <span className="text-xs font-black text-white ml-1">{activeProductModal.rating}</span>
+                <span className="text-[10px] text-slate-400">({activeProductModal.reviewsCount} avaliações de clientes)</span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed pt-2">{activeProductModal.description}</p>
+            </div>
+
+            <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+              <span className="text-base font-black text-emerald-400">{formatBRL(activeProductModal.price)}</span>
+              <button 
+                onClick={() => addToCart(activeProductModal)}
+                className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all shadow-lg"
+              >
+                Adicionar ao Carrinho 🛒
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Gaveta do Carrinho / Checkout */}
       {isCartOpen && (
