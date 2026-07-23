@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard, Search, Eye } from 'lucide-react';
+import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard, Search, Eye, Sparkles } from 'lucide-react';
 
 export default function Storefront() {
   const [storeConfig, setStoreConfig] = useState({ name: 'Minha Loja', about: 'Seja bem-vindo!', whatsapp: '5567999999999', color: '#10b981' });
@@ -9,7 +9,6 @@ export default function Storefront() {
   const [selectedCategory, setSelectedCategory] = useState('Todos');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Estado para o Modal de Detalhes do Produto
   const [activeProductModal, setActiveProductModal] = useState<any>(null);
 
   // Estados de Cupom
@@ -124,8 +123,14 @@ export default function Storefront() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-24">
+      
+      {/* Banner Promocional no Topo */}
+      <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-slate-950 py-2 px-4 text-center font-black text-[11px] flex items-center justify-center gap-2 shadow-md">
+        <Sparkles className="w-3.5 h-3.5" /> Aproveite os melhores produtos com entrega garantida e Pix instantâneo!
+      </div>
+
       {/* Header */}
-      <div className="bg-slate-900 border-b border-slate-800 p-6 flex justify-between items-center max-w-4xl mx-auto rounded-b-3xl shadow-lg">
+      <div className="bg-slate-900 border-b border-slate-800 p-6 flex justify-between items-center max-w-4xl mx-auto rounded-b-3xl shadow-lg mt-2">
         <div>
           <h1 className="text-xl font-black text-white">{storeConfig.name}</h1>
           <p className="text-xs text-slate-400">{storeConfig.about}</p>
