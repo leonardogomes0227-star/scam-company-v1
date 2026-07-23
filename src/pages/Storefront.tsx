@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard, Search, Eye, Sparkles } from 'lucide-react';
+import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard, Search, Eye, Sparkles, Truck, CheckCircle2, Clock } from 'lucide-react';
 
 export default function Storefront() {
   const [storeConfig, setStoreConfig] = useState({ name: 'Minha Loja', about: 'Seja bem-vindo!', whatsapp: '5567999999999', color: '#10b981' });
@@ -23,6 +23,11 @@ export default function Storefront() {
   const [clientAddress, setClientAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Pix');
 
+  // Estados de Rastreio de Pedido pelo Cliente
+  const [trackingCodeInput, setTrackingCodeInput] = useState('');
+  const [trackedOrderResult, setTrackedOrderResult] = useState<any>(null);
+  const [trackingSearched, setTrackingSearched] = useState(false);
+
   useEffect(() => {
     const config = JSON.parse(localStorage.getItem('store_config_lkd-imports') || '{}');
     if (config.name) setStoreConfig(config);
@@ -31,14 +36,14 @@ export default function Storefront() {
     if (prods.length > 0) {
       const prodsWithDetails = prods.map((p: any) => ({
         ...p,
-        description: p.description || 'Produto de alta qualidade, original e com garantia de entrega rápida na sua região.',
+        description: p.description || 'Produto de alta qualidade, original e com garantia de entrega rápida.',
         rating: 4.8,
         reviewsCount: Math.floor(Math.random() * 25) + 5
       }));
       setProducts(prodsWithDetails);
     } else {
       setProducts([
-        { id: '1', name: 'Fone Bluetooth Pro', price: 149.90, category: 'Eletrônicos', description: 'Fone sem fio de alta fidelidade com cancelamento de ruído e bateria de longa duração.', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', rating: 4.9, reviewsCount: 12 }
+        { id: '1', name: 'Fone Bluetooth Pro', price: 149.90, category: 'Eletrônicos', description: 'Fone sem fio de alta fidelidade.', image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', rating: 4.9, reviewsCount: 12 }
       ]);
     }
 
@@ -86,8 +91,9 @@ export default function Storefront() {
     e.preventDefault();
     if (!clientName || !clientPhone || cart.length === 0) return;
 
+    const orderId = 'ORD-' + Math.floor(1000 + Math.random() * 9000);
     const newOrder = {
-      id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
+      id: orderId,
       customer: clientName,
       whatsapp: clientPhone,
       total: total,
@@ -98,11 +104,11 @@ export default function Storefront() {
     const existingOrders = JSON.parse(localStorage.getItem('store_orders_lkd-imports') || '[]');
     localStorage.setItem('store_orders_lkd-imports', JSON.stringify([newOrder, ...existingOrders]));
 
-    let msg = `🛒 *NOVO PEDIDO - ${storeConfig.name}*\n\n` +
+    let msg = `🛒 *NOVO PEDIDO (${orderId}) - ${storeConfig.name}*\n\n` +
       `👤 *Cliente:* ${clientName}\n` +
       `📍 *Endereço:* ${clientAddress}\n` +
       `💳 *Pagamento:* ${paymentMethod}\n\n` +
-      `📦 *Itens do Pedido:*\n`;
+      `📦 *Itens:*\n`;
 
     cart.forEach(item => {
       msg += `- ${item.name} (${formatBRL(item.price)})\n`;
@@ -119,14 +125,23 @@ export default function Storefront() {
     window.open(url, '_blank');
   };
 
+  const handleTrackOrder = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!trackingCodeInput) return;
+    const allOrders = JSON.parse(localStorage.getItem('store_orders_lkd-imports') || '[]');
+    const found = allOrders.find((o: any) => o.id.toLowerCase() === trackingCodeInput.trim().toLowerCase());
+    setTrackedOrderResult(found || null);
+    setTrackingSearched(true);
+  };
+
   const formatBRL = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans pb-24">
       
-      {/* Banner Promocional no Topo */}
+      {/* Banner Topo */}
       <div className="bg-gradient-to-r from-emerald-600 to-teal-600 text-slate-950 py-2 px-4 text-center font-black text-[11px] flex items-center justify-center gap-2 shadow-md">
-        <Sparkles className="w-3.5 h-3.5" /> Aproveite os melhores produtos com entrega garantida e Pix instantâneo!
+        <Sparkles className="w-3.5 h-3.5" /> Entrega rápida na região e pagamento facilitado!
       </div>
 
       {/* Header */}
@@ -146,6 +161,49 @@ export default function Storefront() {
             </span>
           )}
         </button>
+      </div>
+
+      {/* Rastreio de Pedido para o Cliente */}
+      <div className="max-w-4xl mx-auto px-4 pt-6">
+        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl space-y-3 shadow-lg">
+          <h3 className="text-xs font-bold text-white flex items-center gap-2">
+            <Truck className="w-4 h-4 text-emerald-400" /> Acompanhe o Status do seu Pedido
+          </h3>
+          <form onSubmit={handleTrackOrder} className="flex gap-2">
+            <input 
+              type="text" 
+              placeholder="Digite o código do pedido (ex: ORD-1234)" 
+              value={trackingCodeInput}
+              onChange={e => setTrackingCodeInput(e.target.value)}
+              className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-white uppercase outline-none focus:border-emerald-500"
+              required
+            />
+            <button type="submit" className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl transition-all">
+              Consultar
+            </button>
+          </form>
+
+          {trackingSearched && (
+            <div className="pt-2">
+              {trackedOrderResult ? (
+                <div className="bg-slate-950 border border-emerald-500/30 p-4 rounded-2xl flex justify-between items-center text-xs">
+                  <div>
+                    <span className="text-emerald-400 font-bold">{trackedOrderResult.id}</span>
+                    <h4 className="font-bold text-white">Cliente: {trackedOrderResult.customer}</h4>
+                    <span className="text-slate-400">Total: {formatBRL(trackedOrderResult.total)}</span>
+                  </div>
+                  <span className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-bold rounded-xl flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5" /> {trackedOrderResult.status}
+                  </span>
+                </div>
+              ) : (
+                <div className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 p-3 rounded-xl text-center font-bold">
+                  Nenhum pedido encontrado com este código. Verifique e tente novamente.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Busca e Filtros */}
@@ -235,7 +293,7 @@ export default function Storefront() {
               <div className="flex items-center gap-1 text-amber-400">
                 <Star className="w-3.5 h-3.5 fill-current" />
                 <span className="text-xs font-black text-white ml-1">{activeProductModal.rating}</span>
-                <span className="text-[10px] text-slate-400">({activeProductModal.reviewsCount} avaliações de clientes)</span>
+                <span className="text-[10px] text-slate-400">({activeProductModal.reviewsCount} avaliações)</span>
               </div>
               <p className="text-xs text-slate-300 leading-relaxed pt-2">{activeProductModal.description}</p>
             </div>
