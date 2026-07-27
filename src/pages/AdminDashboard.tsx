@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, TrendingUp, CheckCircle2, BarChart3, DollarSign, HelpCircle, ChevronDown, Download, Eye, MapPin, CreditCard, AlertTriangle, Edit3, Copy, Video } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, TrendingUp, CheckCircle2, BarChart3, DollarSign, HelpCircle, ChevronDown, Download, Eye, MapPin, CreditCard, AlertTriangle, Edit3, Copy, Video, Play, Square, RefreshCcw } from 'lucide-react';
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'products' | 'coupons' | 'orders' | 'analytics' | 'help' | 'settings'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'coupons' | 'orders' | 'analytics' | 'help' | 'videos' | 'settings'>('products');
   
   const currentUser = JSON.parse(localStorage.getItem('saas_auth_user') || '{}');
   const tenantId = currentUser.tenantId || 'lkd-imports';
@@ -36,6 +36,15 @@ export default function AdminDashboard() {
 
   const [selectedOrderModal, setSelectedOrderModal] = useState<any>(null);
 
+  // Estados para a Fábrica de Vídeos & Teleprompter
+  const [selectedProductId, setSelectedProductId] = useState('');
+  const [videoGoal, setVideoGoal] = useState<'urgencia' | 'desejo' | 'dor'>('urgencia');
+  const [generatedScript, setGeneratedScript] = useState<any>(null);
+  const [isTeleprompterOpen, setIsTeleprompterOpen] = useState(false);
+  const [teleprompterSpeed, setTeleprompterSpeed] = useState(2); // 1 a 5
+  const [isScrolling, setIsScrolling] = useState(false);
+  const teleprompterRef = useRef<HTMLDivElement>(null);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(''), 3000);
@@ -57,12 +66,14 @@ export default function AdminDashboard() {
     const savedProducts = JSON.parse(localStorage.getItem(`store_products_${tenantId}`) || '[]');
     if (savedProducts.length > 0) {
       setProducts(savedProducts);
+      setSelectedProductId(savedProducts[0].id);
     } else {
       const initial = [
         { id: '1', name: 'Fone de Ouvido Bluetooth Pro', price: 149.90, stock: 2, image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', category: 'Eletrônicos' },
         { id: '2', name: 'Smartwatch 4K', price: 299.90, stock: 1, image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80', category: 'Eletrônicos' }
       ];
       setProducts(initial);
+      setSelectedProductId(initial[0].id);
       localStorage.setItem(`store_products_${tenantId}`, JSON.stringify(initial));
     }
 
@@ -99,6 +110,19 @@ export default function AdminDashboard() {
     const leadCart = JSON.parse(localStorage.getItem('scam_abandoned_lead') || 'null');
     if (leadCart) setAbandonedLeads([leadCart]);
   }, [tenantId]);
+
+  // Lógica de Rolagem Automática do Teleprompter
+  useEffect(() => {
+    let interval: any;
+    if (isScrolling && isTeleprompterOpen) {
+      interval = setInterval(() => {
+        if (teleprompterRef.current) {
+          teleprompterRef.current.scrollTop += teleprompterSpeed * 1.5;
+        }
+      }, 30);
+    }
+    return () => clearInterval(interval);
+  }, [isScrolling, isTeleprompterOpen, teleprompterSpeed]);
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,6 +250,45 @@ export default function AdminDashboard() {
   const averageTicket = orders.length > 0 ? totalRevenue / orders.length : 0;
   const lowStockProducts = products.filter(p => (p.stock || 0) <= 3);
 
+  // Gerador dinâmico de roteiro baseado no produto escolhido
+  const handleGenerateScript = (e: React.FormEvent) => {
+    e.preventDefault();
+    const prod = products.find(p => p.id === selectedProductId);
+    if (!prod) {
+      showToast('Selecione um produto válido.');
+      return;
+    }
+
+    const priceFormatted = formatBRL(prod.price);
+    let scriptData = { title: '', hook: '', body: '', cta: '' };
+
+    if (videoGoal === 'urgencia') {
+      scriptData = {
+        title: `🔥 Queima de Estoque: ${prod.name}`,
+        hook: `Se você estava esperando o momento certo para garantir o seu ${prod.name}, o momento é agora porque restam poucas unidades!`,
+        body: `Olha a qualidade disso aqui. Ele resolve o seu problema no dia a dia, é super durável e está saindo por apenas ${priceFormatted}.`,
+        cta: `Clica no link da minha bio ou vitrine, me chama no WhatsApp e garante o seu antes que acabe!`
+      };
+    } else if (videoGoal === 'desejo') {
+      scriptData = {
+        title: `✨ Lançamento / Desejo: ${prod.name}`,
+        hook: `Olha a lindeza que acabou de chegar reposição aqui na ${storeName}!`,
+        body: `Muita gente me pediu e ele voltou. O ${prod.name} tem acabamento impecável, tecnologia de ponta e vai transformar sua rotina por ${priceFormatted}.`,
+        cta: `Quer garantir o seu? Clica no botão de comprar da vitrine e fala comigo direto no WhatsApp.`
+      };
+    } else {
+      scriptData = {
+        title: `💡 Resolução de Dor: ${prod.name}`,
+        hook: `Cansado de passar perrengue com produtos ruins que quebram rápido?`,
+        body: `O ${prod.name} veio para resolver exatamente isso. Por apenas ${priceFormatted}, você leva máxima eficiência, garantia e praticidade.`,
+        cta: `Não perde tempo, clica no link da vitrine e pede o seu pelo WhatsApp agora mesmo!`
+      };
+    }
+
+    setGeneratedScript(scriptData);
+    showToast('Roteiro gerado com sucesso!');
+  };
+
   const faqList = [
     { 
       q: 'Como faço para divulgar minha vitrine?', 
@@ -237,27 +300,65 @@ export default function AdminDashboard() {
     }
   ];
 
-  const videoScripts = [
-    {
-      title: 'Roteiro 1: Queima de Estoque (Foco em Urgência)',
-      hook: '"Se você estava esperando o momento certo para garantir o seu [Produto], o momento é agora!"',
-      body: 'Mostre o produto de perto na câmera, destaque a qualidade e avise que restam poucas unidades.',
-      cta: '"Clica no link da minha bio (ou vitrine) e garante o seu antes que acabe o estoque!"'
-    },
-    {
-      title: 'Roteiro 2: Unboxing / Detalhes (Foco em Desejo)',
-      hook: '"Olha a lindeza que acabou de chegar reposição na loja!"',
-      body: 'Abra a caixa ou mostre os detalhes de funcionamento do produto de forma bem visual e dinâmica.',
-      cta: '"Quer garantir o seu? Clica no botão de comprar e me chama direto no WhatsApp."'
-    }
-  ];
-
   return (
     <div className="min-h-screen bg-black text-slate-100 font-sans p-4 sm:p-8 relative selection:bg-amber-500 selection:text-black">
       
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-amber-500 text-black px-4 py-3 rounded-2xl font-black text-xs shadow-2xl flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4" /> {toastMessage}
+        </div>
+      )}
+
+      {/* TELA DO TELEPROMPTER FULLSCREEN */}
+      {isTeleprompterOpen && generatedScript && (
+        <div className="fixed inset-0 bg-black z-50 flex flex-col p-6 sm:p-12">
+          {/* Controles do Teleprompter */}
+          <div className="flex justify-between items-center bg-zinc-900 border border-zinc-800 p-4 rounded-2xl mb-6 shadow-2xl">
+            <div className="flex items-center gap-4">
+              <span className="text-xs font-black text-amber-400">TELEPROMPTER ATIVO</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-400">Velocidade:</span>
+                <input 
+                  type="range" 
+                  min="1" 
+                  max="5" 
+                  value={teleprompterSpeed} 
+                  onChange={e => setTeleprompterSpeed(Number(e.target.value))}
+                  className="accent-amber-500 cursor-pointer" 
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={() => setIsScrolling(!isScrolling)} 
+                className={`px-4 py-2 rounded-xl font-black text-xs flex items-center gap-2 transition-all ${isScrolling ? 'bg-red-500 text-white' : 'bg-amber-500 text-black'}`}
+              >
+                {isScrolling ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                {isScrolling ? 'Pausar Rolagem' : 'Iniciar Rolagem'}
+              </button>
+              <button 
+                onClick={() => { setIsTeleprompterOpen(false); setIsScrolling(false); }} 
+                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs rounded-xl"
+              >
+                ✕ Fechar
+              </button>
+            </div>
+          </div>
+
+          {/* Texto Rolável Gigante */}
+          <div 
+            ref={teleprompterRef} 
+            className="flex-1 overflow-y-auto max-w-4xl mx-auto text-center space-y-12 px-6 py-20 scrollbar-none"
+          >
+            <h2 className="text-3xl sm:text-5xl font-black text-amber-400">{generatedScript.title}</h2>
+            <div className="text-2xl sm:text-4xl font-bold text-white leading-relaxed space-y-8">
+              <p><span className="text-amber-400 text-lg block mb-2 uppercase tracking-widest">[ GANCHO ]</span> {generatedScript.hook}</p>
+              <p><span className="text-amber-400 text-lg block mb-2 uppercase tracking-widest">[ CORPO ]</span> {generatedScript.body}</p>
+              <p><span className="text-amber-400 text-lg block mb-2 uppercase tracking-widest">[ CHAMADA PARA AÇÃO ]</span> {generatedScript.cta}</p>
+            </div>
+            <div className="py-20 text-zinc-600 text-sm font-mono">Fim do Roteiro - Posicione o celular e grave!</div>
+          </div>
         </div>
       )}
 
@@ -295,6 +396,9 @@ export default function AdminDashboard() {
           </button>
           <button onClick={() => setActiveTab('analytics')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'analytics' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}>
             <BarChart3 className="w-4 h-4" /> Relatórios & Estoque
+          </button>
+          <button onClick={() => setActiveTab('videos')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'videos' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}>
+            <Video className="w-4 h-4" /> Fábrica de Vídeos
           </button>
           <button onClick={() => setActiveTab('help')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'help' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}>
             <HelpCircle className="w-4 h-4" /> Ajuda
@@ -530,41 +634,100 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* AJUDA & ROTEIROS DE VÍDEO */}
-        {activeTab === 'help' && (
+        {/* FÁBRICA DE VÍDEOS & TELEPROMPTER */}
+        {activeTab === 'videos' && (
           <div className="space-y-6 max-w-3xl">
-            <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-6">
-              <h3 className="text-base font-black text-white flex items-center gap-2"><HelpCircle className="w-5 h-5 text-amber-400" /> Central de Ajuda & Tutoriais</h3>
-              <div className="space-y-3">
-                {faqList.map((item, idx) => (
-                  <div key={idx} className="bg-black border border-zinc-800 rounded-2xl overflow-hidden">
-                    <button onClick={() => setOpenFaq(openFaq === idx ? null : idx)} className="w-full p-4 text-left flex justify-between items-center text-xs font-bold text-white">
-                      <span>{item.q}</span>
-                      <ChevronDown className="w-4 h-4 text-zinc-500" />
-                    </button>
-                    {openFaq === idx && <div className="p-4 pt-0 text-xs text-zinc-400 border-t border-zinc-900">{item.a}</div>}
-                  </div>
-                ))}
+            <form onSubmit={handleGenerateScript} className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-6">
+              <div>
+                <h3 className="text-base font-black text-white flex items-center gap-2">
+                  <Video className="w-5 h-5 text-amber-400" /> Fábrica de Roteiros & Teleprompter
+                </h3>
+                <p className="text-xs text-zinc-400 mt-1">Selecione um produto do seu catálogo e o objetivo para gerar um roteiro de vídeo pronto para conversão no WhatsApp.</p>
               </div>
-            </div>
 
-            {/* Seção de Criador de Roteiros para Reels/TikTok */}
-            <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-4">
-              <h3 className="text-sm font-black text-white flex items-center gap-2">
-                <Video className="w-4 h-4 text-amber-400" /> Roteiros Prontos para Vídeos (Atraia Clientes para o WhatsApp)
-              </h3>
-              <p className="text-xs text-zinc-400">Copie estes roteiros validados para gravar seus Reels e TikToks e transformar visualizações em pedidos no chat.</p>
-              
-              <div className="space-y-4 pt-2">
-                {videoScripts.map((script, i) => (
-                  <div key={i} className="bg-black border border-zinc-800 p-5 rounded-2xl space-y-2">
-                    <h4 className="text-xs font-black text-amber-400">{script.title}</h4>
-                    <p className="text-xs text-zinc-300"><strong className="text-white">Gancho (0-3s):</strong> {script.hook}</p>
-                    <p className="text-xs text-zinc-300"><strong className="text-white">Corpo:</strong> {script.body}</p>
-                    <p className="text-xs text-zinc-300"><strong className="text-white">Chamada para Ação (CTA):</strong> {script.cta}</p>
-                  </div>
-                ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-zinc-300 uppercase">Escolha o Produto</label>
+                  <select 
+                    value={selectedProductId} 
+                    onChange={e => setSelectedProductId(e.target.value)}
+                    className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-amber-500"
+                  >
+                    {products.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} ({formatBRL(p.price)})</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-zinc-300 uppercase">Objetivo do Vídeo</label>
+                  <select 
+                    value={videoGoal} 
+                    onChange={e => setVideoGoal(e.target.value as any)}
+                    className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-amber-500"
+                  >
+                    <option value="urgencia">🔥 Queima de Estoque (Urgência)</option>
+                    <option value="desejo">✨ Lançamento / Desejo (Novidade)</option>
+                    <option value="dor">💡 Resolução de Dor (Utilidade)</option>
+                  </select>
+                </div>
               </div>
+
+              <button type="submit" className="w-full py-3.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-xl transition-all shadow-lg shadow-amber-500/10 flex items-center justify-center gap-2">
+                <RefreshCcw className="w-4 h-4" /> Gerar Roteiro Personalizado
+              </button>
+            </form>
+
+            {/* Exibição do Roteiro Gerado */}
+            {generatedScript && (
+              <div className="bg-zinc-900 border border-amber-500/30 p-8 rounded-3xl space-y-6 shadow-2xl">
+                <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
+                  <h4 className="text-sm font-black text-amber-400">{generatedScript.title}</h4>
+                  <button 
+                    onClick={() => setIsTeleprompterOpen(true)}
+                    className="px-4 py-2 bg-amber-500 text-black font-black text-xs rounded-xl flex items-center gap-1.5 hover:bg-amber-400 transition-all shadow-lg"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-black" /> Abrir Teleprompter (Gravador)
+                  </button>
+                </div>
+
+                <div className="space-y-4 text-xs text-zinc-300">
+                  <div className="bg-black border border-zinc-800 p-4 rounded-2xl space-y-1">
+                    <span className="text-amber-400 font-bold block uppercase text-[10px]">1. Gancho (0 a 3 segundos)</span>
+                    <p className="text-white font-medium">{generatedScript.hook}</p>
+                  </div>
+                  <div className="bg-black border border-zinc-800 p-4 rounded-2xl space-y-1">
+                    <span className="text-amber-400 font-bold block uppercase text-[10px]">2. Corpo / Argumento de Venda</span>
+                    <p className="text-white font-medium">{generatedScript.body}</p>
+                  </div>
+                  <div className="bg-black border border-zinc-800 p-4 rounded-2xl space-y-1">
+                    <span className="text-amber-400 font-bold block uppercase text-[10px]">3. Chamada para Ação (CTA para o WhatsApp)</span>
+                    <p className="text-white font-medium">{generatedScript.cta}</p>
+                  </div>
+                </div>
+
+                <div className="bg-black/50 border border-zinc-800 p-4 rounded-2xl text-[11px] text-zinc-400">
+                  💡 <strong className="text-white">Dica de Edição:</strong> Grave o vídeo utilizando o botão <strong>Teleprompter</strong> acima. Depois, jogue no aplicativo <em>CapCut</em> e ative as <strong>Legendas Automáticas</strong> para estourar de vender no WhatsApp!
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* AJUDA */}
+        {activeTab === 'help' && (
+          <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl max-w-3xl space-y-6">
+            <h3 className="text-base font-black text-white flex items-center gap-2"><HelpCircle className="w-5 h-5 text-amber-400" /> Central de Ajuda & Tutoriais</h3>
+            <div className="space-y-3">
+              {faqList.map((item, idx) => (
+                <div key={idx} className="bg-black border border-zinc-800 rounded-2xl overflow-hidden">
+                  <button onClick={() => setOpenFaq(openFaq === idx ? null : idx)} className="w-full p-4 text-left flex justify-between items-center text-xs font-bold text-white">
+                    <span>{item.q}</span>
+                    <ChevronDown className="w-4 h-4 text-zinc-500" />
+                  </button>
+                  {openFaq === idx && <div className="p-4 pt-0 text-xs text-zinc-400 border-t border-zinc-900">{item.a}</div>}
+                </div>
+              ))}
             </div>
           </div>
         )}
