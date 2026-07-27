@@ -41,7 +41,7 @@ export default function AdminDashboard() {
   const [videoGoal, setVideoGoal] = useState<'urgencia' | 'desejo' | 'dor'>('urgencia');
   const [generatedScript, setGeneratedScript] = useState<any>(null);
   const [isTeleprompterOpen, setIsTeleprompterOpen] = useState(false);
-  const [teleprompterSpeed, setTeleprompterSpeed] = useState(2); // 1 a 5
+  const [teleprompterSpeed, setTeleprompterSpeed] = useState(2);
   const [isScrolling, setIsScrolling] = useState(false);
   const teleprompterRef = useRef<HTMLDivElement>(null);
 
@@ -111,7 +111,6 @@ export default function AdminDashboard() {
     if (leadCart) setAbandonedLeads([leadCart]);
   }, [tenantId]);
 
-  // Lógica de Rolagem Automática do Teleprompter
   useEffect(() => {
     let interval: any;
     if (isScrolling && isTeleprompterOpen) {
@@ -222,6 +221,13 @@ export default function AdminDashboard() {
     showToast('Link da vitrine copiado para a área de transferência!');
   };
 
+  const handleCopyScriptText = () => {
+    if (!generatedScript) return;
+    const fullText = `${generatedScript.title}\n\n[GANCHO]: ${generatedScript.hook}\n\n[CORPO]: ${generatedScript.body}\n\n[CTA]: ${generatedScript.cta}`;
+    navigator.clipboard.writeText(fullText);
+    showToast('Roteiro copiado para a área de transferência!');
+  };
+
   const handleExportCSV = () => {
     if (orders.length === 0) {
       showToast('Nenhum pedido para exportar.');
@@ -250,7 +256,6 @@ export default function AdminDashboard() {
   const averageTicket = orders.length > 0 ? totalRevenue / orders.length : 0;
   const lowStockProducts = products.filter(p => (p.stock || 0) <= 3);
 
-  // Gerador dinâmico de roteiro baseado no produto escolhido
   const handleGenerateScript = (e: React.FormEvent) => {
     e.preventDefault();
     const prod = products.find(p => p.id === selectedProductId);
@@ -301,10 +306,10 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-black text-slate-100 font-sans p-4 sm:p-8 relative selection:bg-amber-500 selection:text-black">
+    <div className="min-h-screen bg-black text-slate-100 font-sans p-4 sm:p-8 relative selection:bg-amber-500 selection:text-black" style={{ '--store-color': storeColor } as any}>
       
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-amber-500 text-black px-4 py-3 rounded-2xl font-black text-xs shadow-2xl flex items-center gap-2">
+        <div className="fixed bottom-6 right-6 z-50 text-black px-4 py-3 rounded-2xl font-black text-xs shadow-2xl flex items-center gap-2" style={{ backgroundColor: storeColor }}>
           <CheckCircle2 className="w-4 h-4" /> {toastMessage}
         </div>
       )}
@@ -312,10 +317,9 @@ export default function AdminDashboard() {
       {/* TELA DO TELEPROMPTER FULLSCREEN */}
       {isTeleprompterOpen && generatedScript && (
         <div className="fixed inset-0 bg-black z-50 flex flex-col p-6 sm:p-12">
-          {/* Controles do Teleprompter */}
           <div className="flex justify-between items-center bg-zinc-900 border border-zinc-800 p-4 rounded-2xl mb-6 shadow-2xl">
             <div className="flex items-center gap-4">
-              <span className="text-xs font-black text-amber-400">TELEPROMPTER ATIVO</span>
+              <span className="text-xs font-black" style={{ color: storeColor }}>TELEPROMPTER ATIVO</span>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-zinc-400">Velocidade:</span>
                 <input 
@@ -324,7 +328,8 @@ export default function AdminDashboard() {
                   max="5" 
                   value={teleprompterSpeed} 
                   onChange={e => setTeleprompterSpeed(Number(e.target.value))}
-                  className="accent-amber-500 cursor-pointer" 
+                  className="cursor-pointer" 
+                  style={{ accentColor: storeColor }}
                 />
               </div>
             </div>
@@ -332,7 +337,8 @@ export default function AdminDashboard() {
             <div className="flex items-center gap-3">
               <button 
                 onClick={() => setIsScrolling(!isScrolling)} 
-                className={`px-4 py-2 rounded-xl font-black text-xs flex items-center gap-2 transition-all ${isScrolling ? 'bg-red-500 text-white' : 'bg-amber-500 text-black'}`}
+                className={`px-4 py-2 rounded-xl font-black text-xs flex items-center gap-2 transition-all text-black`}
+                style={{ backgroundColor: isScrolling ? '#ef4444' : storeColor }}
               >
                 {isScrolling ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
                 {isScrolling ? 'Pausar Rolagem' : 'Iniciar Rolagem'}
@@ -346,16 +352,15 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Texto Rolável Gigante */}
           <div 
             ref={teleprompterRef} 
             className="flex-1 overflow-y-auto max-w-4xl mx-auto text-center space-y-12 px-6 py-20 scrollbar-none"
           >
-            <h2 className="text-3xl sm:text-5xl font-black text-amber-400">{generatedScript.title}</h2>
+            <h2 className="text-3xl sm:text-5xl font-black" style={{ color: storeColor }}>{generatedScript.title}</h2>
             <div className="text-2xl sm:text-4xl font-bold text-white leading-relaxed space-y-8">
-              <p><span className="text-amber-400 text-lg block mb-2 uppercase tracking-widest">[ GANCHO ]</span> {generatedScript.hook}</p>
-              <p><span className="text-amber-400 text-lg block mb-2 uppercase tracking-widest">[ CORPO ]</span> {generatedScript.body}</p>
-              <p><span className="text-amber-400 text-lg block mb-2 uppercase tracking-widest">[ CHAMADA PARA AÇÃO ]</span> {generatedScript.cta}</p>
+              <p><span className="text-lg block mb-2 uppercase tracking-widest font-black" style={{ color: storeColor }}>[ GANCHO ]</span> {generatedScript.hook}</p>
+              <p><span className="text-lg block mb-2 uppercase tracking-widest font-black" style={{ color: storeColor }}>[ CORPO ]</span> {generatedScript.body}</p>
+              <p><span className="text-lg block mb-2 uppercase tracking-widest font-black" style={{ color: storeColor }}>[ CHAMADA PARA AÇÃO ]</span> {generatedScript.cta}</p>
             </div>
             <div className="py-20 text-zinc-600 text-sm font-mono">Fim do Roteiro - Posicione o celular e grave!</div>
           </div>
@@ -368,16 +373,22 @@ export default function AdminDashboard() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-zinc-900 border border-zinc-800 p-6 rounded-3xl shadow-xl">
           <div>
             <h1 className="text-2xl font-black text-white">Painel da Loja ({storeName})</h1>
-            <p className="text-xs text-zinc-400">Gestão gerencial avançada, catálogo e controle de estoque. <span className="text-amber-400 italic">"The World Is Yours"</span></p>
+            <p className="text-xs text-zinc-400">Gestão gerencial avançada, catálogo e controle de estoque. <span className="italic" style={{ color: storeColor }}>"The World Is Yours"</span></p>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button 
               onClick={handleCopyStoreLink}
-              className="flex-1 sm:flex-none px-4 py-2.5 bg-black border border-zinc-800 hover:border-amber-500 text-white font-black text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"
+              className="flex-1 sm:flex-none px-4 py-2.5 bg-black border border-zinc-800 text-white font-black text-xs rounded-xl transition-all flex items-center justify-center gap-1.5 hover:border-zinc-600"
             >
-              <Copy className="w-3.5 h-3.5 text-amber-400" /> Copiar Link
+              <Copy className="w-3.5 h-3.5" style={{ color: storeColor }} /> Copiar Link
             </button>
-            <a href={`#/loja/${tenantId}`} target="_blank" rel="noopener noreferrer" className="flex-1 sm:flex-none px-4 py-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500 hover:text-black font-black text-xs rounded-xl transition-all text-center">
+            <a 
+              href={`#/loja/${tenantId}`} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="flex-1 sm:flex-none px-4 py-2.5 font-black text-xs rounded-xl transition-all text-center"
+              style={{ backgroundColor: `${storeColor}15`, color: storeColor, border: `1px solid ${storeColor}30` }}
+            >
               Ver Vitrine ↗
             </a>
           </div>
@@ -385,38 +396,39 @@ export default function AdminDashboard() {
 
         {/* Abas */}
         <div className="flex flex-wrap gap-2 border-b border-zinc-800 pb-4">
-          <button onClick={() => setActiveTab('products')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'products' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}>
-            <Package className="w-4 h-4" /> Produtos
-          </button>
-          <button onClick={() => setActiveTab('coupons')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'coupons' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}>
-            <Tag className="w-4 h-4" /> Cupons
-          </button>
-          <button onClick={() => setActiveTab('orders')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'orders' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}>
-            <ShoppingBag className="w-4 h-4" /> Pedidos
-          </button>
-          <button onClick={() => setActiveTab('analytics')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'analytics' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}>
-            <BarChart3 className="w-4 h-4" /> Relatórios & Estoque
-          </button>
-          <button onClick={() => setActiveTab('videos')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'videos' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}>
-            <Video className="w-4 h-4" /> Fábrica de Vídeos
-          </button>
-          <button onClick={() => setActiveTab('help')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'help' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}>
-            <HelpCircle className="w-4 h-4" /> Ajuda
-          </button>
-          <button onClick={() => setActiveTab('settings')} className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all ${activeTab === 'settings' ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/10' : 'bg-zinc-900 text-zinc-400 hover:text-white'}`}>
-            <Settings className="w-4 h-4" /> Configurações
-          </button>
+          {[
+            { id: 'products', label: 'Produtos', icon: Package },
+            { id: 'coupons', label: 'Cupons', icon: Tag },
+            { id: 'orders', label: 'Pedidos', icon: ShoppingBag },
+            { id: 'analytics', label: 'Relatórios & Estoque', icon: BarChart3 },
+            { id: 'videos', label: 'Fábrica de Vídeos', icon: Video },
+            { id: 'help', label: 'Ajuda', icon: HelpCircle },
+            { id: 'settings', label: 'Configurações', icon: Settings }
+          ].map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button 
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)} 
+                className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all`}
+                style={isActive ? { backgroundColor: storeColor, color: '#000', boxShadow: `0 10px 20px ${storeColor}20` } : { backgroundColor: '#18181b', color: '#a1a1aa' }}
+              >
+                <Icon className="w-4 h-4" /> {tab.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* PRODUTOS */}
         {activeTab === 'products' && (
           <div className="space-y-6">
             <form onSubmit={handleAddProduct} className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl space-y-4">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2"><Plus className="w-4 h-4 text-amber-400" /> Cadastrar Produto</h3>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2"><Plus className="w-4 h-4" style={{ color: storeColor }} /> Cadastrar Produto</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <input type="text" placeholder="Nome do Produto" value={name} onChange={e => setName(e.target.value)} className="bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-amber-500" required />
-                <input type="number" step="0.01" placeholder="Preço (R$)" value={price} onChange={e => setPrice(e.target.value)} className="bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-amber-500" required />
-                <input type="number" placeholder="Estoque" value={stock} onChange={e => setStock(e.target.value)} className="bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-amber-500" />
+                <input type="text" placeholder="Nome do Produto" value={name} onChange={e => setName(e.target.value)} className="bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-zinc-500" required />
+                <input type="number" step="0.01" placeholder="Preço (R$)" value={price} onChange={e => setPrice(e.target.value)} className="bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-zinc-500" required />
+                <input type="number" placeholder="Estoque" value={stock} onChange={e => setStock(e.target.value)} className="bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-zinc-500" />
                 <input type="file" accept="image/*" onChange={e => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -425,9 +437,9 @@ export default function AdminDashboard() {
                     reader.readAsDataURL(file);
                   }
                 }} className="text-[11px] text-zinc-400 bg-black border border-zinc-800 rounded-xl px-2 py-2 cursor-pointer" />
-                <input type="text" placeholder="Categoria" value={category} onChange={e => setCategory(e.target.value)} className="bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-amber-500" />
+                <input type="text" placeholder="Categoria" value={category} type-text onChange={e => setCategory(e.target.value)} className="bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-zinc-500" />
               </div>
-              <button type="submit" className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-xl transition-all shadow-lg shadow-amber-500/10">Salvar Produto</button>
+              <button type="submit" className="px-6 py-3 text-black font-black text-xs rounded-xl transition-all shadow-lg" style={{ backgroundColor: storeColor }}>Salvar Produto</button>
             </form>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -436,10 +448,10 @@ export default function AdminDashboard() {
                   <img src={p.image} alt={p.name} className="w-16 h-16 object-cover rounded-xl bg-black shrink-0 border border-zinc-800" />
                   <div className="flex-1 min-w-0 space-y-1">
                     <h4 className="text-sm font-bold text-white truncate">{p.name}</h4>
-                    <span className="text-xs font-black text-amber-400">{formatBRL(p.price)} | Estoque: {p.stock}</span>
+                    <span className="text-xs font-black" style={{ color: storeColor }}>{formatBRL(p.price)} | Estoque: {p.stock}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => handleOpenEditModal(p)} className="p-2 text-zinc-400 hover:text-amber-400" title="Editar Produto"><Edit3 className="w-4 h-4" /></button>
+                    <button onClick={() => handleOpenEditModal(p)} className="p-2 text-zinc-400 hover:text-white" title="Editar Produto"><Edit3 className="w-4 h-4" /></button>
                     <button onClick={() => handleDeleteProduct(p.id)} className="p-2 text-zinc-500 hover:text-red-400" title="Excluir"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
@@ -459,15 +471,15 @@ export default function AdminDashboard() {
               <div className="space-y-3 pt-2">
                 <div>
                   <label className="text-[11px] font-bold text-zinc-300 uppercase">Preço (R$)</label>
-                  <input type="number" step="0.01" value={editPrice} onChange={e => setEditPrice(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-amber-500 mt-1" required />
+                  <input type="number" step="0.01" value={editPrice} onChange={e => setEditPrice(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none mt-1" required />
                 </div>
                 <div>
                   <label className="text-[11px] font-bold text-zinc-300 uppercase">Estoque</label>
-                  <input type="number" value={editStock} onChange={e => setEditStock(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none focus:border-amber-500 mt-1" required />
+                  <input type="number" value={editStock} onChange={e => setEditStock(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl px-3 py-2.5 text-xs text-white outline-none mt-1" required />
                 </div>
               </div>
 
-              <button type="submit" className="w-full py-3 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-xl transition-all shadow-lg">Salvar Alterações</button>
+              <button type="submit" className="w-full py-3 text-black font-black text-xs rounded-xl transition-all shadow-lg" style={{ backgroundColor: storeColor }}>Salvar Alterações</button>
             </form>
           </div>
         )}
@@ -476,12 +488,12 @@ export default function AdminDashboard() {
         {activeTab === 'coupons' && (
           <div className="space-y-6">
             <form onSubmit={handleAddCoupon} className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl space-y-4 max-w-xl">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2"><Tag className="w-4 h-4 text-amber-400" /> Criar Cupom</h3>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2"><Tag className="w-4 h-4" style={{ color: storeColor }} /> Criar Cupom</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <input type="text" placeholder="Código (ex: PROMO10)" value={couponCode} onChange={e => setCouponCode(e.target.value)} className="bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white uppercase outline-none focus:border-amber-500" required />
-                <input type="number" placeholder="Desconto %" value={couponDiscount} onChange={e => setCouponDiscount(e.target.value)} className="bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-amber-500" required />
+                <input type="text" placeholder="Código (ex: PROMO10)" value={couponCode} onChange={e => setCouponCode(e.target.value)} className="bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white uppercase outline-none" required />
+                <input type="number" placeholder="Desconto %" value={couponDiscount} onChange={e => setCouponDiscount(e.target.value)} className="bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none" required />
               </div>
-              <button type="submit" className="px-6 py-3 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-xl">Salvar Cupom</button>
+              <button type="submit" className="px-6 py-3 text-black font-black text-xs rounded-xl" style={{ backgroundColor: storeColor }}>Salvar Cupom</button>
             </form>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -489,7 +501,7 @@ export default function AdminDashboard() {
                 <div key={coupon.id} className="bg-zinc-900 border border-zinc-800 p-5 rounded-2xl flex justify-between items-center">
                   <div>
                     <h4 className="text-base font-black text-white">{coupon.code}</h4>
-                    <p className="text-xs text-amber-400 font-bold">{coupon.discount}% de desconto</p>
+                    <p className="text-xs font-bold" style={{ color: storeColor }}>{coupon.discount}% de desconto</p>
                   </div>
                   <button onClick={() => handleDeleteCoupon(coupon.id)} className="p-2 text-zinc-500 hover:text-red-400"><Trash2 className="w-4 h-4" /></button>
                 </div>
@@ -506,14 +518,14 @@ export default function AdminDashboard() {
                 <h3 className="text-base font-black text-white">Pedidos Recebidos da Vitrine</h3>
                 <p className="text-xs text-zinc-400">Inspecione os itens do pedido e altere o status de entrega.</p>
               </div>
-              <span className="px-3 py-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl text-xs font-bold">{orders.length} Pedido(s)</span>
+              <span className="px-3 py-1 rounded-xl text-xs font-bold" style={{ backgroundColor: `${storeColor}15`, color: storeColor, border: `1px solid ${storeColor}30` }}>{orders.length} Pedido(s)</span>
             </div>
 
             <div className="grid grid-cols-1 gap-4">
               {orders.map(order => (
                 <div key={order.id} className="bg-zinc-900 border border-zinc-800 p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div>
-                    <span className="text-xs font-black text-amber-400">{order.id} - {order.date}</span>
+                    <span className="text-xs font-black" style={{ color: storeColor }}>{order.id} - {order.date}</span>
                     <h4 className="text-sm font-bold text-white">Cliente: {order.customer}</h4>
                     <span className="text-xs text-zinc-300 font-bold">Total: {formatBRL(order.total)}</span>
                   </div>
@@ -521,15 +533,16 @@ export default function AdminDashboard() {
                   <div className="flex items-center gap-3 w-full sm:w-auto">
                     <button 
                       onClick={() => setSelectedOrderModal(order)}
-                      className="px-3 py-2 bg-black border border-zinc-800 hover:border-amber-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
+                      className="px-3 py-2 bg-black border border-zinc-800 hover:border-zinc-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
                     >
-                      <Eye className="w-3.5 h-3.5 text-amber-400" /> Detalhes
+                      <Eye className="w-3.5 h-3.5" style={{ color: storeColor }} /> Detalhes
                     </button>
 
                     <select
                       value={order.status}
                       onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
-                      className="bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs font-bold text-amber-400 outline-none cursor-pointer"
+                      className="bg-black border border-zinc-800 rounded-xl px-3 py-2 text-xs font-bold outline-none cursor-pointer"
+                      style={{ color: storeColor }}
                     >
                       <option value="Aguardando Pagamento">Aguardando Pagamento</option>
                       <option value="Pago / Separando">Pago / Separando</option>
@@ -549,13 +562,13 @@ export default function AdminDashboard() {
             <div className="bg-zinc-900 border border-zinc-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
               <button onClick={() => setSelectedOrderModal(null)} className="absolute top-4 right-4 text-zinc-400 hover:text-white font-bold text-xs bg-black px-3 py-1.5 rounded-xl border border-zinc-800">✕ Fechar</button>
               <div className="space-y-1 border-b border-zinc-800 pb-3">
-                <span className="text-xs font-black text-amber-400">{selectedOrderModal.id}</span>
+                <span className="text-xs font-black" style={{ color: storeColor }}>{selectedOrderModal.id}</span>
                 <h3 className="text-base font-black text-white">Pedido de {selectedOrderModal.customer}</h3>
                 <p className="text-xs text-zinc-400 font-mono">WhatsApp: {selectedOrderModal.whatsapp || 'Não informado'}</p>
               </div>
               <div className="space-y-2 text-xs text-zinc-300">
-                <p className="flex items-center gap-2"><MapPin className="w-4 h-4 text-amber-400 shrink-0" /> <span className="text-white font-bold">Endereço:</span> {selectedOrderModal.address || 'Retirada na loja'}</p>
-                <p className="flex items-center gap-2"><CreditCard className="w-4 h-4 text-amber-400 shrink-0" /> <span className="text-white font-bold">Pagamento:</span> {selectedOrderModal.payment || 'Pix'}</p>
+                <p className="flex items-center gap-2"><MapPin className="w-4 h-4 shrink-0" style={{ color: storeColor }} /> <span className="text-white font-bold">Endereço:</span> {selectedOrderModal.address || 'Retirada na loja'}</p>
+                <p className="flex items-center gap-2"><CreditCard className="w-4 h-4 shrink-0" style={{ color: storeColor }} /> <span className="text-white font-bold">Pagamento:</span> {selectedOrderModal.payment || 'Pix'}</p>
               </div>
               <div className="space-y-2 pt-2 border-t border-zinc-800">
                 <h4 className="text-xs font-bold text-white uppercase">Itens do Pedido</h4>
@@ -564,7 +577,7 @@ export default function AdminDashboard() {
                     selectedOrderModal.items.map((it: any, idx: number) => (
                       <div key={idx} className="flex justify-between items-center bg-black border border-zinc-800 p-2.5 rounded-xl text-xs">
                         <span className="text-white font-bold">{it.name}</span>
-                        <span className="text-amber-400 font-black">{formatBRL(it.price)}</span>
+                        <span className="font-black" style={{ color: storeColor }}>{formatBRL(it.price)}</span>
                       </div>
                     ))
                   ) : (
@@ -574,7 +587,7 @@ export default function AdminDashboard() {
               </div>
               <div className="flex justify-between items-center pt-3 border-t border-zinc-800 text-sm font-black">
                 <span className="text-zinc-400">Total:</span>
-                <span className="text-amber-400">{formatBRL(selectedOrderModal.total)}</span>
+                <span style={{ color: storeColor }}>{formatBRL(selectedOrderModal.total)}</span>
               </div>
             </div>
           </div>
@@ -590,7 +603,8 @@ export default function AdminDashboard() {
               </div>
               <button 
                 onClick={handleExportCSV}
-                className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-amber-500/10"
+                className="px-4 py-2.5 text-black font-black text-xs rounded-xl transition-all flex items-center gap-2 shadow-lg"
+                style={{ backgroundColor: storeColor }}
               >
                 <Download className="w-4 h-4" /> Exportar Vendas (CSV)
               </button>
@@ -598,15 +612,15 @@ export default function AdminDashboard() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl space-y-2">
-                <span className="text-xs font-bold text-zinc-400 uppercase flex items-center gap-1"><DollarSign className="w-4 h-4 text-amber-400" /> Faturamento Total</span>
-                <h3 className="text-2xl font-black text-amber-400">{formatBRL(totalRevenue)}</h3>
+                <span className="text-xs font-bold text-zinc-400 uppercase flex items-center gap-1"><DollarSign className="w-4 h-4" style={{ color: storeColor }} /> Faturamento Total</span>
+                <h3 className="text-2xl font-black" style={{ color: storeColor }}>{formatBRL(totalRevenue)}</h3>
               </div>
               <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl space-y-2">
-                <span className="text-xs font-bold text-zinc-400 uppercase flex items-center gap-1"><ShoppingBag className="w-4 h-4 text-amber-400" /> Total de Pedidos</span>
+                <span className="text-xs font-bold text-zinc-400 uppercase flex items-center gap-1"><ShoppingBag className="w-4 h-4" style={{ color: storeColor }} /> Total de Pedidos</span>
                 <h3 className="text-2xl font-black text-white">{orders.length}</h3>
               </div>
               <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl space-y-2">
-                <span className="text-xs font-bold text-zinc-400 uppercase flex items-center gap-1"><TrendingUp className="w-4 h-4 text-amber-400" /> Ticket Médio</span>
+                <span className="text-xs font-bold text-zinc-400 uppercase flex items-center gap-1"><TrendingUp className="w-4 h-4" style={{ color: storeColor }} /> Ticket Médio</span>
                 <h3 className="text-2xl font-black text-white">{formatBRL(averageTicket)}</h3>
               </div>
             </div>
@@ -614,16 +628,16 @@ export default function AdminDashboard() {
             {/* Alerta de Estoque Crítico */}
             <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl space-y-4">
               <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-amber-400" /> Alerta de Estoque Crítico ({lowStockProducts.length} itens)
+                <AlertTriangle className="w-4 h-4" style={{ color: storeColor }} /> Alerta de Estoque Crítico ({lowStockProducts.length} itens)
               </h3>
               {lowStockProducts.length === 0 ? (
                 <p className="text-xs text-zinc-400">Todos os produtos possuem estoque adequado no momento.</p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {lowStockProducts.map(lp => (
-                    <div key={lp.id} className="bg-black border border-amber-500/20 p-3 rounded-2xl flex justify-between items-center text-xs">
+                    <div key={lp.id} className="bg-black border p-3 rounded-2xl flex justify-between items-center text-xs" style={{ borderColor: `${storeColor}30` }}>
                       <span className="text-white font-bold truncate">{lp.name}</span>
-                      <span className="px-2.5 py-1 bg-amber-500/10 text-amber-400 font-bold rounded-xl border border-amber-500/20">
+                      <span className="px-2.5 py-1 font-bold rounded-xl border" style={{ backgroundColor: `${storeColor}15`, color: storeColor, borderColor: `${storeColor}30` }}>
                         Apenas {lp.stock} un.
                       </span>
                     </div>
@@ -640,7 +654,7 @@ export default function AdminDashboard() {
             <form onSubmit={handleGenerateScript} className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-6">
               <div>
                 <h3 className="text-base font-black text-white flex items-center gap-2">
-                  <Video className="w-5 h-5 text-amber-400" /> Fábrica de Roteiros & Teleprompter
+                  <Video className="w-5 h-5" style={{ color: storeColor }} /> Fábrica de Roteiros & Teleprompter
                 </h3>
                 <p className="text-xs text-zinc-400 mt-1">Selecione um produto do seu catálogo e o objetivo para gerar um roteiro de vídeo pronto para conversão no WhatsApp.</p>
               </div>
@@ -651,7 +665,7 @@ export default function AdminDashboard() {
                   <select 
                     value={selectedProductId} 
                     onChange={e => setSelectedProductId(e.target.value)}
-                    className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-amber-500"
+                    className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none"
                   >
                     {products.map(p => (
                       <option key={p.id} value={p.id}>{p.name} ({formatBRL(p.price)})</option>
@@ -664,7 +678,7 @@ export default function AdminDashboard() {
                   <select 
                     value={videoGoal} 
                     onChange={e => setVideoGoal(e.target.value as any)}
-                    className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-amber-500"
+                    className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none"
                   >
                     <option value="urgencia">🔥 Queima de Estoque (Urgência)</option>
                     <option value="desejo">✨ Lançamento / Desejo (Novidade)</option>
@@ -673,35 +687,44 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <button type="submit" className="w-full py-3.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-xl transition-all shadow-lg shadow-amber-500/10 flex items-center justify-center gap-2">
+              <button type="submit" className="w-full py-3.5 text-black font-black text-xs rounded-xl transition-all shadow-lg flex items-center justify-center gap-2" style={{ backgroundColor: storeColor }}>
                 <RefreshCcw className="w-4 h-4" /> Gerar Roteiro Personalizado
               </button>
             </form>
 
             {/* Exibição do Roteiro Gerado */}
             {generatedScript && (
-              <div className="bg-zinc-900 border border-amber-500/30 p-8 rounded-3xl space-y-6 shadow-2xl">
-                <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
-                  <h4 className="text-sm font-black text-amber-400">{generatedScript.title}</h4>
-                  <button 
-                    onClick={() => setIsTeleprompterOpen(true)}
-                    className="px-4 py-2 bg-amber-500 text-black font-black text-xs rounded-xl flex items-center gap-1.5 hover:bg-amber-400 transition-all shadow-lg"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-black" /> Abrir Teleprompter (Gravador)
-                  </button>
+              <div className="bg-zinc-900 border p-8 rounded-3xl space-y-6 shadow-2xl" style={{ borderColor: `${storeColor}40` }}>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-zinc-800 pb-4">
+                  <h4 className="text-sm font-black" style={{ color: storeColor }}>{generatedScript.title}</h4>
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button 
+                      onClick={handleCopyScriptText}
+                      className="flex-1 sm:flex-none px-3 py-2 bg-black border border-zinc-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 hover:border-zinc-600 transition-all"
+                    >
+                      <Copy className="w-3.5 h-3.5" style={{ color: storeColor }} /> Copiar Texto
+                    </button>
+                    <button 
+                      onClick={() => setIsTeleprompterOpen(true)}
+                      className="flex-1 sm:flex-none px-4 py-2 text-black font-black text-xs rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-lg"
+                      style={{ backgroundColor: storeColor }}
+                    >
+                      <Play className="w-3.5 h-3.5 fill-black" /> Abrir Teleprompter
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-4 text-xs text-zinc-300">
                   <div className="bg-black border border-zinc-800 p-4 rounded-2xl space-y-1">
-                    <span className="text-amber-400 font-bold block uppercase text-[10px]">1. Gancho (0 a 3 segundos)</span>
+                    <span className="font-bold block uppercase text-[10px]" style={{ color: storeColor }}>1. Gancho (0 a 3 segundos)</span>
                     <p className="text-white font-medium">{generatedScript.hook}</p>
                   </div>
                   <div className="bg-black border border-zinc-800 p-4 rounded-2xl space-y-1">
-                    <span className="text-amber-400 font-bold block uppercase text-[10px]">2. Corpo / Argumento de Venda</span>
+                    <span className="font-bold block uppercase text-[10px]" style={{ color: storeColor }}>2. Corpo / Argumento de Venda</span>
                     <p className="text-white font-medium">{generatedScript.body}</p>
                   </div>
                   <div className="bg-black border border-zinc-800 p-4 rounded-2xl space-y-1">
-                    <span className="text-amber-400 font-bold block uppercase text-[10px]">3. Chamada para Ação (CTA para o WhatsApp)</span>
+                    <span className="font-bold block uppercase text-[10px]" style={{ color: storeColor }}>3. Chamada para Ação (CTA para o WhatsApp)</span>
                     <p className="text-white font-medium">{generatedScript.cta}</p>
                   </div>
                 </div>
@@ -717,7 +740,7 @@ export default function AdminDashboard() {
         {/* AJUDA */}
         {activeTab === 'help' && (
           <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl max-w-3xl space-y-6">
-            <h3 className="text-base font-black text-white flex items-center gap-2"><HelpCircle className="w-5 h-5 text-amber-400" /> Central de Ajuda & Tutoriais</h3>
+            <h3 className="text-base font-black text-white flex items-center gap-2"><HelpCircle className="w-5 h-5" style={{ color: storeColor }} /> Central de Ajuda & Tutoriais</h3>
             <div className="space-y-3">
               {faqList.map((item, idx) => (
                 <div key={idx} className="bg-black border border-zinc-800 rounded-2xl overflow-hidden">
@@ -736,8 +759,18 @@ export default function AdminDashboard() {
         {activeTab === 'settings' && (
           <form onSubmit={handleSaveSettings} className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl max-w-2xl space-y-4">
             <h3 className="text-base font-black text-white">Configurações da Loja</h3>
-            <input type="text" value={storeName} onChange={e => setStoreName(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-amber-500" />
-            <button type="submit" className="w-full py-3.5 bg-amber-500 text-black font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg shadow-amber-500/10">
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-zinc-300 uppercase">Nome da Loja</label>
+              <input type="text" value={storeName} onChange={e => setStoreName(e.target.value)} className="w-full bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-zinc-300 uppercase">Cor de Destaque da Loja</label>
+              <div className="flex items-center gap-3">
+                <input type="color" value={storeColor} onChange={e => setStoreColor(e.target.value)} className="w-12 h-10 bg-black border border-zinc-800 rounded-xl cursor-pointer" />
+                <span className="text-xs font-mono text-zinc-400">{storeColor}</span>
+              </div>
+            </div>
+            <button type="submit" className="w-full py-3.5 text-black font-black text-xs rounded-xl flex items-center justify-center gap-2 shadow-lg" style={{ backgroundColor: storeColor }}>
               <Save className="w-4 h-4" /> Salvar Configurações
             </button>
           </form>
