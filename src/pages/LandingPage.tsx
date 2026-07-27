@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { PalmTree, ShoppingBag, Smartphone, Zap, CheckCircle2, Video, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
+import { Palmtree, ShoppingBag, Smartphone, CheckCircle2, Video, ArrowRight, Sparkles } from 'lucide-react';
 
 export default function LandingPage() {
-  const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'annual'>('monthly');
+  const [, setSelectedPlan] = useState<'monthly' | 'annual'>('monthly');
 
   return (
     <div className="min-h-screen bg-black text-slate-100 font-sans selection:bg-amber-500 selection:text-black">
@@ -11,7 +11,7 @@ export default function LandingPage() {
       <header className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center border-b border-zinc-900">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-            <PalmTree className="w-5 h-5" />
+            <Palmtree className="w-5 h-5" />
           </div>
           <div>
             <span className="text-base font-black tracking-wider text-white">STCK COMPANY</span>
@@ -129,7 +129,7 @@ export default function LandingPage() {
       {/* FOOTER */}
       <footer className="max-w-7xl mx-auto px-6 py-8 border-t border-zinc-900 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-zinc-500">
         <div className="flex items-center gap-2">
-          <PalmTree className="w-4 h-4 text-amber-400" /> STCK Company. Todos os direitos reservados.
+          <Palmtree className="w-4 h-4 text-amber-400" /> STCK Company. Todos os direitos reservados.
         </div>
         <p className="italic">"The World Is Yours"</p>
       </footer>
