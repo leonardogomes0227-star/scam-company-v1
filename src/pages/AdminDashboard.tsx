@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, TrendingUp, CheckCircle2, BarChart3, DollarSign, HelpCircle, ChevronDown, Download, Eye, MapPin, CreditCard, AlertTriangle, Edit3 } from 'lucide-react';
+import { Package, ShoppingBag, Tag, Settings, Save, Trash2, Plus, TrendingUp, CheckCircle2, BarChart3, DollarSign, HelpCircle, ChevronDown, Download, Eye, MapPin, CreditCard, AlertTriangle, Edit3, Copy, Video } from 'lucide-react';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'products' | 'coupons' | 'orders' | 'analytics' | 'help' | 'settings'>('products');
@@ -17,7 +17,7 @@ export default function AdminDashboard() {
   const [products, setProducts] = useState<any[]>([]);
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
-  const [stock, setStock] = useState('10');
+  const [stock, setStock] = useState('');
   const [image, setImage] = useState('');
   const [category, setCategory] = useState('Geral');
 
@@ -123,7 +123,7 @@ export default function AdminDashboard() {
     localStorage.setItem(`store_products_${tenantId}`, JSON.stringify(updated));
     setName('');
     setPrice('');
-    setStock('10');
+    setStock('');
     setImage('');
     showToast('Produto cadastrado com sucesso!');
   };
@@ -192,6 +192,12 @@ export default function AdminDashboard() {
     showToast(`Status do pedido ${orderId} atualizado para: ${newStatus}`);
   };
 
+  const handleCopyStoreLink = () => {
+    const storeUrl = `${window.location.origin}/#/loja/${tenantId}`;
+    navigator.clipboard.writeText(storeUrl);
+    showToast('Link da vitrine copiado para a área de transferência!');
+  };
+
   const handleExportCSV = () => {
     if (orders.length === 0) {
       showToast('Nenhum pedido para exportar.');
@@ -221,8 +227,29 @@ export default function AdminDashboard() {
   const lowStockProducts = products.filter(p => (p.stock || 0) <= 3);
 
   const faqList = [
-    { q: 'Como faço para divulgar minha vitrine?', a: 'Basta copiar o link da sua vitrine clicando em "Ver Minha Vitrine ↗" no topo do painel.' },
-    { q: 'Como editar um produto existente?', a: 'Na aba Produtos, clique no ícone de edição (lápis) no card do produto para alterar preço e estoque.' }
+    { 
+      q: 'Como faço para divulgar minha vitrine?', 
+      a: 'Basta copiar o link da sua vitrine utilizando o botão "Copiar Link" ao lado e colar na bio do seu Instagram ou status do WhatsApp.' 
+    },
+    { 
+      q: 'Como editar um produto existente?', 
+      a: 'Na aba Produtos, clique no ícone de edição (lápis) no card do produto para alterar preço e estoque instantaneamente.' 
+    }
+  ];
+
+  const videoScripts = [
+    {
+      title: 'Roteiro 1: Queima de Estoque (Foco em Urgência)',
+      hook: '"Se você estava esperando o momento certo para garantir o seu [Produto], o momento é agora!"',
+      body: 'Mostre o produto de perto na câmera, destaque a qualidade e avise que restam poucas unidades.',
+      cta: '"Clica no link da minha bio (ou vitrine) e garante o seu antes que acabe o estoque!"'
+    },
+    {
+      title: 'Roteiro 2: Unboxing / Detalhes (Foco em Desejo)',
+      hook: '"Olha a lindeza que acabou de chegar reposição na loja!"',
+      body: 'Abra a caixa ou mostre os detalhes de funcionamento do produto de forma bem visual e dinâmica.',
+      cta: '"Quer garantir o seu? Clica no botão de comprar e me chama direto no WhatsApp."'
+    }
   ];
 
   return (
@@ -242,9 +269,17 @@ export default function AdminDashboard() {
             <h1 className="text-2xl font-black text-white">Painel da Loja ({storeName})</h1>
             <p className="text-xs text-zinc-400">Gestão gerencial avançada, catálogo e controle de estoque. <span className="text-amber-400 italic">"The World Is Yours"</span></p>
           </div>
-          <a href={`#/loja/${tenantId}`} target="_blank" rel="noopener noreferrer" className="px-4 py-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500 hover:text-black font-black text-xs rounded-xl transition-all">
-            Ver Minha Vitrine ↗
-          </a>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button 
+              onClick={handleCopyStoreLink}
+              className="flex-1 sm:flex-none px-4 py-2.5 bg-black border border-zinc-800 hover:border-amber-500 text-white font-black text-xs rounded-xl transition-all flex items-center justify-center gap-1.5"
+            >
+              <Copy className="w-3.5 h-3.5 text-amber-400" /> Copiar Link
+            </button>
+            <a href={`#/loja/${tenantId}`} target="_blank" rel="noopener noreferrer" className="flex-1 sm:flex-none px-4 py-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500 hover:text-black font-black text-xs rounded-xl transition-all text-center">
+              Ver Vitrine ↗
+            </a>
+          </div>
         </div>
 
         {/* Abas */}
@@ -277,7 +312,7 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                 <input type="text" placeholder="Nome do Produto" value={name} onChange={e => setName(e.target.value)} className="bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-amber-500" required />
                 <input type="number" step="0.01" placeholder="Preço (R$)" value={price} onChange={e => setPrice(e.target.value)} className="bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-amber-500" required />
-                <input type="number" placeholder="Estoque" value={stock} onChange={e => setStock(e.target.value)} className="bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-amber-500" required />
+                <input type="number" placeholder="Estoque" value={stock} onChange={e => setStock(e.target.value)} className="bg-black border border-zinc-800 rounded-xl px-4 py-3 text-xs text-white outline-none focus:border-amber-500" />
                 <input type="file" accept="image/*" onChange={e => {
                   const file = e.target.files?.[0];
                   if (file) {
@@ -495,20 +530,41 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* AJUDA */}
+        {/* AJUDA & ROTEIROS DE VÍDEO */}
         {activeTab === 'help' && (
-          <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl max-w-3xl space-y-6">
-            <h3 className="text-base font-black text-white flex items-center gap-2"><HelpCircle className="w-5 h-5 text-amber-400" /> Central de Ajuda</h3>
-            <div className="space-y-3">
-              {faqList.map((item, idx) => (
-                <div key={idx} className="bg-black border border-zinc-800 rounded-2xl overflow-hidden">
-                  <button onClick={() => setOpenFaq(openFaq === idx ? null : idx)} className="w-full p-4 text-left flex justify-between items-center text-xs font-bold text-white">
-                    <span>{item.q}</span>
-                    <ChevronDown className="w-4 h-4 text-zinc-500" />
-                  </button>
-                  {openFaq === idx && <div className="p-4 pt-0 text-xs text-zinc-400 border-t border-zinc-900">{item.a}</div>}
-                </div>
-              ))}
+          <div className="space-y-6 max-w-3xl">
+            <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-6">
+              <h3 className="text-base font-black text-white flex items-center gap-2"><HelpCircle className="w-5 h-5 text-amber-400" /> Central de Ajuda & Tutoriais</h3>
+              <div className="space-y-3">
+                {faqList.map((item, idx) => (
+                  <div key={idx} className="bg-black border border-zinc-800 rounded-2xl overflow-hidden">
+                    <button onClick={() => setOpenFaq(openFaq === idx ? null : idx)} className="w-full p-4 text-left flex justify-between items-center text-xs font-bold text-white">
+                      <span>{item.q}</span>
+                      <ChevronDown className="w-4 h-4 text-zinc-500" />
+                    </button>
+                    {openFaq === idx && <div className="p-4 pt-0 text-xs text-zinc-400 border-t border-zinc-900">{item.a}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Seção de Criador de Roteiros para Reels/TikTok */}
+            <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-4">
+              <h3 className="text-sm font-black text-white flex items-center gap-2">
+                <Video className="w-4 h-4 text-amber-400" /> Roteiros Prontos para Vídeos (Atraia Clientes para o WhatsApp)
+              </h3>
+              <p className="text-xs text-zinc-400">Copie estes roteiros validados para gravar seus Reels e TikToks e transformar visualizações em pedidos no chat.</p>
+              
+              <div className="space-y-4 pt-2">
+                {videoScripts.map((script, i) => (
+                  <div key={i} className="bg-black border border-zinc-800 p-5 rounded-2xl space-y-2">
+                    <h4 className="text-xs font-black text-amber-400">{script.title}</h4>
+                    <p className="text-xs text-zinc-300"><strong className="text-white">Gancho (0-3s):</strong> {script.hook}</p>
+                    <p className="text-xs text-zinc-300"><strong className="text-white">Corpo:</strong> {script.body}</p>
+                    <p className="text-xs text-zinc-300"><strong className="text-white">Chamada para Ação (CTA):</strong> {script.cta}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         )}
