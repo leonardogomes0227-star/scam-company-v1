@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
 import { ShoppingBag, Star, Filter, Trash2, MessageSquare, CreditCard, Search, Eye, Truck, Clock, Heart, Zap, MapPin, Send } from 'lucide-react';
+import { supabase } from '../supabaseClient';
 
-export default function Storefront() {
-  const [storeConfig, setStoreConfig] = useState({ name: 'STCK Company', about: 'Seja bem-vindo! The World Is Yours.', whatsapp: '5567999999999', color: '#f59e0b' });
+export default function Storefront({ tenantId }: { tenantId: string }) {
+  const [storeConfig, setStoreConfig] = useState({ name: 'Carregando...', about: '', whatsapp: '5567999999999', color: '#f59e0b' });
   const [products, setProducts] = useState<any[]>([]);
+  const [loadingStore, setLoadingStore] = useState(true);
+  const [storeNotFound, setStoreNotFound] = useState(false);
+
   const [cart, setCart] = useState<any[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
@@ -14,30 +18,25 @@ export default function Storefront() {
   const [cartPulse, setCartPulse] = useState(false);
   const [activeProductModal, setActiveProductModal] = useState<any>(null);
 
-  // Estados para nova avaliação dentro do modal do produto
   const [reviewName, setReviewName] = useState('');
   const [reviewComment, setReviewComment] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
 
-  // Estados de Cupom
   const [coupons, setCoupons] = useState<any[]>([]);
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
   const [couponError, setCouponError] = useState('');
 
-  // Estados de Checkout e Frete
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [clientAddress, setClientAddress] = useState('');
   const [shippingFee, setShippingFee] = useState<number>(10.00);
   const [paymentMethod, setPaymentMethod] = useState('Pix');
 
-  // Estados de Rastreio
   const [trackingCodeInput, setTrackingCodeInput] = useState('');
   const [trackedOrderResult, setTrackedOrderResult] = useState<any>(null);
   const [trackingSearched, setTrackingSearched] = useState(false);
 
-  // Cronômetro Regressivo
   const [timeLeft, setTimeLeft] = useState({ hours: 4, minutes: 35, seconds: 12 });
 
   useEffect(() => {
@@ -52,44 +51,53 @@ export default function Storefront() {
     return () => clearInterval(timer);
   }, []);
 
+  // Carrega os dados REAIS da loja e dos produtos do Supabase, com base no tenantId da URL
   useEffect(() => {
-    const config = JSON.parse(localStorage.getItem('store_config_lkd-imports') || '{}');
-    if (config.name) setStoreConfig(config);
+    async function loadStoreData() {
+      setLoadingStore(true);
 
-    const prods = JSON.parse(localStorage.getItem('store_products_lkd-imports') || '[]');
-    if (prods.length > 0) {
-      const prodsWithDetails = prods.map((p: any) => ({
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('*')
+        .eq('id', tenantId)
+        .single();
+
+      if (!tenant) {
+        setStoreNotFound(true);
+        setLoadingStore(false);
+        return;
+      }
+
+      setStoreConfig({
+        name: tenant.name,
+        about: tenant.about || 'Seja bem-vindo(a)!',
+        whatsapp: tenant.whatsapp || '5567999999999',
+        color: tenant.color || '#f59e0b'
+      });
+
+      const { data: cloudProducts } = await supabase
+        .from('products')
+        .select('*')
+        .eq('tenant_id', tenantId);
+
+      const prodsWithDetails = (cloudProducts || []).map((p: any) => ({
         ...p,
         description: p.description || 'Produto de alta qualidade, original e com garantia de entrega rápida.',
         rating: p.rating || 4.8,
-        reviewsCount: p.reviewsCount || 12,
-        customerReviews: p.customerReviews || [
-          { name: 'Mariana S.', comment: 'Excelente produto, chegou super rápido!', rating: 5 }
-        ]
+        reviewsCount: p.reviewsCount || 0,
+        customerReviews: p.customerReviews || []
       }));
       setProducts(prodsWithDetails);
-    } else {
-      setProducts([
-        { 
-          id: '1', 
-          name: 'Fone Bluetooth Pro', 
-          price: 149.90, 
-          category: 'Eletrônicos', 
-          description: 'Fone sem fio de alta fidelidade.', 
-          image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80', 
-          rating: 4.9, 
-          reviewsCount: 12,
-          customerReviews: [{ name: 'Carlos E.', comment: 'Muito bom, recomendo!', rating: 5 }]
-        }
-      ]);
+
+      // Favoritos e cupons continuam locais ao navegador do cliente, mas agora isolados por loja
+      const savedFavs = JSON.parse(localStorage.getItem(`store_favorites_${tenantId}`) || '[]');
+      setFavorites(savedFavs);
+
+      setLoadingStore(false);
     }
 
-    const savedFavs = JSON.parse(localStorage.getItem('store_favorites_lkd-imports') || '[]');
-    setFavorites(savedFavs);
-
-    const savedCoupons = JSON.parse(localStorage.getItem('store_coupons_lkd-imports') || '[]');
-    setCoupons(savedCoupons);
-  }, []);
+    if (tenantId) loadStoreData();
+  }, [tenantId]);
 
   const categories = ['Todos', ...Array.from(new Set(products.map(p => p.category || 'Geral')))];
 
@@ -108,7 +116,7 @@ export default function Storefront() {
       updated = [...favorites, productId];
     }
     setFavorites(updated);
-    localStorage.setItem('store_favorites_lkd-imports', JSON.stringify(updated));
+    localStorage.setItem(`store_favorites_${tenantId}`, JSON.stringify(updated));
   };
 
   const addToCart = (product: any) => {
@@ -130,13 +138,13 @@ export default function Storefront() {
     if (!reviewName || !reviewComment) return;
 
     const newRev = { name: reviewName, comment: reviewComment, rating: reviewRating };
-    
+
     const updatedProducts = products.map(p => {
       if (p.id === productId) {
         const currentReviews = p.customerReviews || [];
         const newReviewsList = [newRev, ...currentReviews];
         const newRating = Number((newReviewsList.reduce((acc, r) => acc + r.rating, 0) / newReviewsList.length).toFixed(1));
-        
+
         const updatedProd = {
           ...p,
           rating: newRating,
@@ -153,7 +161,6 @@ export default function Storefront() {
     });
 
     setProducts(updatedProducts);
-    localStorage.setItem('store_products_lkd-imports', JSON.stringify(updatedProducts));
     setReviewName('');
     setReviewComment('');
   };
@@ -174,22 +181,25 @@ export default function Storefront() {
   const discountAmount = appliedCoupon ? (subtotal * appliedCoupon.discount) / 100 : 0;
   const total = subtotal - discountAmount + shippingFee;
 
-  const handleCheckoutWhatsApp = (e: React.FormEvent) => {
+  // Agora o pedido é salvo de verdade no Supabase, na loja certa
+  const handleCheckoutWhatsApp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clientName || !clientPhone || cart.length === 0) return;
 
     const orderId = 'ORD-' + Math.floor(1000 + Math.random() * 9000);
     const newOrder = {
       id: orderId,
+      tenant_id: tenantId,
       customer: clientName,
       whatsapp: clientPhone,
+      address: clientAddress,
+      payment: paymentMethod,
       total: total,
       status: 'Aguardando Pagamento',
       date: new Date().toISOString().split('T')[0]
     };
-    
-    const existingOrders = JSON.parse(localStorage.getItem('store_orders_lkd-imports') || '[]');
-    localStorage.setItem('store_orders_lkd-imports', JSON.stringify([newOrder, ...existingOrders]));
+
+    await supabase.from('orders').insert([newOrder]);
 
     let msg = `🛒 *NOVO PEDIDO (${orderId}) - ${storeConfig.name}*\n\n` +
       `👤 *Cliente:* ${clientName}\n` +
@@ -213,16 +223,40 @@ export default function Storefront() {
     window.open(url, '_blank');
   };
 
-  const handleTrackOrder = (e: React.FormEvent) => {
+  // Rastreio agora consulta o Supabase, restrito à loja atual
+  const handleTrackOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!trackingCodeInput) return;
-    const allOrders = JSON.parse(localStorage.getItem('store_orders_lkd-imports') || '[]');
-    const found = allOrders.find((o: any) => o.id.toLowerCase() === trackingCodeInput.trim().toLowerCase());
+
+    const { data: found } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .ilike('id', trackingCodeInput.trim())
+      .single();
+
     setTrackedOrderResult(found || null);
     setTrackingSearched(true);
   };
 
   const formatBRL = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
+
+  if (loadingStore) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <p className="text-zinc-400 text-xs">Carregando loja...</p>
+      </div>
+    );
+  }
+
+  if (storeNotFound) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-3 text-center p-6">
+        <h1 className="text-xl font-black text-white">Loja não encontrada</h1>
+        <p className="text-xs text-zinc-400">Verifique se o link da vitrine está correto.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-slate-100 font-sans pb-24 selection:bg-amber-500 selection:text-black">
@@ -449,7 +483,6 @@ export default function Storefront() {
               </div>
             </div>
 
-            {/* Lista de Avaliações */}
             <div className="space-y-3 pt-3 border-t border-zinc-800">
               <h3 className="text-xs font-bold text-white uppercase">Avaliações de Clientes</h3>
               <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
@@ -472,7 +505,6 @@ export default function Storefront() {
                 )}
               </div>
 
-              {/* Formulário de Enviar Avaliação */}
               <form onSubmit={(e) => handleAddReview(e, activeProductModal.id)} className="space-y-3 pt-2">
                 <h4 className="text-[11px] font-bold text-amber-400 uppercase">Deixe sua avaliação</h4>
                 <div className="grid grid-cols-2 gap-2">
