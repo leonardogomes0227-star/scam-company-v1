@@ -8,19 +8,13 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = login(email, password);
-    
+    const success = await login(email, password);
+
     if (success) {
       setError(false);
-      // O roteador no App.tsx vai redirecionar automaticamente, 
-      // mas forçamos a troca de URL aqui para atualizar a tela.
-      if (email === 'admin@plataforma.com') {
-        window.location.hash = '#/admin-global';
-      } else {
-        window.location.hash = '#/admin';
-      }
+      window.location.hash = '#/admin';
     } else {
       setError(true);
     }
@@ -62,38 +56,3 @@ export default function LoginPage() {
             <div className="relative">
               <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-sm text-white outline-none focus:border-emerald-500 transition-all"
-                placeholder="••••••••"
-                required
-              />
-            </div>
-          </div>
-
-          {error && (
-            <p className="text-xs text-red-400 font-bold bg-red-500/10 border border-red-500/20 p-3 rounded-xl text-center">
-              E-mail ou senha incorretos.
-            </p>
-          )}
-
-          <button
-            type="submit"
-            className="w-full py-3.5 mt-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 group"
-          >
-            Entrar no Painel <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </button>
-        </form>
-
-        <div className="mt-8 pt-6 border-t border-slate-800 text-center">
-          <p className="text-[10px] text-slate-500">
-            <strong>Dica de Teste:</strong><br/>
-            Super Admin: admin@plataforma.com / 123456<br/>
-            Lojista: contato@loja.com / 123456
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
