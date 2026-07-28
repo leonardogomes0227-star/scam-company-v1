@@ -1,57 +1,79 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '../supabaseClient';
 
 type Role = 'SUPER_ADMIN' | 'STORE_OWNER' | null;
 
 interface User {
+  id: string;
   email: string;
   role: Role;
-  tenantId?: string; // ID da loja para o lojista
+  tenantId?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, pass: string) => boolean;
+  loading: boolean;
+  login: (email: string, pass: string) => Promise<boolean>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(() => {
-    // Tenta lembrar do usuário se ele recarregar a página
-    const saved = localStorage.getItem('saas_auth_user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const login = (email: string, pass: string) => {
-    // 👑 LOGIN DO DONO DA PLATAFORMA (SUPER ADMIN)
-    if (email === 'admin@plataforma.com' && pass === '123456') {
-      const newUser: User = { email, role: 'SUPER_ADMIN' };
-      setUser(newUser);
-      localStorage.setItem('saas_auth_user', JSON.stringify(newUser));
-      return true;
-    }
-    
-    // 🏪 LOGIN DO LOJISTA (INQUILINO) - Exemplo genérico
-    if (email.includes('@loja.com') && pass === '123456') {
-      const newUser: User = { email, role: 'STORE_OWNER', tenantId: email.split('@')[0] };
-      setUser(newUser);
-      localStorage.setItem('saas_auth_user', JSON.stringify(newUser));
-      return true;
-    }
+  async function loadProfile(sessionUserId: string, email: string) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role, tenant_id')
+      .eq('id', sessionUserId)
+      .single();
 
-    // Senha ou E-mail incorretos
-    return false;
+    if (profile) {
+      setUser({
+        id: sessionUserId,
+        email,
+        role: profile.role,
+        tenantId: profile.tenant_id
+      });
+    }
+  }
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        loadProfile(session.user.id, session.user.email!);
+      }
+      setLoading(false);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        loadProfile(session.user.id, session.user.email!);
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data.user) return false;
+    await loadProfile(data.user.id, data.user.email!);
+    return true;
   };
 
   const logout = () => {
+    supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('saas_auth_user');
     window.location.hash = '#/login';
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
