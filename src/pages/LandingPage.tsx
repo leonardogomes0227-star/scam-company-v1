@@ -1,139 +1,230 @@
-import { useState } from 'react';
-import { Palmtree, ShoppingBag, Smartphone, CheckCircle2, Video, ArrowRight, Sparkles } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
 
-export default function LandingPage() {
-  const [, setSelectedPlan] = useState<'monthly' | 'annual'>('monthly');
+export default function Landing() {
+  const waBodyRef = useRef<HTMLDivElement>(null);
+  const originalHtmlRef = useRef<string>("");
+
+  useEffect(() => {
+    // Animação cíclica do WhatsApp
+    if (waBodyRef.current && !originalHtmlRef.current) {
+      originalHtmlRef.current = waBodyRef.current.innerHTML;
+    }
+
+    const interval = setInterval(() => {
+      if (waBodyRef.current) {
+        waBodyRef.current.style.opacity = '0';
+        setTimeout(() => {
+          if (waBodyRef.current) {
+            waBodyRef.current.innerHTML = originalHtmlRef.current;
+            waBodyRef.current.style.opacity = '1';
+          }
+        }, 400);
+      }
+    }, 7000);
+
+    // Intersection Observer para animar os cards de recursos aparecendo
+    const feats = document.querySelectorAll('.feat');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry, i) => {
+        if (entry.isIntersecting) {
+          setTimeout(() => entry.target.classList.add('in-view'), i * 100);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.2 });
+
+    feats.forEach(f => observer.observe(f));
+
+    return () => {
+      clearInterval(interval);
+      observer.disconnect();
+    };
+  }, []);
 
   return (
-    <div className="min-h-screen bg-black text-slate-100 font-sans selection:bg-amber-500 selection:text-black">
-      
-      {/* HEADER */}
-      <header className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center border-b border-zinc-900">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-            <Palmtree className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-base font-black tracking-wider text-white">STCK COMPANY</span>
-            <span className="text-[10px] text-zinc-500 block italic">"The World Is Yours"</span>
-          </div>
-        </div>
+    <>
+      <div className="glow"></div>
 
-        <div className="flex items-center gap-4">
-          <a href="#/login" className="text-xs font-bold text-zinc-400 hover:text-white transition-all">
-            Fazer Login
-          </a>
-          <a href="#/register" className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-xl transition-all shadow-lg shadow-amber-500/10">
-            Criar Loja Grátis
-          </a>
+      <header>
+        <div className="logo">
+          <div className="logo-mark">S</div>
+          <div>
+            <div className="logo-text">STCK COMPANY</div>
+            <div className="logo-sub">The World Is Yours</div>
+          </div>
         </div>
+        <nav>
+          <a href="#recursos">Recursos</a>
+          <a href="#precos">Preços</a>
+          <a href="#">Fazer login</a>
+          <a href="#" className="btn-primary">Criar loja grátis</a>
+        </nav>
       </header>
 
-      {/* HERO SECTION */}
-      <section className="max-w-5xl mx-auto px-6 pt-20 pb-16 text-center space-y-8">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-bold">
-          <Sparkles className="w-4 h-4" /> Fábrica de Roteiros & Teleprompter Integrados
-        </div>
-
-        <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-white leading-tight">
-          Sua Loja Virtual Pronta para <span className="text-amber-400">Vender no WhatsApp</span> e Instagram
-        </h1>
-
-        <p className="text-sm sm:text-base text-zinc-400 max-w-2xl mx-auto">
-          Cadastre seus produtos, envie seu link exclusivo e receba os pedidos organizados direto no seu WhatsApp com código Pix gerado na hora — além de gravar vídeos virais com nosso teleprompter embutido.
-        </p>
-
-        <div className="flex justify-center items-center gap-4 pt-4">
-          <a href="#/register" className="px-8 py-4 bg-amber-500 hover:bg-amber-400 text-black font-black text-sm rounded-2xl transition-all shadow-xl shadow-amber-500/20 flex items-center gap-2">
-            Criar Minha Loja Agora <ArrowRight className="w-4 h-4" />
-          </a>
-        </div>
-
-        {/* CARDS DE BENEFÍCIOS */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-12">
-          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl text-left space-y-3">
-            <div className="w-10 h-10 rounded-2xl bg-black border border-zinc-800 flex items-center justify-center text-amber-400">
-              <Smartphone className="w-5 h-5" />
+      <main>
+        {/* HERO SECTION */}
+        <section className="hero">
+          <div>
+            <div className="eyebrow reveal r1">Roteiros e teleprompter integrados</div>
+            <h1 className="reveal r2">Sua loja vende<br />sozinha no <span className="hl">WhatsApp</span></h1>
+            <p className="lead reveal r3">Cadastre seus produtos, envie seu link exclusivo e receba pedidos organizados direto no chat — com Pix gerado na hora e roteiros prontos pra gravar com teleprompter embutido.</p>
+            <div className="cta-row reveal r4">
+              <a href="#precos" className="btn-lg">Criar minha loja agora →</a>
+              <a href="#recursos" className="btn-ghost">Ver recursos</a>
             </div>
-            <h3 className="text-sm font-bold text-white">100% Otimizado para Mobile</h3>
-            <p className="text-xs text-zinc-400">Seus clientes navegam, escolhem e compram direto pelo celular com extrema velocidade.</p>
+            <div className="proof reveal r5">
+              <span><strong>+2.400</strong> lojas criadas</span>
+              <span>·</span>
+              <span>Pix gerado automaticamente em cada pedido</span>
+            </div>
           </div>
 
-          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl text-left space-y-3">
-            <div className="w-10 h-10 rounded-2xl bg-black border border-zinc-800 flex items-center justify-center text-amber-400">
-              <Video className="w-5 h-5" />
+          <div className="phone-wrap reveal r2">
+            <div className="phone">
+              <div className="phone-notch"></div>
+              <div className="wa-header">
+                <div className="wa-avatar">M</div>
+                <div>
+                  <div className="wa-name">Loja da Marina</div>
+                  <div className="wa-status">online</div>
+                </div>
+              </div>
+              <div className="wa-body" id="waBody" ref={waBodyRef}>
+                <div className="bubble in b1">Oi! Vi o vestido azul na sua loja, ainda tem tamanho M?</div>
+                <div className="bubble out b2">
+                  Tem sim! Separei aqui pra você<br />
+                  <div style={{ height: '64px', background: 'linear-gradient(135deg,#2a2a2a,#111)', borderRadius: '6px', marginTop: '6px' }}></div>
+                </div>
+                <div className="bubble in b3">Perfeito, quero levar!</div>
+                <div className="bubble out pix b4">
+                  <div className="pix-tag">PIX GERADO</div>
+                  Vestido Azul M — R$ 89,90<br />Copia e cola disponível
+                </div>
+                <div className="bubble in b5">Pago agora mesmo!</div>
+              </div>
             </div>
-            <h3 className="text-sm font-bold text-white">Roteiros & Teleprompter</h3>
-            <p className="text-xs text-zinc-400">Gere roteiros automáticos para os seus produtos e grave Reels direto pelo painel sem errar.</p>
+          </div>
+        </section>
+
+        {/* RECURSOS */}
+        <section className="section" id="recursos">
+          <div className="section-head">
+            <div className="eyebrow">Como funciona</div>
+            <h2>Tudo que você precisa pra vender sem complicação</h2>
+            <p>Do cadastro do produto ao Pix na mão do cliente — sem sair do WhatsApp.</p>
+          </div>
+          <div className="grid3">
+            <div className="feat">
+              <div className="feat-ic">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <rect x="7" y="2" width="10" height="20" rx="2" />
+                  <line x1="11" y1="18" x2="13" y2="18" />
+                </svg>
+              </div>
+              <h3>100% otimizado pra mobile</h3>
+              <p>Seus clientes navegam, escolhem e compram direto pelo celular, com carregamento rápido.</p>
+            </div>
+            <div className="feat">
+              <div className="feat-ic">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <rect x="2" y="6" width="14" height="12" rx="2" />
+                  <path d="M16 10l6-3v10l-6-3" />
+                </svg>
+              </div>
+              <h3>Roteiros e teleprompter</h3>
+              <p>Gere roteiros automáticos pros seus produtos e grave vídeos direto pelo painel, sem decorar a fala.</p>
+            </div>
+            <div className="feat">
+              <div className="feat-ic">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                  <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
+                </svg>
+              </div>
+              <h3>Checkout via WhatsApp</h3>
+              <p>Cada pedido chega formatado e organizado direto no chat da sua loja, com Pix já gerado.</p>
+            </div>
+          </div>
+        </section>
+
+        {/* PREÇOS */}
+        <section className="section" id="precos">
+          <div className="section-head" style={{ textAlign: 'center', margin: '0 auto 50px' }}>
+            <div className="eyebrow" style={{ margin: '0 auto 16px' }}>Planos Transparentes</div>
+            <h2>Comece a vender mais hoje mesmo</h2>
+            <p>Escolha o plano ideal para o tamanho do seu negócio e acelere suas vendas no WhatsApp.</p>
           </div>
 
-          <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl text-left space-y-3">
-            <div className="w-10 h-10 rounded-2xl bg-black border border-zinc-800 flex items-center justify-center text-amber-400">
-              <ShoppingBag className="w-5 h-5" />
-            </div>
-            <h3 className="text-sm font-bold text-white">Checkout via WhatsApp</h3>
-            <p className="text-xs text-zinc-400">Cada pedido é formatado de forma limpa e enviado direto no chat do seu WhatsApp comercial.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* SEÇÃO DE PREÇOS E PLANOS */}
-      <section className="max-w-5xl mx-auto px-6 py-20 border-t border-zinc-900 space-y-12">
-        <div className="text-center space-y-4">
-          <h2 className="text-3xl font-black text-white">Planos simples e transparentes</h2>
-          <p className="text-xs text-zinc-400">Escolha o plano ideal para escalar suas vendas hoje mesmo.</p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-3xl mx-auto">
-          {/* Plano Starter */}
-          <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-3xl space-y-6 flex flex-col justify-between">
-            <div className="space-y-4">
-              <span className="px-3 py-1 bg-black border border-zinc-800 text-zinc-400 font-bold text-xs rounded-xl">Iniciante</span>
-              <h3 className="text-xl font-black text-white">Plano Mensal</h3>
-              <div className="text-3xl font-black text-amber-400">R$ 67<span className="text-xs text-zinc-400 font-normal"> /mês</span></div>
-              <ul className="space-y-3 text-xs text-zinc-300 pt-2">
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-amber-400" /> Vitrine online ilimitada</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-amber-400" /> Pedidos direto no WhatsApp</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-amber-400" /> Fábrica de Roteiros & Teleprompter</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-amber-400" /> Alerta de estoque crítico</li>
+          <div className="pricing-grid">
+            <div className="price-card">
+              <div className="plan-name">Iniciante</div>
+              <div className="plan-desc">Ideal para quem está começando a estruturar as vendas online.</div>
+              <div className="plan-price">R$ 49<span>/mês</span></div>
+              <ul className="plan-features">
+                <li>✓ Até 100 produtos cadastrados</li>
+                <li>✓ Link exclusivo da loja</li>
+                <li>✓ Geração automática de Pix</li>
+                <li>✓ Suporte via chat</li>
               </ul>
+              <a href="#" className="btn-ghost" style={{ display: 'block', textAlign: 'center', marginTop: '24px' }}>Escolher Iniciante</a>
             </div>
-            <a href="#/register" className="w-full py-3.5 bg-black border border-zinc-800 hover:border-amber-500 text-white font-black text-xs rounded-xl transition-all text-center">
-              Começar Agora
+
+            <div className="price-card popular">
+              <div className="popular-badge">Mais Popular</div>
+              <div className="plan-name">Profissional</div>
+              <div className="plan-desc">Para quem quer escala, roteiros automáticos e teleprompter.</div>
+              <div className="plan-price">R$ 97<span>/mês</span></div>
+              <ul className="plan-features">
+                <li>✓ Produtos ilimitados</li>
+                <li>✓ Roteiros e teleprompter integrados</li>
+                <li>✓ Checkout avançado via WhatsApp</li>
+                <li>✓ Prioridade no suporte</li>
+                <li>✓ Sem taxa por venda</li>
+              </ul>
+              <a href="#" className="btn-primary" style={{ display: 'block', textAlign: 'center', marginTop: '24px' }}>Criar Loja Pro Agora</a>
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section className="section" id="faq">
+          <div className="section-head">
+            <div className="eyebrow">Dúvidas Frequentes</div>
+            <h2>Tudo o que você precisa saber</h2>
+            <p>Tire suas dúvidas sobre como a STCK Company funciona na prática.</p>
+          </div>
+
+          <div className="faq-list">
+            <div className="faq-item">
+              <h3>Como recebo o dinheiro das minhas vendas?</h3>
+              <p>O pagamento via Pix vai direto para a sua conta bancária cadastrada, sem intermediários e sem taxas ocultas por transação.</p>
+            </div>
+            <div className="faq-item">
+              <h3>Preciso ter conhecimento técnico para montar a loja?</h3>
+              <p>Zero! O painel foi desenvolvido para ser extremamente simples. Em menos de 5 minutos você cadastra seus produtos e já pode divulgar o link.</p>
+            </div>
+            <div className="faq-item">
+              <h3>Como funcionam os roteiros e o teleprompter?</h3>
+              <p>Nossa inteligência ajuda a estruturar o texto ideal para o seu produto. O teleprompter roda direto na tela para você gravar vídeos fluidos para o Instagram, TikTok e Status sem travar.</p>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA FINAL */}
+        <section className="section">
+          <div className="cta-bottom">
+            <h2>Pronto para vender no automático?</h2>
+            <p>Junte-se a milhares de lojistas que simplificaram os pedidos e pagamentos no WhatsApp.</p>
+            <a href="#precos" className="btn-lg" style={{ position: 'relative', zIndex: 1 }}>
+              Criar minha loja grátis agora →
             </a>
           </div>
+        </section>
+      </main>
 
-          {/* Plano PRO (Destaque) */}
-          <div className="bg-zinc-900 border-2 border-amber-500 p-8 rounded-3xl space-y-6 flex flex-col justify-between relative shadow-2xl shadow-amber-500/10">
-            <div className="absolute -top-3 right-6 px-3 py-1 bg-amber-500 text-black font-black text-[10px] rounded-full uppercase tracking-wider">
-              Mais Popular
-            </div>
-            <div className="space-y-4">
-              <span className="px-3 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-400 font-bold text-xs rounded-xl">Profissional</span>
-              <h3 className="text-xl font-black text-white">Plano Semestral PRO</h3>
-              <div className="text-3xl font-black text-amber-400">R$ 197<span className="text-xs text-zinc-400 font-normal"> /6 meses</span></div>
-              <ul className="space-y-3 text-xs text-zinc-300 pt-2">
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-amber-400" /> Tudo do plano mensal</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-amber-400" /> Prioridade no suporte</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-amber-400" /> Cupons de desconto avançados</li>
-                <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-amber-400" /> Exportação de relatórios CSV</li>
-              </ul>
-            </div>
-            <a href="#/register" className="w-full py-3.5 bg-amber-500 hover:bg-amber-400 text-black font-black text-xs rounded-xl transition-all text-center shadow-lg">
-              Garantir Plano PRO
-            </a>
-          </div>
-        </div>
-      </section>
-
-      {/* FOOTER */}
-      <footer className="max-w-7xl mx-auto px-6 py-8 border-t border-zinc-900 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-zinc-500">
-        <div className="flex items-center gap-2">
-          <Palmtree className="w-4 h-4 text-amber-400" /> STCK Company. Todos os direitos reservados.
-        </div>
-        <p className="italic">"The World Is Yours"</p>
+      <footer>
+        <div>© 2026 STCK Company</div>
+        <div>Feito pra quem vende todo dia no WhatsApp</div>
       </footer>
-
-    </div>
+    </>
   );
 }
