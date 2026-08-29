@@ -1,6 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 
-export default function Landing() {
+interface LandingPageProps {
+  onNavigate: (path: string) => void;
+}
+
+export default function Landing({ onNavigate }: LandingPageProps) {
   const waBodyRef = useRef<HTMLDivElement>(null);
   const originalHtmlRef = useRef<string>("");
 
@@ -56,8 +60,8 @@ export default function Landing() {
         <nav>
           <a href="#recursos">Recursos</a>
           <a href="#precos">Preços</a>
-          <a href="#">Fazer login</a>
-          <a href="#" className="btn-primary">Criar loja grátis</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('login'); }}>Fazer login</a>
+          <a href="#" className="btn-primary" onClick={(e) => { e.preventDefault(); onNavigate('register'); }}>Criar loja grátis</a>
         </nav>
       </header>
 
@@ -69,7 +73,7 @@ export default function Landing() {
             <h1 className="reveal r2">Sua loja vende<br />sozinha no <span className="hl">WhatsApp</span></h1>
             <p className="lead reveal r3">Cadastre seus produtos, envie seu link exclusivo e receba pedidos organizados direto no chat — com Pix gerado na hora e roteiros prontos pra gravar com teleprompter embutido.</p>
             <div className="cta-row reveal r4">
-              <a href="#precos" className="btn-lg">Criar minha loja agora →</a>
+              <a href="#" className="btn-lg" onClick={(e) => { e.preventDefault(); onNavigate('register'); }}>Criar minha loja agora →</a>
               <a href="#recursos" className="btn-ghost">Ver recursos</a>
             </div>
             <div className="proof reveal r5">
@@ -165,7 +169,7 @@ export default function Landing() {
                 <li>✓ Geração automática de Pix</li>
                 <li>✓ Suporte via chat</li>
               </ul>
-              <a href="#" className="btn-ghost" style={{ display: 'block', textAlign: 'center', marginTop: '24px' }}>Escolher Iniciante</a>
+              <a href="#" className="btn-ghost" style={{ display: 'block', textAlign: 'center', marginTop: '24px' }} onClick={(e) => { e.preventDefault(); onNavigate('register'); }}>Escolher Iniciante</a>
             </div>
 
             <div className="price-card popular">
@@ -180,7 +184,7 @@ export default function Landing() {
                 <li>✓ Prioridade no suporte</li>
                 <li>✓ Sem taxa por venda</li>
               </ul>
-              <a href="#" className="btn-primary" style={{ display: 'block', textAlign: 'center', marginTop: '24px' }}>Criar Loja Pro Agora</a>
+              <a href="#" className="btn-primary" style={{ display: 'block', textAlign: 'center', marginTop: '24px' }} onClick={(e) => { e.preventDefault(); onNavigate('register'); }}>Criar Loja Pro Agora</a>
             </div>
           </div>
         </section>
@@ -214,7 +218,7 @@ export default function Landing() {
           <div className="cta-bottom">
             <h2>Pronto para vender no automático?</h2>
             <p>Junte-se a milhares de lojistas que simplificaram os pedidos e pagamentos no WhatsApp.</p>
-            <a href="#precos" className="btn-lg" style={{ position: 'relative', zIndex: 1 }}>
+            <a href="#" className="btn-lg" style={{ position: 'relative', zIndex: 1 }} onClick={(e) => { e.preventDefault(); onNavigate('register'); }}>
               Criar minha loja grátis agora →
             </a>
           </div>
