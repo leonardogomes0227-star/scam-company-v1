@@ -23,21 +23,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function loadProfile(sessionUserId: string, email: string) {
-    const { data: profile } = await supabase
+  // Agora retorna true/false indicando se o profile foi carregado com sucesso
+  async function loadProfile(sessionUserId: string, email: string): Promise<boolean> {
+    const { data: profile, error } = await supabase
       .from('profiles')
       .select('role, tenant_id')
       .eq('id', sessionUserId)
       .single();
 
-    if (profile) {
-      setUser({
-        id: sessionUserId,
-        email,
-        role: profile.role,
-        tenantId: profile.tenant_id
-      });
+    if (error) {
+      console.error('[AuthContext] Erro ao buscar profile:', error.message, error);
+      return false;
     }
+
+    if (!profile) {
+      console.error('[AuthContext] Nenhum profile encontrado para o usuário:', sessionUserId);
+      return false;
+    }
+
+    setUser({
+      id: sessionUserId,
+      email,
+      role: profile.role,
+      tenantId: profile.tenant_id
+    });
+    return true;
   }
 
   useEffect(() => {
@@ -63,8 +73,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error || !data.user) return false;
-    await loadProfile(data.user.id, data.user.email!);
+
+    if (error || !data.user) {
+      console.error('[AuthContext] Erro no signInWithPassword:', error?.message);
+      return false;
+    }
+
+    const profileOk = await loadProfile(data.user.id, data.user.email!);
+
+    if (!profileOk) {
+      // Login no Supabase Auth funcionou, mas não achou o profile.
+      // Desloga pra não deixar o usuário "autenticado" sem dados válidos.
+      await supabase.auth.signOut();
+      return false;
+    }
+
     return true;
   };
 
