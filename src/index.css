@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* =========================================
    STCK COMPANY - LANDING PAGE STYLES
    ========================================= */
