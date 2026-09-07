@@ -23,7 +23,7 @@ export default function Header({ page, onNavigate, cartCount, onCartOpen }: Head
         {/* Logo */}
         <button onClick={() => nav('home')} className="flex items-center gap-2.5 group">
           <div className="h-9 w-9 rounded-lg bg-zinc-900 p-1 border border-zinc-700 flex items-center justify-center overflow-hidden">
-            <svg viewBox="0 0 64 64" className="h-full w-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg viewBox="-30 -40 100 100" className="h-full w-full" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path
                 d="M26,60 C24,46 34,38 28,26 C25,20 30,15 34,12 L37,13 C34,17 30,21 32,27 C37,38 28,47 30,60 Z"
                 fill="#F59E0B"
