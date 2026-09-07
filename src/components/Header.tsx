@@ -23,17 +23,17 @@ export default function Header({ page, onNavigate, cartCount, onCartOpen }: Head
         {/* Logo */}
         <button onClick={() => nav('home')} className="flex items-center gap-2.5 group">
           <div className="h-9 w-9 rounded-lg bg-zinc-900 p-1 border border-zinc-700 flex items-center justify-center overflow-hidden">
-            <svg viewBox="-30 -40 100 100" className="h-full w-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg viewBox="-5 -15 110 110" className="h-full w-full" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path
-                d="M26,60 C24,46 34,38 28,26 C25,20 30,15 34,12 L37,13 C34,17 30,21 32,27 C37,38 28,47 30,60 Z"
+                d="M50,92 C46,78 56,66 48,52 C45,46 46,42 47,39 L53,39 C54,42 52,47 55,53 C63,68 52,79 56,92 Z"
                 fill="#F59E0B"
               />
               <g fill="#F59E0B">
-                <path d="M34,13 C30,2 18,-6 4,-4 C0,-3 0,1 4,2 C16,4 28,10 34,13 Z" transform="rotate(-30 34 13)" />
-                <path d="M34,13 C30,2 18,-6 4,-4 C0,-3 0,1 4,2 C16,4 28,10 34,13 Z" transform="rotate(10 34 13)" />
-                <path d="M34,13 C30,2 18,-6 4,-4 C0,-3 0,1 4,2 C16,4 28,10 34,13 Z" transform="rotate(50 34 13)" />
-                <path d="M34,13 C30,2 18,-6 4,-4 C0,-3 0,1 4,2 C16,4 28,10 34,13 Z" transform="rotate(90 34 13)" />
-                <path d="M34,13 C30,2 18,-6 4,-4 C0,-3 0,1 4,2 C16,4 28,10 34,13 Z" transform="rotate(130 34 13)" />
+                <path d="M50,39 C40,25 40,5 50,-7 C60,5 60,25 50,39 Z" transform="rotate(-70 50 39)" />
+                <path d="M50,39 C40,25 40,5 50,-7 C60,5 60,25 50,39 Z" transform="rotate(-35 50 39)" />
+                <path d="M50,39 C40,25 40,5 50,-7 C60,5 60,25 50,39 Z" />
+                <path d="M50,39 C40,25 40,5 50,-7 C60,5 60,25 50,39 Z" transform="rotate(35 50 39)" />
+                <path d="M50,39 C40,25 40,5 50,-7 C60,5 60,25 50,39 Z" transform="rotate(70 50 39)" />
               </g>
             </svg>
           </div>
