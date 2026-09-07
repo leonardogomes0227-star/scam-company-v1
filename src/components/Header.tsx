@@ -22,11 +22,21 @@ export default function Header({ page, onNavigate, cartCount, onCartOpen }: Head
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
         <button onClick={() => nav('home')} className="flex items-center gap-2.5 group">
-          <img
-            src="/logo-stck.png"
-            alt="STCK Company"
-            className="h-9 w-9 rounded-lg object-contain bg-zinc-900 p-1 border border-zinc-700"
-          />
+          <div className="h-9 w-9 rounded-lg bg-zinc-900 p-1 border border-zinc-700 flex items-center justify-center overflow-hidden">
+            <svg viewBox="0 0 64 64" className="h-full w-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M26,60 C24,46 34,38 28,26 C25,20 30,15 34,12 L37,13 C34,17 30,21 32,27 C37,38 28,47 30,60 Z"
+                fill="#F59E0B"
+              />
+              <g fill="#F59E0B">
+                <path d="M34,13 C30,2 18,-6 4,-4 C0,-3 0,1 4,2 C16,4 28,10 34,13 Z" transform="rotate(-30 34 13)" />
+                <path d="M34,13 C30,2 18,-6 4,-4 C0,-3 0,1 4,2 C16,4 28,10 34,13 Z" transform="rotate(10 34 13)" />
+                <path d="M34,13 C30,2 18,-6 4,-4 C0,-3 0,1 4,2 C16,4 28,10 34,13 Z" transform="rotate(50 34 13)" />
+                <path d="M34,13 C30,2 18,-6 4,-4 C0,-3 0,1 4,2 C16,4 28,10 34,13 Z" transform="rotate(90 34 13)" />
+                <path d="M34,13 C30,2 18,-6 4,-4 C0,-3 0,1 4,2 C16,4 28,10 34,13 Z" transform="rotate(130 34 13)" />
+              </g>
+            </svg>
+          </div>
           <div className="flex flex-col text-left">
             <span className="font-bold text-lg text-white tracking-wider group-hover:text-amber-400 transition-colors">
               STCK COMPANY
