@@ -51,7 +51,21 @@ export default function Landing({ onNavigate }: LandingPageProps) {
 
       <header>
         <div className="logo">
-          <div className="logo-mark">S</div>
+          <div className="logo-mark">
+            <svg viewBox="0 0 64 64" width="100%" height="100%" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path
+                d="M26,60 C24,46 34,38 28,26 C25,20 30,15 34,12 L37,13 C34,17 30,21 32,27 C37,38 28,47 30,60 Z"
+                fill="currentColor"
+              />
+              <g fill="currentColor">
+                <path d="M34,13 C30,2 18,-6 4,-4 C0,-3 0,1 4,2 C16,4 28,10 34,13 Z" transform="rotate(-30 34 13)" />
+                <path d="M34,13 C30,2 18,-6 4,-4 C0,-3 0,1 4,2 C16,4 28,10 34,13 Z" transform="rotate(10 34 13)" />
+                <path d="M34,13 C30,2 18,-6 4,-4 C0,-3 0,1 4,2 C16,4 28,10 34,13 Z" transform="rotate(50 34 13)" />
+                <path d="M34,13 C30,2 18,-6 4,-4 C0,-3 0,1 4,2 C16,4 28,10 34,13 Z" transform="rotate(90 34 13)" />
+                <path d="M34,13 C30,2 18,-6 4,-4 C0,-3 0,1 4,2 C16,4 28,10 34,13 Z" transform="rotate(130 34 13)" />
+              </g>
+            </svg>
+          </div>
           <div>
             <div className="logo-text">STCK COMPANY</div>
             <div className="logo-sub">The World Is Yours</div>
