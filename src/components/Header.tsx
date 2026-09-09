@@ -23,17 +23,15 @@ export default function Header({ page, onNavigate, cartCount, onCartOpen }: Head
         {/* Logo */}
         <button onClick={() => nav('home')} className="flex items-center gap-2.5 group">
           <div className="h-9 w-9 rounded-lg bg-zinc-900 p-1 border border-zinc-700 flex items-center justify-center overflow-hidden">
-            <svg viewBox="-5 -15 110 110" className="h-full w-full" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M50,92 C46,78 56,66 48,52 C45,46 46,42 47,39 L53,39 C54,42 52,47 55,53 C63,68 52,79 56,92 Z"
-                fill="#F59E0B"
-              />
-              <g fill="#F59E0B">
-                <path d="M50,39 C40,25 40,5 50,-7 C60,5 60,25 50,39 Z" transform="rotate(-70 50 39)" />
-                <path d="M50,39 C40,25 40,5 50,-7 C60,5 60,25 50,39 Z" transform="rotate(-35 50 39)" />
-                <path d="M50,39 C40,25 40,5 50,-7 C60,5 60,25 50,39 Z" />
-                <path d="M50,39 C40,25 40,5 50,-7 C60,5 60,25 50,39 Z" transform="rotate(35 50 39)" />
-                <path d="M50,39 C40,25 40,5 50,-7 C60,5 60,25 50,39 Z" transform="rotate(70 50 39)" />
+            <svg viewBox="130 60 350 430" className="h-full w-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <g fill="#FFFFFF">
+                <path d="M310 472 C295 380 285 300 315 210 C322 192 334 192 330 212 C305 300 312 390 335 472 Z" />
+                <path d="M322 220 C260 195 195 205 145 250 C205 235 265 240 315 258 Z" />
+                <path d="M324 214 C270 170 205 155 148 172 C205 185 258 200 312 232 Z" />
+                <path d="M326 210 C295 155 250 118 195 108 C235 145 268 178 315 220 Z" />
+                <path d="M328 208 C335 148 360 100 415 78 C388 128 365 168 330 212 Z" />
+                <path d="M330 210 C370 165 420 145 470 155 C425 170 385 190 335 222 Z" />
+                <path d="M330 216 C380 205 430 215 465 248 C420 235 375 232 332 240 Z" />
               </g>
             </svg>
           </div>
