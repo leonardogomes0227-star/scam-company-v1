@@ -6,11 +6,22 @@ Plataforma SaaS para lojistas criarem uma vitrine virtual e receberem pedidos or
 
 ## Funcionalidades
 
-- **Landing page** com planos e cadastro.
-- **Cadastro/Login de lojistas** via Supabase Auth: a loja e o perfil são criados automaticamente no banco.
-- **Painel do lojista** (`#/admin`): produtos (cadastro, edição, foto, estoque), pedidos (status, detalhes, aviso ao cliente no WhatsApp), cupons de desconto, relatórios (faturamento, ticket médio, estoque baixo, mais vendidos), fábrica de roteiros com teleprompter e configurações (WhatsApp, chave Pix, frete, cor).
-- **Vitrine pública** (`#/loja/<id-da-loja>`): busca, categorias, favoritos, avaliações reais, carrinho com quantidades, cupom, frete, checkout pelo WhatsApp, Pix Copia e Cola com o valor do pedido e rastreio por código.
-- **Super Admin** (`#/admin-global`): lista todas as lojas, MRR, bloqueio/liberação e troca de plano.
+- **Site (landing page):** apresentação completa com como funciona, recursos, demonstração da vitrine, planos, FAQ e chamada final.
+- **Cadastro e login** de lojistas via Supabase Auth: a loja e o perfil são criados automaticamente no banco.
+- **Vitrine pública** (`#/loja/<id-da-loja>`):
+  - tema com a cor da marca de cada loja, banner, busca, categorias e ordenação;
+  - página do produto com avaliações reais, produtos relacionados e quantidade;
+  - carrinho em gaveta, cupom, checkout em etapas (dados → frete → pagamento);
+  - pedido enviado pelo WhatsApp + **Pix Copia e Cola** com o valor exato;
+  - rastreio do pedido com barra de progresso, favoritos e botão flutuante do WhatsApp.
+- **Painel do lojista** (`#/admin`), com menu lateral no computador e barra inferior no celular:
+  - **Visão geral:** link da loja para divulgar, checklist de configuração, KPIs, gráfico de faturamento dos últimos 14 dias, pedidos recentes e estoque baixo;
+  - **Pedidos:** abas por status, busca, detalhes, mensagem pronta para o cliente no WhatsApp e **baixa automática de estoque** ao confirmar o pagamento;
+  - **Produtos:** busca e filtros, cadastro/edição com foto, duplicar, ajuste rápido de estoque;
+  - **Cupons:** criação com sugestões e contagem de uso;
+  - **Marketing:** roteiros de vídeo com teleprompter (velocidade, fonte, espelhamento) e texto pronto para status/grupos;
+  - **Configurações:** identidade, cor da marca, WhatsApp, chave Pix e frete, com pré-visualização ao vivo.
+- **Super Admin** (`#/admin-global`): lojas da plataforma, MRR, bloqueio/liberação, troca de plano e exclusão.
 
 ## Como rodar
 
