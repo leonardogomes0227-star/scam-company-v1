@@ -63,13 +63,17 @@ export default function SalesChart({ data }: { data: DayPoint[] }) {
               </div>
             ))}
           </div>
-          {/* Rótulos do eixo X */}
-          <div className="absolute inset-x-0 bottom-0 h-5 flex gap-[2px] text-[10.5px] text-ink-soft">
-            {data.map((d, i) => (
-              <span key={d.day} className={cx('flex-1 text-center truncate', i % 2 === 1 && data.length > 10 && 'invisible sm:visible')}>
-                {dayMonth.format(parseDay(d.day))}
-              </span>
-            ))}
+          {/* Rótulos do eixo X (posicionados no centro de cada barra) */}
+          <div className="absolute inset-x-0 bottom-0 h-5 text-[10.5px] text-ink-soft">
+            {data.map((d, i) => {
+              const every = data.length > 20 ? 5 : data.length > 10 ? 2 : 1;
+              if ((data.length - 1 - i) % every !== 0) return null;
+              return (
+                <span key={d.day} className="absolute top-0 -translate-x-1/2 whitespace-nowrap" style={{ left: `${((i + 0.5) / data.length) * 100}%` }}>
+                  {dayMonth.format(parseDay(d.day))}
+                </span>
+              );
+            })}
           </div>
           {/* Tooltip */}
           {active && hover != null && (

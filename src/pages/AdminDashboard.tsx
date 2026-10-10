@@ -3,6 +3,7 @@ import { Crown, ExternalLink, LayoutDashboard, Lock, LogOut, Megaphone, Menu, Pa
 import { useAuth } from '../context/AuthContext';
 import { Logo } from '../components/Logo';
 import { Spinner, cx } from '../components/ui';
+import { useToast } from '../components/Toast';
 import { useStoreData } from './admin/useStoreData';
 import Overview from './admin/Overview';
 import Products from './admin/Products';
@@ -36,6 +37,7 @@ function readSection(): AdminSection {
 export default function AdminDashboard({ tenantId }: { tenantId: string }) {
   const { user, logout } = useAuth();
   const data = useStoreData(tenantId);
+  const toast = useToast();
   const [section, setSection] = useState<AdminSection>(readSection);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -50,6 +52,21 @@ export default function AdminDashboard({ tenantId }: { tenantId: string }) {
     }
     window.scrollTo(0, 0);
   }, [section]);
+
+  // Confere pedidos novos a cada 45s enquanto o painel está aberto e visível.
+  const { refreshOrders } = data;
+  useEffect(() => {
+    const id = window.setInterval(async () => {
+      if (document.visibilityState !== 'visible') return;
+      const added = await refreshOrders();
+      if (added > 0) {
+        toast(added === 1 ? '🛒 Novo pedido recebido!' : `🛒 ${added} novos pedidos recebidos!`);
+        document.title = `(${added}) Novo pedido · STCK`;
+        setTimeout(() => (document.title = 'STCK Company'), 8000);
+      }
+    }, 45000);
+    return () => window.clearInterval(id);
+  }, [refreshOrders, toast]);
 
   const goTo = (s: AdminSection) => {
     setSection(s);

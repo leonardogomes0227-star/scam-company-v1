@@ -1,13 +1,13 @@
 import { useMemo, useRef, useState } from 'react';
-import { Copy, Edit3, ImagePlus, Package, Plus, Search, Trash2 } from 'lucide-react';
+import { Copy, Edit3, ImagePlus, Link2, Loader2, Package, Plus, Search, Trash2 } from 'lucide-react';
 import { Badge, Button, Card, EmptyState, Field, Input, Modal, Select, Textarea, cx } from '../../components/ui';
 import { useToast } from '../../components/Toast';
 import { supabase } from '../../supabaseClient';
 import { formatBRL, generateId } from '../../lib/format';
+import { compressImage, dataUrlKB } from '../../lib/image';
 import type { Product } from '../../types';
 import type { StoreData } from './useStoreData';
 
-const MAX_IMAGE_BYTES = 700 * 1024;
 
 type Draft = { id?: string; name: string; price: string; stock: string; category: string; description: string; image: string };
 const emptyDraft: Draft = { name: '', price: '', stock: '', category: '', description: '', image: '' };
@@ -20,6 +20,7 @@ export default function Products({ data, tenantId }: { data: StoreData; tenantId
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all');
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
+  const [processingImage, setProcessingImage] = useState(false);
   const [toDelete, setToDelete] = useState<Product | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -40,17 +41,19 @@ export default function Products({ data, tenantId }: { data: StoreData; tenantId
   const duplicate = (p: Product) =>
     setDraft({ name: `${p.name} (cópia)`, price: String(p.price), stock: String(p.stock), category: p.category || '', description: p.description || '', image: p.image || '' });
 
-  const handleImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file || !draft) return;
-    if (file.size > MAX_IMAGE_BYTES) {
-      toast('Imagem muito grande (máx. 700 KB). Comprima a foto ou use um link.', true);
-      e.target.value = '';
-      return;
+    setProcessingImage(true);
+    try {
+      const image = await compressImage(file);
+      setDraft((d) => (d ? { ...d, image } : d));
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Não foi possível usar esta imagem.', true);
+    } finally {
+      setProcessingImage(false);
     }
-    const reader = new FileReader();
-    reader.onloadend = () => setDraft((d) => (d ? { ...d, image: reader.result as string } : d));
-    reader.readAsDataURL(file);
   };
 
   const save = async (e: React.FormEvent) => {
@@ -86,6 +89,16 @@ export default function Products({ data, tenantId }: { data: StoreData; tenantId
       toast('Produto cadastrado!');
     }
     setDraft(null);
+  };
+
+  const copyProductLink = async (p: Product) => {
+    const url = `${window.location.origin}${window.location.pathname}#/loja/${encodeURIComponent(tenantId)}/p/${encodeURIComponent(p.id)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast('Link do produto copiado! Cole no Instagram ou WhatsApp.');
+    } catch {
+      prompt('Copie o link do produto:', url);
+    }
   };
 
   const quickStock = async (p: Product, delta: number) => {
@@ -164,6 +177,7 @@ export default function Products({ data, tenantId }: { data: StoreData; tenantId
                 </div>
                 <span className="md:hidden"><Badge tone={p.stock <= 0 ? 'red' : p.stock <= 3 ? 'amber' : 'green'}>{p.stock <= 0 ? 'Esgotado' : p.stock}</Badge></span>
                 <div className="flex items-center">
+                  <IconAction label="Copiar link do produto" onClick={() => copyProductLink(p)}><Link2 className="w-4 h-4" /></IconAction>
                   <IconAction label="Editar" onClick={() => openEdit(p)}><Edit3 className="w-4 h-4" /></IconAction>
                   <span className="hidden sm:inline-flex"><IconAction label="Duplicar" onClick={() => duplicate(p)}><Copy className="w-4 h-4" /></IconAction></span>
                   <IconAction label="Excluir" danger onClick={() => setToDelete(p)}><Trash2 className="w-4 h-4" /></IconAction>
@@ -182,18 +196,23 @@ export default function Products({ data, tenantId }: { data: StoreData; tenantId
           footer={
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setDraft(null)}>Cancelar</Button>
-              <Button type="submit" form="product-form" loading={saving}>{draft.id ? 'Salvar alterações' : 'Cadastrar produto'}</Button>
+              <Button type="submit" form="product-form" loading={saving} disabled={processingImage}>{draft.id ? 'Salvar alterações' : 'Cadastrar produto'}</Button>
             </div>
           }
         >
           <form id="product-form" onSubmit={save} className="grid md:grid-cols-[220px_1fr] gap-6">
             <div className="space-y-2">
               <button type="button" onClick={() => fileRef.current?.click()} className="w-full aspect-square rounded-2xl border-2 border-dashed border-black/10 hover:border-brand-400 bg-black/[0.02] overflow-hidden flex flex-col items-center justify-center gap-2 text-ink-muted text-sm">
-                {draft.image ? <img src={draft.image} alt="Prévia" className="w-full h-full object-cover" /> : <><ImagePlus className="w-7 h-7" /> Enviar foto</>}
+                {processingImage ? <><Loader2 className="w-6 h-6 animate-spin" /> Otimizando foto...</> : draft.image ? <img src={draft.image} alt="Prévia" className="w-full h-full object-cover" /> : <><ImagePlus className="w-7 h-7" /> Enviar foto<span className="text-xs text-ink-soft">Qualquer tamanho — otimizamos para você</span></>}
               </button>
               <input ref={fileRef} type="file" accept="image/*" onChange={handleImage} className="hidden" />
               <Input placeholder="...ou cole o link da imagem" value={draft.image.startsWith('data:') ? '' : draft.image} onChange={(e) => setDraft({ ...draft, image: e.target.value })} className="h-9 text-xs" />
-              {draft.image && <button type="button" onClick={() => setDraft({ ...draft, image: '' })} className="text-xs text-red-600 hover:underline">Remover imagem</button>}
+              {draft.image && (
+                <div className="flex items-center justify-between text-xs">
+                  {draft.image.startsWith('data:') ? <span className="text-ink-soft">Foto otimizada · {dataUrlKB(draft.image)} KB</span> : <span />}
+                  <button type="button" onClick={() => setDraft({ ...draft, image: '' })} className="text-red-600 hover:underline">Remover</button>
+                </div>
+              )}
             </div>
             <div className="space-y-4">
               <Field label="Nome do produto">

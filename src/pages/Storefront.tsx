@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   ArrowLeft, ArrowRight, Check, CheckCircle2, Clock, Copy, CreditCard, Heart, MapPin, MessageCircle, Minus, Package, Plus,
-  Search, ShoppingBag, SlidersHorizontal, Star, Store as StoreIcon, Tag, Trash2, Truck, X, Zap,
+  Search, Share2, ShoppingBag, SlidersHorizontal, Star, Store as StoreIcon, Tag, Trash2, Truck, X, Zap,
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { formatBRL, formatDate, generateId, generateOrderCode, normalizeWhatsapp, whatsappLink } from '../lib/format';
@@ -102,7 +102,7 @@ const fieldClass = 'w-full h-11 rounded-xl border border-black/10 bg-white px-3.
 // ---------------------------------------------------------------------------
 // Vitrine
 // ---------------------------------------------------------------------------
-export default function Storefront({ tenantId }: { tenantId: string }) {
+export default function Storefront({ tenantId, initialProductId }: { tenantId: string; initialProductId?: string }) {
   const [store, setStore] = useState<Tenant | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -264,6 +264,44 @@ export default function Storefront({ tenantId }: { tenantId: string }) {
         .map((l) => (l.productId === productId ? { ...l, quantity: Math.min(quantity, product?.stock ?? quantity) } : l))
         .filter((l) => l.quantity > 0),
     );
+  };
+
+  // Link direto para produto: #/loja/<loja>/p/<produto>
+  useEffect(() => {
+    if (!loadingStore && initialProductId && products.some((p) => p.id === initialProductId)) {
+      setActiveProductId(initialProductId);
+      setModalQuantity(1);
+    }
+  }, [initialProductId, loadingStore, products]);
+
+  useEffect(() => {
+    if (loadingStore) return;
+    const target = `#/loja/${encodeURIComponent(tenantId)}${activeProductId ? `/p/${encodeURIComponent(activeProductId)}` : ''}`;
+    if (window.location.hash !== target) window.history.replaceState(null, '', target);
+  }, [activeProductId, tenantId, loadingStore]);
+
+  const productUrl = (productId: string) =>
+    `${window.location.origin}${window.location.pathname}#/loja/${encodeURIComponent(tenantId)}/p/${encodeURIComponent(productId)}`;
+
+  const [linkCopied, setLinkCopied] = useState(false);
+  const shareProduct = async (product: Product) => {
+    const url = productUrl(product.id);
+    const text = `${product.name} por ${formatBRL(product.price)}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: product.name, text, url });
+        return;
+      } catch {
+        /* usuário cancelou ou não suportado: copia o link */
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setLinkCopied(true);
+      setTimeout(() => setLinkCopied(false), 2500);
+    } catch {
+      prompt('Copie o link do produto:', url);
+    }
   };
 
   const openProduct = (product: Product) => {
@@ -681,7 +719,11 @@ export default function Storefront({ tenantId }: { tenantId: string }) {
                 <button onClick={() => toggleFavorite(activeProduct.id)} className="w-10 h-10 rounded-xl border border-black/10 flex items-center justify-center shrink-0" aria-label="Favoritar">
                   <Heart className={cx('w-4 h-4', favorites.includes(activeProduct.id) ? 'fill-rose-500 text-rose-500' : 'text-ink-muted')} />
                 </button>
+                <button onClick={() => shareProduct(activeProduct)} className="w-10 h-10 rounded-xl border border-black/10 flex items-center justify-center shrink-0 text-ink-muted" aria-label="Compartilhar produto" title="Compartilhar">
+                  {linkCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Share2 className="w-4 h-4" />}
+                </button>
               </div>
+              {linkCopied && <p className="mt-2 text-xs text-emerald-700">Link do produto copiado!</p>}
             </div>
           </div>
 
