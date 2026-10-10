@@ -1,11 +1,44 @@
 import { useMemo, useState } from 'react';
-import { MapPin, MessageCircle, Phone, Search, ShoppingBag, Wallet } from 'lucide-react';
-import { Badge, Card, EmptyState, Input, Modal, Select, cx } from '../../components/ui';
+import { ClipboardCopy, Download, MapPin, MessageCircle, Phone, Search, ShoppingBag, Wallet } from 'lucide-react';
+import { Badge, Button, Card, EmptyState, Input, Modal, Select, cx } from '../../components/ui';
+import { csvNumber, downloadCsv } from '../../lib/csv';
 import { useToast } from '../../components/Toast';
 import { supabase } from '../../supabaseClient';
 import { formatBRL, formatDate, whatsappLink } from '../../lib/format';
 import { ORDER_STATUSES, type Order } from '../../types';
 import { orderDay, PAID_STATUSES, STATUS_TONE, type StoreData } from './useStoreData';
+
+type Period = 'all' | 'today' | '7' | '30';
+
+const PERIODS: { id: Period; label: string }[] = [
+  { id: 'all', label: 'Todo o período' },
+  { id: 'today', label: 'Hoje' },
+  { id: '7', label: 'Últimos 7 dias' },
+  { id: '30', label: 'Últimos 30 dias' },
+];
+
+function periodStart(period: Period): string | null {
+  if (period === 'all') return null;
+  const d = new Date();
+  if (period !== 'today') d.setDate(d.getDate() - (Number(period) - 1));
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function orderSummary(o: Order): string {
+  const lines = [
+    `Pedido ${o.id} — ${formatDate(orderDay(o))}`,
+    `Cliente: ${o.customer}${o.whatsapp ? ` (${o.whatsapp})` : ''}`,
+    o.address ? `Endereço: ${o.address}` : '',
+    '',
+    ...(o.items || []).map((i) => `${i.quantity}x ${i.name} — ${formatBRL(i.price * i.quantity)}`),
+    '',
+    o.discount ? `Desconto${o.coupon ? ` (${o.coupon})` : ''}: -${formatBRL(o.discount)}` : '',
+    o.shipping != null ? `Frete: ${formatBRL(o.shipping)}` : '',
+    `Total: ${formatBRL(o.total)}${o.payment ? ` · ${o.payment}` : ''}`,
+    `Status: ${o.status}`,
+  ];
+  return lines.filter((l, i, arr) => l !== '' || (arr[i - 1] !== '' && i > 0)).join('\n').trim();
+}
 
 const CUSTOMER_MESSAGES: Record<string, string> = {
   'Aguardando Pagamento': 'recebemos seu pedido e estamos aguardando o pagamento.',
@@ -20,20 +53,59 @@ export default function Orders({ data }: { data: StoreData }) {
   const { orders, setOrders, products, setProducts, tenant } = data;
   const [tab, setTab] = useState<string>('Todos');
   const [search, setSearch] = useState('');
+  const [period, setPeriod] = useState<Period>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
 
-  const counts = useMemo(() => {
-    const map: Record<string, number> = { Todos: orders.length };
-    for (const s of ORDER_STATUSES) map[s] = orders.filter((o) => o.status === s).length;
-    return map;
-  }, [orders]);
+  const inPeriod = useMemo(() => {
+    const start = periodStart(period);
+    return start ? orders.filter((o) => orderDay(o) >= start) : orders;
+  }, [orders, period]);
 
-  const filtered = orders.filter((o) => {
+  const counts = useMemo(() => {
+    const map: Record<string, number> = { Todos: inPeriod.length };
+    for (const s of ORDER_STATUSES) map[s] = inPeriod.filter((o) => o.status === s).length;
+    return map;
+  }, [inPeriod]);
+
+  const filtered = inPeriod.filter((o) => {
     if (tab !== 'Todos' && o.status !== tab) return false;
     const q = search.trim().toLowerCase();
     return !q || o.id.toLowerCase().includes(q) || o.customer.toLowerCase().includes(q) || (o.whatsapp || '').includes(q);
   });
+
+  const filteredTotal = filtered.filter((o) => o.status !== 'Cancelado').reduce((acc, o) => acc + o.total, 0);
+
+  const exportCsv = () => {
+    downloadCsv(
+      `pedidos-${tenant?.id ?? 'loja'}-${new Date().toISOString().slice(0, 10)}.csv`,
+      ['Pedido', 'Data', 'Cliente', 'WhatsApp', 'Endereço', 'Itens', 'Pagamento', 'Cupom', 'Desconto', 'Frete', 'Total', 'Status'],
+      filtered.map((o) => [
+        o.id,
+        formatDate(orderDay(o)),
+        o.customer,
+        o.whatsapp || '',
+        o.address || '',
+        (o.items || []).map((i) => `${i.quantity}x ${i.name}`).join(', '),
+        o.payment || '',
+        o.coupon || '',
+        csvNumber(o.discount ?? 0),
+        csvNumber(o.shipping ?? 0),
+        csvNumber(o.total),
+        o.status,
+      ]),
+    );
+    toast(`${filtered.length} pedido(s) exportado(s).`);
+  };
+
+  const copySummary = async (o: Order) => {
+    try {
+      await navigator.clipboard.writeText(orderSummary(o));
+      toast('Resumo do pedido copiado!');
+    } catch {
+      prompt('Copie o resumo:', orderSummary(o));
+    }
+  };
 
   const selected = orders.find((o) => o.id === selectedId) || null;
 
@@ -69,9 +141,12 @@ export default function Orders({ data }: { data: StoreData }) {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="font-display text-2xl sm:text-3xl font-semibold">Pedidos</h1>
-        <p className="text-ink-muted mt-1">Confirme pagamentos, atualize o status e avise o cliente pelo WhatsApp.</p>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl sm:text-3xl font-semibold">Pedidos</h1>
+          <p className="text-ink-muted mt-1">Confirme pagamentos, atualize o status e avise o cliente pelo WhatsApp.</p>
+        </div>
+        <Button variant="secondary" onClick={exportCsv} disabled={filtered.length === 0}><Download className="w-4 h-4" /> Exportar planilha</Button>
       </div>
 
       <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-4 px-4 sm:mx-0 sm:px-0">
@@ -87,10 +162,21 @@ export default function Orders({ data }: { data: StoreData }) {
         ))}
       </div>
 
-      <div className="relative">
-        <Search className="w-4 h-4 text-ink-soft absolute left-3.5 top-1/2 -translate-y-1/2" />
-        <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por código, cliente ou telefone" className="pl-10" />
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="relative flex-1">
+          <Search className="w-4 h-4 text-ink-soft absolute left-3.5 top-1/2 -translate-y-1/2" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por código, cliente ou telefone" className="pl-10" />
+        </div>
+        <Select value={period} onChange={(e) => setPeriod(e.target.value as Period)} className="sm:w-52">
+          {PERIODS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+        </Select>
       </div>
+
+      {filtered.length > 0 && (
+        <p className="text-sm text-ink-muted">
+          {filtered.length} {filtered.length === 1 ? 'pedido' : 'pedidos'} · <span className="font-semibold text-ink tabular-nums">{formatBRL(filteredTotal)}</span> <span className="text-ink-soft">(sem cancelados)</span>
+        </p>
+      )}
 
       <Card className="overflow-hidden">
         {filtered.length === 0 ? (
@@ -158,6 +244,8 @@ export default function Orders({ data }: { data: StoreData }) {
               </Select>
               <p className="text-xs text-ink-soft">Ao marcar como pago, o estoque dos produtos é descontado automaticamente.</p>
             </div>
+
+            <Button variant="secondary" className="w-full" onClick={() => copySummary(selected)}><ClipboardCopy className="w-4 h-4" /> Copiar resumo do pedido</Button>
 
             {selected.whatsapp && (
               <a

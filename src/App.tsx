@@ -44,8 +44,10 @@ function AppRoutes() {
 
   // ---------------- Rotas públicas ----------------
   if (route.startsWith('#/loja/')) {
-    const tenantId = decodeURIComponent(route.replace('#/loja/', '').split(/[/?]/)[0]);
-    return <Storefront key={tenantId} tenantId={tenantId} />;
+    const [tenantPart, , productPart] = route.replace('#/loja/', '').split(/[?]/)[0].split('/');
+    const tenantId = decodeURIComponent(tenantPart);
+    const productId = productPart ? decodeURIComponent(productPart) : undefined;
+    return <Storefront key={tenantId} tenantId={tenantId} initialProductId={productId} />;
   }
 
   // "#/" é a home; hashes sem "/" (ex: #recursos) são âncoras da landing page.

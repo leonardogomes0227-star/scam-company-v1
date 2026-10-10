@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { AlertTriangle, ArrowRight, CheckCircle2, Circle, Clock, Copy, DollarSign, ExternalLink, MessageCircle, Package, ShoppingBag, TrendingUp } from 'lucide-react';
 import { Badge, Card, cx } from '../../components/ui';
 import { useToast } from '../../components/Toast';
@@ -14,11 +14,12 @@ function localDay(d: Date) {
 export default function Overview({ data, storeUrl, goTo }: { data: StoreData; storeUrl: string; goTo: (s: AdminSection) => void }) {
   const toast = useToast();
   const { tenant, products, orders, coupons } = data;
+  const [range, setRange] = useState<7 | 14 | 30>(14);
 
   const stats = useMemo(() => {
     const today = new Date();
     const days: DayPoint[] = [];
-    for (let i = 13; i >= 0; i--) {
+    for (let i = range - 1; i >= 0; i--) {
       const d = new Date(today);
       d.setDate(today.getDate() - i);
       days.push({ day: localDay(d), revenue: 0, orders: 0 });
@@ -50,9 +51,9 @@ export default function Overview({ data, storeUrl, goTo }: { data: StoreData; st
       ticket: paid30 ? revenue30 / paid30 : 0,
       pending: orders.filter((o) => o.status === 'Aguardando Pagamento'),
       lowStock: products.filter((p) => p.stock <= 3).sort((a, b) => a.stock - b.stock),
-      revenue14: days.reduce((acc, d) => acc + d.revenue, 0),
+      revenueRange: days.reduce((acc, d) => acc + d.revenue, 0),
     };
-  }, [orders, products]);
+  }, [orders, products, range]);
 
   const checklist = [
     { done: !!tenant?.whatsapp, label: 'Cadastrar o WhatsApp que recebe os pedidos', action: () => goTo('settings') },
@@ -131,9 +132,15 @@ export default function Overview({ data, storeUrl, goTo }: { data: StoreData; st
           <div className="flex items-start justify-between gap-3 mb-6">
             <div>
               <h2 className="font-semibold">Faturamento diário</h2>
-              <p className="text-sm text-ink-muted">Pedidos pagos nos últimos 14 dias</p>
+              <p className="text-sm text-ink-muted">Pedidos pagos · <span className="font-semibold text-ink tabular-nums">{formatBRL(stats.revenueRange)}</span></p>
             </div>
-            <p className="font-display text-xl font-semibold tabular-nums">{formatBRL(stats.revenue14)}</p>
+            <div className="flex p-1 rounded-xl bg-black/[0.04] shrink-0" role="tablist" aria-label="Período do gráfico">
+              {([7, 14, 30] as const).map((r) => (
+                <button key={r} role="tab" aria-selected={range === r} onClick={() => setRange(r)} className={cx('h-8 px-2.5 rounded-lg text-xs font-semibold', range === r ? 'bg-white shadow-sm text-ink' : 'text-ink-muted')}>
+                  {r}d
+                </button>
+              ))}
+            </div>
           </div>
           <SalesChart data={stats.days} />
         </Card>
