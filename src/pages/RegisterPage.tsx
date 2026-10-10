@@ -1,71 +1,64 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { slugify } from '../lib/format';
 import { Store, Mail, Lock, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 export default function RegisterPage() {
-  const { login } = useAuth();
+  const { signUp } = useAuth();
   const [storeName, setStoreName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!storeName || !email || !password) {
+    if (!storeName.trim() || !email.trim() || !password) {
       setError('Preencha todos os campos para continuar.');
       return;
     }
-
-    // Cria o ID único da loja baseado no nome (ex: "Trendbox Shop" vira "trendbox-shop")
-    const tenantId = storeName
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]/g, '-')
-      .replace(/-+/g, '-');
-
-    // 1. Busca as lojas já cadastradas na plataforma
-    const existingTenants = JSON.parse(localStorage.getItem('saas_tenants') || '[]');
-    
-    // Verifica se o ID da loja já existe
-    if (existingTenants.some((t: any) => t.id === tenantId)) {
-      setError('Já existe uma loja com esse nome. Escolha outro.');
+    if (password.length < 6) {
+      setError('A senha precisa ter pelo menos 6 caracteres.');
       return;
     }
 
-    // 2. Adiciona a nova loja na lista do Super Admin
-    const newTenant = {
-      id: tenantId,
-      name: storeName,
-      ownerEmail: email,
-      plan: 'PRO',
-      active: true,
-      createdAt: new Date().toISOString()
-    };
+    // ID da loja baseado no nome (ex: "Trendbox Shop" vira "trendbox-shop").
+    // Se já existir, o banco acrescenta um sufixo automaticamente.
+    const tenantId = slugify(storeName) || 'loja';
 
-    const updatedTenants = [...existingTenants, newTenant];
-    localStorage.setItem('saas_tenants', JSON.stringify(updatedTenants));
+    setSubmitting(true);
+    const result = await signUp(email.trim(), password, storeName.trim(), tenantId);
+    setSubmitting(false);
 
-    // 3. Salva também a configuração inicial da loja para a vitrine e o admin dela
-    const storeConfig = {
-      name: storeName,
-      about: 'Bem-vindo à nossa loja digital!',
-      whatsapp: '5567999999999',
-      pixKey: '00000000000',
-    };
-    localStorage.setItem(`store_config_${tenantId}`, JSON.stringify(storeConfig));
-
-    // 4. Cria a sessão de login e redireciona direto para o painel do lojista
-    // Salvamos temporariamente o usuario no contexto de auth simulando o registro
-    const newUser = { email, role: 'STORE_OWNER' as const, tenantId };
-    localStorage.setItem('saas_auth_user', JSON.stringify(newUser));
-
-    // Redireciona para o painel de gestão do lojista
+    if (!result.ok) {
+      setError(translateAuthError(result.error));
+      return;
+    }
+    if (result.needsConfirmation) {
+      setAwaitingConfirmation(true);
+      return;
+    }
     window.location.hash = '#/admin';
-    window.location.reload();
   };
+
+  if (awaitingConfirmation) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 font-sans">
+        <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 text-center space-y-4">
+          <CheckCircle2 className="w-10 h-10 text-emerald-400 mx-auto" />
+          <h1 className="text-xl font-black text-white">Confirme seu e-mail</h1>
+          <p className="text-xs text-slate-400">
+            Enviamos um link de confirmação para <span className="text-white font-bold">{email}</span>.
+            Depois de confirmar, é só fazer login para acessar o painel da sua loja.
+          </p>
+          <a href="#/login" className="inline-block px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl">Ir para o login</a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-4 font-sans relative overflow-hidden">
@@ -120,7 +113,8 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl py-3 pl-10 pr-4 text-sm text-white outline-none focus:border-emerald-500 transition-all"
-                placeholder="••••••••"
+                placeholder="Mínimo de 6 caracteres"
+                minLength={6}
                 required
               />
             </div>
@@ -134,9 +128,10 @@ export default function RegisterPage() {
 
           <button
             type="submit"
-            className="w-full py-3.5 mt-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 group"
+            disabled={submitting}
+            className="w-full py-3.5 mt-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-wait text-slate-950 font-black text-sm rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 group"
           >
-            Criar Minha Loja Agora <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            {submitting ? 'Criando sua loja...' : <>Criar Minha Loja Agora <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></>}
           </button>
         </form>
 
@@ -151,4 +146,12 @@ export default function RegisterPage() {
       </div>
     </div>
   );
+}
+
+function translateAuthError(message: string): string {
+  const m = message.toLowerCase();
+  if (m.includes('already registered') || m.includes('already exists')) return 'Este e-mail já possui uma conta. Faça login.';
+  if (m.includes('password')) return 'Senha inválida: use pelo menos 6 caracteres.';
+  if (m.includes('email')) return 'E-mail inválido.';
+  return 'Não foi possível criar a conta agora. Tente novamente.';
 }

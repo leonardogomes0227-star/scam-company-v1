@@ -1,30 +1,15 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 
 interface LandingPageProps {
   onNavigate: (path: string) => void;
 }
 
-export default function Landing({ onNavigate }: LandingPageProps) {
-  const waBodyRef = useRef<HTMLDivElement>(null);
-  const originalHtmlRef = useRef<string>("");
+export default function LandingPage({ onNavigate }: LandingPageProps) {
+  // Incrementar a key remonta a conversa e reinicia a animação das mensagens.
+  const [chatCycle, setChatCycle] = useState(0);
 
   useEffect(() => {
-    // Animação cíclica do WhatsApp
-    if (waBodyRef.current && !originalHtmlRef.current) {
-      originalHtmlRef.current = waBodyRef.current.innerHTML;
-    }
-
-    const interval = setInterval(() => {
-      if (waBodyRef.current) {
-        waBodyRef.current.style.opacity = '0';
-        setTimeout(() => {
-          if (waBodyRef.current) {
-            waBodyRef.current.innerHTML = originalHtmlRef.current;
-            waBodyRef.current.style.opacity = '1';
-          }
-        }, 400);
-      }
-    }, 7000);
+    const interval = setInterval(() => setChatCycle((c) => c + 1), 7000);
 
     // Intersection Observer para animar os cards de recursos aparecendo
     const feats = document.querySelectorAll('.feat');
@@ -45,8 +30,14 @@ export default function Landing({ onNavigate }: LandingPageProps) {
     };
   }, []);
 
+  // O app usa rotas por hash (#/...), então âncoras internas rolam a página manualmente.
+  const scrollTo = (id: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
-    <>
+    <div className="landing">
       <div className="glow"></div>
 
       <header>
@@ -72,10 +63,10 @@ export default function Landing({ onNavigate }: LandingPageProps) {
           </div>
         </div>
         <nav>
-          <a href="#recursos">Recursos</a>
-          <a href="#precos">Preços</a>
+          <a href="#recursos" className="nav-anchor" onClick={scrollTo('recursos')}>Recursos</a>
+          <a href="#precos" className="nav-anchor" onClick={scrollTo('precos')}>Preços</a>
           <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('login'); }}>Fazer login</a>
-          <a href="#" className="btn-primary" onClick={(e) => { e.preventDefault(); onNavigate('register'); }}>Criar loja grátis</a>
+          <a href="#" className="btn-primary" onClick={(e) => { e.preventDefault(); onNavigate('register'); }}>Criar minha loja</a>
         </nav>
       </header>
 
@@ -88,12 +79,12 @@ export default function Landing({ onNavigate }: LandingPageProps) {
             <p className="lead reveal r3">Cadastre seus produtos, envie seu link exclusivo e receba pedidos organizados direto no chat — com Pix gerado na hora e roteiros prontos pra gravar com teleprompter embutido.</p>
             <div className="cta-row reveal r4">
               <a href="#" className="btn-lg" onClick={(e) => { e.preventDefault(); onNavigate('register'); }}>Criar minha loja agora →</a>
-              <a href="#recursos" className="btn-ghost">Ver recursos</a>
+              <a href="#recursos" className="btn-ghost" onClick={scrollTo('recursos')}>Ver recursos</a>
             </div>
             <div className="proof reveal r5">
-              <span><strong>+2.400</strong> lojas criadas</span>
+              <span><strong>2 minutos</strong> pra criar sua loja</span>
               <span>·</span>
-              <span>Pix gerado automaticamente em cada pedido</span>
+              <span>Pix Copia e Cola gerado em cada pedido</span>
             </div>
           </div>
 
@@ -107,7 +98,7 @@ export default function Landing({ onNavigate }: LandingPageProps) {
                   <div className="wa-status">online</div>
                 </div>
               </div>
-              <div className="wa-body" id="waBody" ref={waBodyRef}>
+              <div className="wa-body" key={chatCycle}>
                 <div className="bubble in b1">Oi! Vi o vestido azul na sua loja, ainda tem tamanho M?</div>
                 <div className="bubble out b2">
                   Tem sim! Separei aqui pra você<br />
@@ -231,9 +222,9 @@ export default function Landing({ onNavigate }: LandingPageProps) {
         <section className="section">
           <div className="cta-bottom">
             <h2>Pronto para vender no automático?</h2>
-            <p>Junte-se a milhares de lojistas que simplificaram os pedidos e pagamentos no WhatsApp.</p>
+            <p>Simplifique seus pedidos e pagamentos no WhatsApp em poucos minutos.</p>
             <a href="#" className="btn-lg" style={{ position: 'relative', zIndex: 1 }} onClick={(e) => { e.preventDefault(); onNavigate('register'); }}>
-              Criar minha loja grátis agora →
+              Criar minha loja agora →
             </a>
           </div>
         </section>
@@ -243,6 +234,6 @@ export default function Landing({ onNavigate }: LandingPageProps) {
         <div>© 2026 STCK Company</div>
         <div>Feito pra quem vende todo dia no WhatsApp</div>
       </footer>
-    </>
+    </div>
   );
 }

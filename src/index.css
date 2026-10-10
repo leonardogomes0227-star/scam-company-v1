@@ -22,12 +22,11 @@
 
 html {
   scroll-behavior: smooth;
-  background: var(--bg);
+  background: #000;
 }
 
 body {
-  background: var(--bg);
-  color: var(--text);
+  background: #000;
   font-family: 'Inter', sans-serif;
   margin: 0;
   padding: 0;
@@ -39,13 +38,15 @@ body {
 }
 
 /* Base Classes */
+.landing { background: var(--bg); color: var(--text); min-height: 100vh; }
+
 .glow {
   position: fixed; top: -260px; right: -200px; width: 640px; height: 640px;
   background: radial-gradient(circle, rgba(14,107,79,0.08), transparent 70%);
   pointer-events: none; z-index: 0;
 }
 
-header {
+.landing header {
   position: sticky; top: 0; z-index: 50;
   display: flex; justify-content: space-between; align-items: center;
   padding: 22px 56px;
@@ -64,15 +65,15 @@ header {
 .logo-text { font-weight: 600; font-size: 14.5px; letter-spacing: 0.01em; color: var(--text); }
 .logo-sub { font-size: 10.5px; color: var(--muted); margin-top: 1px; }
 
-nav { display: flex; align-items: center; gap: 30px; }
-nav a { color: var(--text); text-decoration: none; font-size: 14px; opacity: .78; }
+.landing nav { display: flex; align-items: center; gap: 30px; }
+.landing nav a { color: var(--text); text-decoration: none; font-size: 14px; opacity: .78; }
 .btn-primary {
   background: var(--accent); color: #fff; padding: 10px 18px; border-radius: 8px;
   font-weight: 600; font-size: 13.5px; text-decoration: none;
   box-shadow: 0 8px 18px -8px rgba(14,107,79,0.5);
 }
 
-main { position: relative; z-index: 2; }
+.landing main { position: relative; z-index: 2; }
 .hero {
   display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 56px;
   padding: 100px 56px 70px; max-width: 1240px; margin: 0 auto; align-items: center;
@@ -83,12 +84,12 @@ main { position: relative; z-index: 2; }
   padding: 7px 13px; border-radius: 99px; font-size: 12.5px; color: var(--accent-deep);
   margin-bottom: 26px; font-weight: 500;
 }
-h1 {
+.landing h1 {
   font-family: 'Space Grotesk', sans-serif; font-weight: 600;
   font-size: 50px; line-height: 1.12; letter-spacing: -0.02em;
   margin-bottom: 22px; color: var(--text);
 }
-h1 .hl { color: var(--accent); }
+.landing h1 .hl { color: var(--accent); }
 .lead { color: var(--muted); font-size: 16.5px; line-height: 1.65; max-width: 500px; margin-bottom: 34px; }
 .cta-row { display: flex; gap: 14px; align-items: center; margin-bottom: 30px; }
 .btn-lg {
@@ -198,13 +199,14 @@ h1 .hl { color: var(--accent); }
 .cta-bottom p { color: rgba(255,255,255,0.75); font-size: 16px; margin-bottom: 32px; position: relative; z-index: 1; }
 .cta-bottom .btn-lg { background: #fff; color: var(--accent-deep); box-shadow: none; }
 
-footer { border-top: 1px solid var(--border); padding: 30px 56px; display: flex; justify-content: space-between; color: var(--muted); font-size: 12.5px; }
+.landing footer { border-top: 1px solid var(--border); padding: 30px 56px; display: flex; justify-content: space-between; color: var(--muted); font-size: 12.5px; }
 
 @media(max-width: 900px) {
   .hero { grid-template-columns: 1fr; padding: 60px 24px; }
-  h1 { font-size: 36px; }
+  .landing h1 { font-size: 36px; }
   .grid3, .pricing-grid, .faq-list { grid-template-columns: 1fr; }
-  header { padding: 16px 20px; }
-  nav a:not(.btn-primary) { display: none; }
+  .landing header { padding: 16px 20px; }
+  .landing nav { gap: 16px; }
+  .landing nav .nav-anchor { display: none; }
   .section { padding: 56px 24px; }
 }

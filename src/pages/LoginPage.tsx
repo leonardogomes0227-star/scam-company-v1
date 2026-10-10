@@ -7,10 +7,13 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await login(email, password);
+    setSubmitting(true);
+    const success = await login(email.trim(), password);
+    setSubmitting(false);
 
     if (success) {
       setError(false);
@@ -73,11 +76,20 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="w-full py-3.5 mt-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 group"
+            disabled={submitting}
+            className="w-full py-3.5 mt-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-wait text-slate-950 font-black text-sm rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 group"
           >
-            Entrar no Painel <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            {submitting ? 'Entrando...' : <>Entrar no Painel <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" /></>}
           </button>
         </form>
+
+        <div className="mt-6 pt-6 border-t border-slate-800 text-center space-y-2">
+          <p className="text-xs text-slate-400">
+            Ainda não tem loja?{' '}
+            <a href="#/register" className="text-emerald-400 font-bold hover:underline">Criar conta</a>
+          </p>
+          <a href="#/" className="block text-[11px] text-slate-500 hover:text-slate-300">← Voltar ao site</a>
+        </div>
       </div>
     </div>
   );
