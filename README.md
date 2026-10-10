@@ -12,6 +12,9 @@ Plataforma SaaS para lojistas criarem uma vitrine virtual e receberem pedidos or
   - tema com a cor da marca de cada loja, banner, busca, categorias e ordenação;
   - página do produto com avaliações reais, produtos relacionados e quantidade;
   - carrinho em gaveta, cupom, checkout em etapas (dados → frete → pagamento);
+  - **venda na cidade e para todo o Brasil:** o cliente informa o CEP (busca automática no ViaCEP) e vê só as opções que valem para ele — entrega local (centro/bairros), retirada na loja ou envio para outra cidade (valor fixo ou a combinar);
+  - frete grátis acima de um valor, com barra de progresso no carrinho;
+  - produtos com tamanhos/cores e preço promocional ("de/por");
   - pedido enviado pelo WhatsApp + **Pix Copia e Cola** com o valor exato;
   - rastreio do pedido com barra de progresso, favoritos e botão flutuante do WhatsApp.
 - **Painel do lojista** (`#/admin`), com menu lateral no computador e barra inferior no celular:
@@ -34,6 +37,7 @@ npm run dev
 ### Banco de dados (obrigatório)
 
 1. No painel do Supabase, abra **SQL Editor** e execute todo o arquivo [`supabase/schema.sql`](supabase/schema.sql).
+   Se o banco já existia, basta rodar as atualizações em [`supabase/migrations/`](supabase/migrations).
    Ele é idempotente: cria as tabelas/colunas que faltarem, as políticas de segurança (RLS), o trigger que cria a loja no cadastro e a função pública de rastreio.
 2. (Opcional) Em **Authentication → Providers → Email**, desative "Confirm email" se quiser que o lojista entre no painel logo após o cadastro.
 3. Para tornar seu usuário Super Admin, rode o `update` comentado no final do `schema.sql` com o seu e-mail.

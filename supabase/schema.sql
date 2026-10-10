@@ -24,6 +24,13 @@ alter table public.tenants add column if not exists plan                text def
 alter table public.tenants add column if not exists subscription_status text default 'active';
 alter table public.tenants add column if not exists shipping_local      numeric(10,2) default 10;
 alter table public.tenants add column if not exists shipping_far        numeric(10,2) default 18;
+alter table public.tenants add column if not exists city                text;
+alter table public.tenants add column if not exists state               text;
+alter table public.tenants add column if not exists pickup_enabled      boolean default false;
+alter table public.tenants add column if not exists pickup_address      text;
+alter table public.tenants add column if not exists ship_nationwide     boolean default true;
+alter table public.tenants add column if not exists shipping_national   numeric(10,2);
+alter table public.tenants add column if not exists free_shipping_min   numeric(10,2);
 
 -- Perfis (liga o usuário do Auth à loja)
 create table if not exists public.profiles (
@@ -44,6 +51,8 @@ alter table public.products add column if not exists stock       integer default
 alter table public.products add column if not exists image       text;
 alter table public.products add column if not exists category    text default 'Geral';
 alter table public.products add column if not exists created_at  timestamptz default now();
+alter table public.products add column if not exists variants      text;
+alter table public.products add column if not exists compare_price numeric(10,2);
 
 -- Pedidos
 create table if not exists public.orders (

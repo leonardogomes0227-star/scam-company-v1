@@ -4,24 +4,38 @@ import {
   Search, Share2, ShoppingBag, SlidersHorizontal, Star, Store as StoreIcon, Tag, Trash2, Truck, X, Zap,
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { formatBRL, formatDate, generateId, generateOrderCode, normalizeWhatsapp, whatsappLink } from '../lib/format';
+import { discountPercent, formatBRL, formatDate, generateId, generateOrderCode, normalizeWhatsapp, parseVariants, whatsappLink } from '../lib/format';
+import { formatCep, lookupCep, UFS } from '../lib/cep';
+import { deliveryOptions, PAYMENT_HINTS, shippingConfig, type DeliveryId } from '../lib/shipping';
 import { buildPixPayload } from '../lib/pix';
 import { brandVars, safeColor } from '../lib/color';
 import { Drawer, Modal, cx } from '../components/ui';
 import type { Coupon, OrderItem, Product, Review, Tenant } from '../types';
 
-const PAYMENT_METHODS = [
-  { id: 'Pix', label: 'Pix', hint: 'Código na hora' },
-  { id: 'Cartão', label: 'Cartão', hint: 'Na entrega' },
-  { id: 'Dinheiro', label: 'Dinheiro', hint: 'Na entrega' },
-] as const;
 
 type SortKey = 'recent' | 'price-asc' | 'price-desc' | 'rating';
 
 interface CartLine {
   productId: string;
   quantity: number;
+  variant?: string;
 }
+
+interface SavedCustomer {
+  name: string;
+  phone: string;
+  cep: string;
+  street: string;
+  number: string;
+  complement: string;
+  district: string;
+  city: string;
+  state: string;
+}
+
+const EMPTY_CUSTOMER: SavedCustomer = { name: '', phone: '', cep: '', street: '', number: '', complement: '', district: '', city: '', state: '' };
+
+const lineKey = (l: { productId: string; variant?: string }) => `${l.productId}|${l.variant ?? ''}`;
 
 interface TrackedOrder {
   id: string;
@@ -36,6 +50,7 @@ interface PlacedOrder {
   payment: string;
   whatsappUrl: string;
   pixCode: string | null;
+  freightPending: boolean;
 }
 
 interface Rating {
@@ -135,11 +150,14 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(null);
   const [couponError, setCouponError] = useState('');
 
-  const [clientName, setClientName] = useState(() => readStorage('stck_customer', { name: '' }).name);
-  const [clientPhone, setClientPhone] = useState(() => readStorage('stck_customer', { phone: '' }).phone);
-  const [clientAddress, setClientAddress] = useState(() => readStorage('stck_customer', { address: '' }).address);
-  const [shippingRegion, setShippingRegion] = useState<'local' | 'far'>('local');
+  const [customer, setCustomer] = useState<SavedCustomer>(() => ({ ...EMPTY_CUSTOMER, ...readStorage<Partial<SavedCustomer>>('stck_customer', {}) }));
+  const setField = (field: keyof SavedCustomer) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setCustomer((c) => ({ ...c, [field]: e.target.value }));
+  const [cepStatus, setCepStatus] = useState<'idle' | 'loading' | 'error' | 'notfound'>('idle');
+  const [manualCity, setManualCity] = useState(false);
+  const [delivery, setDelivery] = useState<DeliveryId | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<string>('Pix');
+  const [selectedVariant, setSelectedVariant] = useState<string>('');
+  const [variantError, setVariantError] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const [placingOrder, setPlacingOrder] = useState(false);
   const [placedOrder, setPlacedOrder] = useState<PlacedOrder | null>(null);
@@ -233,20 +251,31 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
   const cartLines = cart
     .map((line) => ({ ...line, product: productById.get(line.productId) }))
     .filter((l): l is CartLine & { product: Product } => !!l.product);
+  const qtyInCart = (productId: string, exceptKey?: string) =>
+    cart.filter((l) => l.productId === productId && lineKey(l) !== exceptKey).reduce((a, l) => a + l.quantity, 0);
   const cartCount = cartLines.reduce((acc, l) => acc + l.quantity, 0);
 
   const toggleFavorite = (productId: string) => {
     setFavorites((prev) => (prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]));
   };
 
-  const addToCart = (product: Product, quantity = 1, openCart = true) => {
+  const addToCart = (product: Product, quantity = 1, openCart = true, variant?: string) => {
     if (product.stock <= 0) return;
+    // Produto com tamanho/cor: abre a página do produto para escolher
+    if (parseVariants(product.variants).length > 0 && !variant) {
+      openProduct(product);
+      return;
+    }
+    const available = product.stock - qtyInCart(product.id);
+    if (available <= 0) {
+      setPanel('cart');
+      return;
+    }
+    const key = lineKey({ productId: product.id, variant });
     setCart((prev) => {
-      const existing = prev.find((l) => l.productId === product.id);
-      if (existing) {
-        return prev.map((l) => (l.productId === product.id ? { ...l, quantity: Math.min(l.quantity + quantity, product.stock) } : l));
-      }
-      return [...prev, { productId: product.id, quantity: Math.min(quantity, product.stock) }];
+      const existing = prev.find((l) => lineKey(l) === key);
+      if (existing) return prev.map((l) => (lineKey(l) === key ? { ...l, quantity: l.quantity + Math.min(quantity, available) } : l));
+      return [...prev, { productId: product.id, variant, quantity: Math.min(quantity, available) }];
     });
     setCartPulse((n) => n + 1);
     setActiveProductId(null);
@@ -257,11 +286,15 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
     }
   };
 
-  const setLineQuantity = (productId: string, quantity: number) => {
-    const product = productById.get(productId);
+  const setLineQuantity = (key: string, quantity: number) => {
     setCart((prev) =>
       prev
-        .map((l) => (l.productId === productId ? { ...l, quantity: Math.min(quantity, product?.stock ?? quantity) } : l))
+        .map((l) => {
+          if (lineKey(l) !== key) return l;
+          const product = productById.get(l.productId);
+          const max = product ? product.stock - qtyInCart(l.productId, key) : quantity;
+          return { ...l, quantity: Math.min(quantity, max) };
+        })
         .filter((l) => l.quantity > 0),
     );
   };
@@ -304,11 +337,13 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
     }
   };
 
-  const openProduct = (product: Product) => {
+  function openProduct(product: Product) {
     setActiveProductId(product.id);
     setModalQuantity(1);
+    setSelectedVariant('');
+    setVariantError(false);
     setReviewSent(false);
-  };
+  }
 
   const handleAddReview = async (e: React.FormEvent, productId: string) => {
     e.preventDefault();
@@ -349,65 +384,121 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
     }
   };
 
-  const shippingLocal = Number(store?.shipping_local ?? 10);
-  const shippingFar = Number(store?.shipping_far ?? 18);
-  const shippingFee = shippingRegion === 'local' ? shippingLocal : shippingFar;
+  const shipCfg = shippingConfig(store);
   const subtotal = cartLines.reduce((acc, l) => acc + l.product.price * l.quantity, 0);
   const discountAmount = appliedCoupon ? Math.round(subtotal * appliedCoupon.discount) / 100 : 0;
+  const options = deliveryOptions(shipCfg, customer.city, customer.state, subtotal - discountAmount);
+  const selectedDelivery = options.find((o) => o.id === delivery) ?? null;
+  const freightPending = selectedDelivery?.fee === null;
+  const shippingFee = selectedDelivery?.fee ?? 0;
   const total = Math.max(0, subtotal - discountAmount) + shippingFee;
+  const allowedPayments = selectedDelivery?.payments ?? ['Pix', 'Cartão', 'Dinheiro'];
+  // Frete grátis só vale para fretes com valor definido (não para "a combinar")
+  const freeShippingApplies = selectedDelivery ? selectedDelivery.id !== 'pickup' && !freightPending : options.some((o) => o.id === 'local' || o.id === 'far' || (o.id === 'national' && shipCfg.shippingNational != null));
+  const freeShippingGap = shipCfg.freeShippingMin && shipCfg.freeShippingMin > 0 && freeShippingApplies ? shipCfg.freeShippingMin - (subtotal - discountAmount) : null;
+
+  // Se a opção escolhida deixar de existir (ex.: mudou o CEP), limpa a escolha
+  const optionIds = options.map((o) => o.id).join(',');
+  const allowedKey = allowedPayments.join(',');
+  useEffect(() => {
+    if (delivery && !optionIds.split(',').includes(delivery)) setDelivery(null);
+    const allowed = allowedKey.split(',');
+    if (!allowed.includes(paymentMethod)) setPaymentMethod(allowed[0]);
+  }, [delivery, optionIds, allowedKey, paymentMethod]);
+
+  const handleCepChange = async (value: string) => {
+    const cep = formatCep(value);
+    setCustomer((c) => ({ ...c, cep }));
+    if (cep.replace(/\D/g, '').length !== 8) {
+      setCepStatus('idle');
+      return;
+    }
+    setCepStatus('loading');
+    try {
+      const found = await lookupCep(cep);
+      if (!found) {
+        setCepStatus('notfound');
+        setManualCity(true);
+        return;
+      }
+      setCustomer((c) => ({ ...c, cep: found.cep, street: found.street || c.street, district: found.district || c.district, city: found.city, state: found.state }));
+      setCepStatus('idle');
+    } catch {
+      setCepStatus('error');
+      setManualCity(true);
+    }
+  };
+
+  const fullAddress = () => {
+    const c = customer;
+    const line1 = [c.street, c.number].filter(Boolean).join(', ');
+    const parts = [line1 + (c.complement ? ` (${c.complement})` : ''), c.district, [c.city, c.state].filter(Boolean).join('/'), c.cep ? `CEP ${c.cep}` : ''];
+    return parts.filter((p) => p && p.trim()).join(' - ');
+  };
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     setCheckoutError('');
     if (cartLines.length === 0 || !store) return;
-    if (!clientName.trim() || !clientAddress.trim()) {
-      setCheckoutError('Preencha seu nome e endereço para continuar.');
-      return;
-    }
-    if (normalizeWhatsapp(clientPhone).length < 12) {
-      setCheckoutError('Informe um WhatsApp válido com DDD.');
-      return;
+    if (!customer.name.trim()) return setCheckoutError('Informe seu nome.');
+    if (normalizeWhatsapp(customer.phone).length < 12) return setCheckoutError('Informe um WhatsApp válido com DDD.');
+    if (!selectedDelivery) return setCheckoutError('Escolha como você quer receber o pedido.');
+    if (selectedDelivery.id !== 'pickup') {
+      if (!customer.city.trim() || !customer.state.trim()) return setCheckoutError('Informe seu CEP (ou cidade e estado).');
+      if (!customer.street.trim() || !customer.number.trim()) return setCheckoutError('Informe a rua e o número para a entrega.');
+      if (selectedDelivery.id === 'national' && customer.cep.replace(/\D/g, '').length !== 8) return setCheckoutError('Para envio a outra cidade, informe o CEP.');
     }
 
     const orderId = generateOrderCode();
-    const items: OrderItem[] = cartLines.map((l) => ({ id: l.product.id, name: l.product.name, price: l.product.price, quantity: l.quantity }));
+    const items: OrderItem[] = cartLines.map((l) => ({
+      id: l.product.id,
+      name: l.variant ? `${l.product.name} (${l.variant})` : l.product.name,
+      variant: l.variant,
+      price: l.product.price,
+      quantity: l.quantity,
+    }));
     const pixCode =
-      paymentMethod === 'Pix' && store.pix_key
-        ? buildPixPayload({ key: store.pix_key, merchantName: store.name, amount: total, txid: orderId.replace('-', '') })
+      paymentMethod === 'Pix' && store.pix_key && !freightPending
+        ? buildPixPayload({ key: store.pix_key, merchantName: store.name, merchantCity: shipCfg.city || 'BRASIL', amount: total, txid: orderId.replace('-', '') })
         : null;
+    const address = selectedDelivery.id === 'pickup' ? `Retirada na loja${shipCfg.pickupAddress ? `: ${shipCfg.pickupAddress}` : ''}` : fullAddress();
+    const hint = paymentMethod === 'Pix' && freightPending ? 'após combinar o frete' : PAYMENT_HINTS[paymentMethod]?.[selectedDelivery.id]?.toLowerCase();
+    const paymentLabel = `${paymentMethod}${hint ? ` (${hint})` : ''}`;
 
     let msg =
       `🛒 *NOVO PEDIDO (${orderId}) - ${store.name}*\n\n` +
-      `👤 *Cliente:* ${clientName.trim()}\n` +
-      `📱 *WhatsApp:* ${clientPhone.trim()}\n` +
-      `📍 *Endereço:* ${clientAddress.trim()}\n` +
-      `💳 *Pagamento:* ${paymentMethod}\n\n` +
+      `👤 *Cliente:* ${customer.name.trim()}\n` +
+      `📱 *WhatsApp:* ${customer.phone.trim()}\n` +
+      `🚚 *Entrega:* ${selectedDelivery.title}\n` +
+      `📍 *Endereço:* ${address}\n` +
+      `💳 *Pagamento:* ${paymentLabel}\n\n` +
       `📦 *Itens:*\n`;
     items.forEach((item) => {
       msg += `- ${item.quantity}x ${item.name} (${formatBRL(item.price * item.quantity)})\n`;
     });
     msg += `\nSubtotal: ${formatBRL(subtotal)}\n`;
     if (appliedCoupon) msg += `🎟 Cupom ${appliedCoupon.code} (-${appliedCoupon.discount}%): -${formatBRL(discountAmount)}\n`;
-    msg += `🚚 Frete: ${formatBRL(shippingFee)}\n`;
-    msg += `\n💰 *Total Geral: ${formatBRL(total)}*`;
+    msg += `🚚 Frete: ${freightPending ? 'a combinar (por favor, me informe o valor)' : shippingFee === 0 ? 'grátis' : formatBRL(shippingFee)}\n`;
+    msg += `\n💰 *Total${freightPending ? ' (sem frete)' : ''}: ${formatBRL(total)}*`;
     if (pixCode) msg += `\n\nVou pagar via Pix e envio o comprovante aqui.`;
+    if (freightPending) msg += `\n\nAguardo o valor do frete para pagar.`;
 
     const whatsappUrl = whatsappLink(store.whatsapp, msg);
 
     // Abre o WhatsApp de forma síncrona ao clique (senão o navegador bloqueia o pop-up)
     if (store.whatsapp) window.open(whatsappUrl, '_blank', 'noopener');
 
-    writeStorage('stck_customer', { name: clientName.trim(), phone: clientPhone.trim(), address: clientAddress.trim() });
+    writeStorage('stck_customer', { ...customer, name: customer.name.trim(), phone: customer.phone.trim() });
 
     setPlacingOrder(true);
     const { error } = await supabase.from('orders').insert([
       {
         id: orderId,
         tenant_id: tenantId,
-        customer: clientName.trim(),
-        whatsapp: clientPhone.trim(),
-        address: clientAddress.trim(),
-        payment: paymentMethod,
+        customer: customer.name.trim(),
+        whatsapp: customer.phone.trim(),
+        address: `[${selectedDelivery.title}] ${address}`,
+        payment: paymentLabel,
         total,
         shipping: shippingFee,
         discount: discountAmount,
@@ -420,7 +511,7 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
     setPlacingOrder(false);
     if (error) console.error('[Storefront] Falha ao registrar pedido:', error.message);
 
-    setPlacedOrder({ id: orderId, total, payment: paymentMethod, whatsappUrl, pixCode });
+    setPlacedOrder({ id: orderId, total, payment: paymentMethod, whatsappUrl, pixCode, freightPending });
     setCart([]);
     setAppliedCoupon(null);
   };
@@ -511,7 +602,8 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
         <div className="max-w-6xl mx-auto px-4 h-9 flex items-center justify-center gap-5 overflow-x-auto scrollbar-none whitespace-nowrap">
           <span className="flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5" /> Pedido direto pelo WhatsApp</span>
           <span className="hidden sm:flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" /> Pix na hora</span>
-          <span className="flex items-center gap-1.5"><Truck className="w-3.5 h-3.5" /> Entrega a partir de {formatBRL(Math.min(shippingLocal, shippingFar))}</span>
+          <span className="flex items-center gap-1.5"><Truck className="w-3.5 h-3.5" /> {shipCfg.shipNationwide ? 'Enviamos para todo o Brasil' : `Entrega a partir de ${formatBRL(Math.min(shipCfg.shippingLocal, shipCfg.shippingFar))}`}</span>
+          {shipCfg.freeShippingMin ? <span className="flex items-center gap-1.5"><Tag className="w-3.5 h-3.5" /> Frete grátis acima de {formatBRL(shipCfg.freeShippingMin)}</span> : null}
         </div>
       </div>
 
@@ -564,8 +656,8 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
         <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-4">
           {[
             { icon: MessageCircle, title: 'Atendimento', text: 'via WhatsApp' },
-            { icon: CreditCard, title: 'Pagamento', text: 'Pix, cartão ou dinheiro' },
-            { icon: Truck, title: 'Entrega', text: `a partir de ${formatBRL(Math.min(shippingLocal, shippingFar))}` },
+            { icon: CreditCard, title: 'Pagamento', text: 'Pix ou cartão' },
+            { icon: Truck, title: shipCfg.shipNationwide ? 'Todo o Brasil' : 'Entrega', text: shipCfg.city ? `${shipCfg.city} e região` : `a partir de ${formatBRL(Math.min(shipCfg.shippingLocal, shipCfg.shippingFar))}` },
           ].map((b) => (
             <div key={b.title} className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-3 text-center sm:text-left rounded-2xl bg-black/[0.03] px-3 py-3 sm:px-4">
               <span className="w-9 h-9 rounded-xl bg-[var(--store-soft)] text-[var(--store)] flex items-center justify-center shrink-0"><b.icon className="w-4 h-4" /></span>
@@ -658,8 +750,10 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
           <div>
             <p className="font-semibold">Entrega</p>
             <ul className="mt-3 space-y-2 text-ink-muted">
-              <li className="flex items-center gap-2"><MapPin className="w-4 h-4" /> Centro / local: {formatBRL(shippingLocal)}</li>
-              <li className="flex items-center gap-2"><MapPin className="w-4 h-4" /> Bairros distantes: {formatBRL(shippingFar)}</li>
+              <li className="flex items-start gap-2"><MapPin className="w-4 h-4 mt-0.5 shrink-0" /> {shipCfg.city ? `${shipCfg.city}${shipCfg.state ? `/${shipCfg.state}` : ''}` : 'Na cidade'}: {formatBRL(shipCfg.shippingLocal)} a {formatBRL(shipCfg.shippingFar)}</li>
+              {shipCfg.shipNationwide && <li className="flex items-start gap-2"><Truck className="w-4 h-4 mt-0.5 shrink-0" /> Outras cidades: {shipCfg.shippingNational == null ? 'frete combinado no WhatsApp' : formatBRL(shipCfg.shippingNational)}</li>}
+              {shipCfg.pickupEnabled && <li className="flex items-start gap-2"><StoreIcon className="w-4 h-4 mt-0.5 shrink-0" /> Retirada grátis{shipCfg.pickupAddress ? `: ${shipCfg.pickupAddress}` : ''}</li>}
+              {shipCfg.freeShippingMin ? <li className="flex items-start gap-2"><Tag className="w-4 h-4 mt-0.5 shrink-0" /> Frete grátis acima de {formatBRL(shipCfg.freeShippingMin)}</li> : null}
             </ul>
           </div>
         </div>
@@ -706,14 +800,46 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
                   <span className="text-ink-muted">{activeRating.average.toFixed(1)} · {activeRating.count} {activeRating.count === 1 ? 'avaliação' : 'avaliações'}</span>
                 </div>
               )}
-              <p className="mt-4 font-display text-3xl font-semibold">{formatBRL(activeProduct.price)}</p>
+              <div className="mt-4 flex items-baseline gap-3 flex-wrap">
+                <p className="font-display text-3xl font-semibold">{formatBRL(activeProduct.price)}</p>
+                {discountPercent(activeProduct.price, activeProduct.compare_price) > 0 && (
+                  <>
+                    <span className="text-ink-soft line-through">{formatBRL(activeProduct.compare_price)}</span>
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 text-xs font-bold">-{discountPercent(activeProduct.price, activeProduct.compare_price)}%</span>
+                  </>
+                )}
+              </div>
+              {store.pix_key && <p className="mt-1 text-xs text-ink-muted">Pague com Pix na hora</p>}
+              {parseVariants(activeProduct.variants).length > 0 && (
+                <div className="mt-5">
+                  <p className={cx('text-sm font-semibold', variantError && 'text-red-600')}>{variantError ? 'Escolha uma opção:' : 'Opção:'} <span className="font-normal text-ink-muted">{selectedVariant}</span></p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {parseVariants(activeProduct.variants).map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => { setSelectedVariant(v); setVariantError(false); }}
+                        aria-pressed={selectedVariant === v}
+                        className={cx('min-w-11 h-10 px-3 rounded-xl border text-sm font-medium transition', selectedVariant === v ? 'border-[var(--store)] bg-[var(--store)] text-[var(--store-ink)]' : variantError ? 'border-red-300' : 'border-black/15 hover:border-black/40')}
+                      >
+                        {v}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               {activeProduct.description && <p className="mt-4 text-sm text-ink-muted leading-relaxed whitespace-pre-line">{activeProduct.description}</p>}
               <p className={cx('mt-4 text-sm font-medium flex items-center gap-1.5', activeProduct.stock <= 0 ? 'text-red-600' : activeProduct.stock <= 3 ? 'text-amber-600' : 'text-emerald-600')}>
                 {activeProduct.stock <= 0 ? 'Esgotado no momento' : activeProduct.stock <= 3 ? `Últimas ${activeProduct.stock} unidades` : <><Check className="w-4 h-4" /> Em estoque</>}
               </p>
               <div className="mt-auto pt-6 flex gap-3">
                 {activeProduct.stock > 0 && <QuantityStepper value={modalQuantity} max={activeProduct.stock} onChange={(v) => setModalQuantity(Math.max(1, v))} />}
-                <button onClick={() => addToCart(activeProduct, modalQuantity)} disabled={activeProduct.stock <= 0} className={cx(storeButton, 'flex-1 h-10 text-sm whitespace-nowrap')}>
+                <button
+                  onClick={() => {
+                    if (parseVariants(activeProduct.variants).length > 0 && !selectedVariant) return setVariantError(true);
+                    addToCart(activeProduct, modalQuantity, true, selectedVariant || undefined);
+                  }}
+                  disabled={activeProduct.stock <= 0} className={cx(storeButton, 'flex-1 h-10 text-sm whitespace-nowrap')}>
                   <ShoppingBag className="w-4 h-4" /> {activeProduct.stock <= 0 ? 'Esgotado' : 'Adicionar'}
                 </button>
                 <button onClick={() => toggleFavorite(activeProduct.id)} className="w-10 h-10 rounded-xl border border-black/10 flex items-center justify-center shrink-0" aria-label="Favoritar">
@@ -800,14 +926,14 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
                 <div className="space-y-1.5 text-sm">
                   <Row label="Subtotal" value={formatBRL(subtotal)} />
                   {appliedCoupon && <Row label={`Cupom ${appliedCoupon.code}`} value={`-${formatBRL(discountAmount)}`} className="text-emerald-700" />}
-                  {checkoutStep === 'details' && <Row label="Frete" value={formatBRL(shippingFee)} />}
-                  <Row label={checkoutStep === 'details' ? 'Total' : 'Total (sem frete)'} value={formatBRL(checkoutStep === 'details' ? total : subtotal - discountAmount)} className="text-base font-semibold pt-1.5 border-t border-black/[0.06]" />
+                  {checkoutStep === 'details' && <Row label="Frete" value={!selectedDelivery ? '—' : freightPending ? 'A combinar' : shippingFee === 0 ? 'Grátis' : formatBRL(shippingFee)} />}
+                  <Row label={checkoutStep === 'details' && selectedDelivery && !freightPending ? 'Total' : 'Total (sem frete)'} value={formatBRL(checkoutStep === 'details' ? total : subtotal - discountAmount)} className="text-base font-semibold pt-1.5 border-t border-black/[0.06]" />
                 </div>
                 {checkoutError && <p className="text-sm text-red-700 bg-red-50 rounded-xl px-3 py-2">{checkoutError}</p>}
                 {checkoutStep === 'cart' ? (
-                  <button onClick={() => setCheckoutStep('details')} className={cx(storeButton, 'w-full h-12')}>Continuar <ArrowRight className="w-4 h-4" /></button>
+                  <button key="go-details" type="button" onClick={(e) => { e.preventDefault(); setCheckoutStep('details'); }} className={cx(storeButton, 'w-full h-12')}>Continuar <ArrowRight className="w-4 h-4" /></button>
                 ) : (
-                  <button type="submit" form="checkout-form" disabled={placingOrder} className={cx(storeButton, 'w-full h-12')}>
+                  <button key="submit-order" type="submit" form="checkout-form" disabled={placingOrder} className={cx(storeButton, 'w-full h-12')}>
                     <MessageCircle className="w-4 h-4" /> {placingOrder ? 'Enviando...' : 'Finalizar pelo WhatsApp'}
                   </button>
                 )}
@@ -822,6 +948,13 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
               <h3 className="mt-4 font-display text-xl font-semibold">Pedido recebido!</h3>
               <p className="mt-1 text-sm text-ink-muted">Guarde o código para acompanhar o status:</p>
               <p className="mt-2 inline-block font-mono font-semibold text-lg px-3 py-1 rounded-lg bg-black/[0.04] select-all">{placedOrder.id}</p>
+
+              {placedOrder.freightPending && (
+                <div className="mt-6 text-left rounded-2xl bg-amber-50 border border-amber-100 p-4 text-sm text-amber-900">
+                  <p className="font-semibold flex items-center gap-2"><Truck className="w-4 h-4" /> Falta só o frete</p>
+                  <p className="mt-1">A loja vai calcular o envio para sua cidade e te mandar o valor final e o Pix pelo WhatsApp.</p>
+                </div>
+              )}
 
               {placedOrder.pixCode && (
                 <div className="mt-6 text-left rounded-2xl border border-black/[0.08] p-4">
@@ -854,21 +987,33 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
             <div className="space-y-5">
               <ul className="divide-y divide-black/[0.06]">
                 {cartLines.map((line) => (
-                  <li key={line.productId} className="flex gap-3 py-3 first:pt-0">
+                  <li key={lineKey(line)} className="flex gap-3 py-3 first:pt-0">
                     <ProductImage product={line.product} className="w-20 h-20 rounded-xl shrink-0" />
                     <div className="flex-1 min-w-0 flex flex-col">
                       <div className="flex justify-between gap-2">
-                        <p className="text-sm font-medium line-clamp-2">{line.product.name}</p>
-                        <button onClick={() => setLineQuantity(line.productId, 0)} className="text-ink-soft hover:text-red-600 shrink-0" aria-label="Remover"><Trash2 className="w-4 h-4" /></button>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium line-clamp-2">{line.product.name}</p>
+                          {line.variant && <p className="text-xs text-ink-muted mt-0.5">Opção: {line.variant}</p>}
+                        </div>
+                        <button onClick={() => setLineQuantity(lineKey(line), 0)} className="text-ink-soft hover:text-red-600 shrink-0" aria-label="Remover"><Trash2 className="w-4 h-4" /></button>
                       </div>
                       <div className="mt-auto flex items-center justify-between">
-                        <QuantityStepper size="sm" value={line.quantity} max={line.product.stock} onChange={(v) => setLineQuantity(line.productId, v)} />
+                        <QuantityStepper size="sm" value={line.quantity} max={line.product.stock - qtyInCart(line.productId, lineKey(line))} onChange={(v) => setLineQuantity(lineKey(line), v)} />
                         <span className="font-semibold text-sm">{formatBRL(line.product.price * line.quantity)}</span>
                       </div>
                     </div>
                   </li>
                 ))}
               </ul>
+
+              {freeShippingGap != null && (
+                <div className="rounded-xl bg-emerald-50 px-3.5 py-3 text-sm text-emerald-800">
+                  {freeShippingGap > 0 ? <>Faltam <b>{formatBRL(freeShippingGap)}</b> para ganhar frete grátis 🎉</> : <>Você ganhou <b>frete grátis</b> na entrega! 🎉</>}
+                  <div className="mt-2 h-1.5 rounded-full bg-emerald-100 overflow-hidden">
+                    <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${Math.min(100, ((subtotal - discountAmount) / (shipCfg.freeShippingMin || 1)) * 100)}%` }} />
+                  </div>
+                </div>
+              )}
 
               {coupons.length > 0 && (
                 <div>
@@ -896,28 +1041,93 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
           ) : (
             <form id="checkout-form" onSubmit={handleCheckout} className="space-y-6">
               <div className="space-y-3">
-                <p className="text-sm font-semibold">Seus dados</p>
-                <input autoComplete="name" placeholder="Nome completo" value={clientName} onChange={(e) => setClientName(e.target.value)} className={fieldClass} required />
-                <input type="tel" autoComplete="tel" placeholder="WhatsApp com DDD" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} className={fieldClass} required />
-                <input autoComplete="street-address" placeholder="Endereço completo e bairro" value={clientAddress} onChange={(e) => setClientAddress(e.target.value)} className={fieldClass} required />
+                <p className="text-sm font-semibold">1. Seus dados</p>
+                <input autoComplete="name" placeholder="Nome completo" value={customer.name} onChange={setField('name')} className={fieldClass} required />
+                <input type="tel" autoComplete="tel" placeholder="WhatsApp com DDD" value={customer.phone} onChange={setField('phone')} className={fieldClass} required />
+              </div>
+
+              <div className="space-y-3">
+                <p className="text-sm font-semibold">2. Onde você está?</p>
+                <div className="relative">
+                  <input
+                    inputMode="numeric"
+                    autoComplete="postal-code"
+                    placeholder="CEP"
+                    value={customer.cep}
+                    onChange={(e) => handleCepChange(e.target.value)}
+                    className={cx(fieldClass, 'pr-28')}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-ink-soft">
+                    {cepStatus === 'loading' ? 'Buscando...' : customer.city && !manualCity ? `${customer.city}/${customer.state}` : ''}
+                  </span>
+                </div>
+                {cepStatus === 'notfound' && <p className="text-xs text-amber-700">CEP não encontrado. Confira o número ou preencha cidade e estado abaixo.</p>}
+                {cepStatus === 'error' && <p className="text-xs text-amber-700">Não foi possível consultar o CEP agora. Preencha cidade e estado abaixo.</p>}
+                {manualCity ? (
+                  <div className="grid grid-cols-[1fr_88px] gap-2">
+                    <input placeholder="Cidade" autoComplete="address-level2" value={customer.city} onChange={setField('city')} className={fieldClass} />
+                    <select value={customer.state} onChange={setField('state')} className={cx(fieldClass, 'px-2')} aria-label="Estado">
+                      <option value="">UF</option>
+                      {UFS.map((uf) => <option key={uf}>{uf}</option>)}
+                    </select>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setManualCity(true)} className="text-xs font-medium text-ink-muted underline">Não sei meu CEP</button>
+                )}
               </div>
 
               <div className="space-y-2">
-                <p className="text-sm font-semibold">Região de entrega</p>
-                {([
-                  { id: 'local', label: 'Centro / local', fee: shippingLocal },
-                  { id: 'far', label: 'Bairros distantes', fee: shippingFar },
-                ] as const).map((reg) => (
-                  <OptionCard key={reg.id} selected={shippingRegion === reg.id} onClick={() => setShippingRegion(reg.id)} icon={<MapPin className="w-4 h-4" />} title={reg.label} aside={formatBRL(reg.fee)} />
-                ))}
+                <p className="text-sm font-semibold">3. Como quer receber?</p>
+                {options.length === 0 ? (
+                  <p className="text-sm text-ink-muted bg-black/[0.03] rounded-xl p-3.5">
+                    {customer.city ? 'A loja ainda não entrega na sua cidade. Fale com a loja pelo WhatsApp para combinar.' : 'Informe seu CEP para ver as opções de entrega.'}
+                  </p>
+                ) : (
+                  options.map((o) => (
+                    <OptionCard
+                      key={o.id}
+                      selected={delivery === o.id}
+                      onClick={() => setDelivery(o.id)}
+                      icon={o.id === 'pickup' ? <StoreIcon className="w-4 h-4" /> : o.id === 'national' ? <Truck className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+                      title={o.title}
+                      description={o.description}
+                      aside={o.fee === null ? 'A combinar' : o.fee === 0 ? 'Grátis' : formatBRL(o.fee)}
+                    />
+                  ))
+                )}
+                {freeShippingGap != null && freeShippingGap > 0 && (
+                  <p className="text-xs text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2">Faltam {formatBRL(freeShippingGap)} para ganhar frete grátis 🎉</p>
+                )}
               </div>
 
-              <div className="space-y-2">
-                <p className="text-sm font-semibold">Pagamento</p>
-                {PAYMENT_METHODS.map((m) => (
-                  <OptionCard key={m.id} selected={paymentMethod === m.id} onClick={() => setPaymentMethod(m.id)} icon={m.id === 'Pix' ? <Zap className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />} title={m.label} aside={m.hint} />
-                ))}
-              </div>
+              {selectedDelivery && selectedDelivery.id !== 'pickup' && (
+                <div className="space-y-3 animate-fade-up">
+                  <p className="text-sm font-semibold">Endereço de entrega</p>
+                  <input autoComplete="address-line1" placeholder="Rua / Avenida" value={customer.street} onChange={setField('street')} className={fieldClass} />
+                  <div className="grid grid-cols-[110px_1fr] gap-2">
+                    <input placeholder="Número" value={customer.number} onChange={setField('number')} className={fieldClass} />
+                    <input autoComplete="address-line2" placeholder="Complemento (opcional)" value={customer.complement} onChange={setField('complement')} className={fieldClass} />
+                  </div>
+                  <input placeholder="Bairro" value={customer.district} onChange={setField('district')} className={fieldClass} />
+                </div>
+              )}
+
+              {selectedDelivery && (
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold">4. Pagamento</p>
+                  {allowedPayments.map((m) => (
+                    <OptionCard
+                      key={m}
+                      selected={paymentMethod === m}
+                      onClick={() => setPaymentMethod(m)}
+                      icon={m === 'Pix' ? <Zap className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
+                      title={m}
+                      aside={m === 'Pix' && freightPending ? 'Após o frete' : PAYMENT_HINTS[m]?.[selectedDelivery.id] ?? ''}
+                    />
+                  ))}
+                  {freightPending && <p className="text-xs text-ink-muted">O frete para sua cidade é calculado pela loja. Você recebe o valor final e o Pix pelo WhatsApp.</p>}
+                </div>
+              )}
             </form>
           )}
         </Drawer>
@@ -1021,6 +1231,8 @@ function ProductCard({ product, rating, isFavorite, onOpen, onToggleFavorite, on
         </button>
         {soldOut ? (
           <span className="absolute top-2.5 left-2.5 px-2 py-1 rounded-lg bg-ink text-white text-[10px] font-bold uppercase tracking-wide">Esgotado</span>
+        ) : discountPercent(product.price, product.compare_price) > 0 ? (
+          <span className="absolute top-2.5 left-2.5 px-2 py-1 rounded-lg bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-wide">-{discountPercent(product.price, product.compare_price)}%</span>
         ) : product.stock <= 3 ? (
           <span className="absolute top-2.5 left-2.5 px-2 py-1 rounded-lg bg-white/90 text-amber-700 text-[10px] font-bold uppercase tracking-wide">Últimas unidades</span>
         ) : null}
@@ -1042,13 +1254,17 @@ function ProductCard({ product, rating, isFavorite, onOpen, onToggleFavorite, on
             <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> {rating.average.toFixed(1)} <span className="text-ink-soft">({rating.count})</span>
           </p>
         )}
-        <p className="mt-1.5 font-semibold">{formatBRL(product.price)}</p>
+        <p className="mt-1.5 flex items-baseline gap-2 flex-wrap">
+          <span className="font-semibold">{formatBRL(product.price)}</span>
+          {discountPercent(product.price, product.compare_price) > 0 && <span className="text-xs text-ink-soft line-through">{formatBRL(product.compare_price)}</span>}
+        </p>
+        {parseVariants(product.variants).length > 0 && <p className="mt-0.5 text-[11px] text-ink-soft truncate">{parseVariants(product.variants).join(' · ')}</p>}
       </button>
     </article>
   );
 }
 
-function OptionCard({ selected, onClick, icon, title, aside }: { selected: boolean; onClick: () => void; icon: React.ReactNode; title: string; aside: string }) {
+function OptionCard({ selected, onClick, icon, title, description, aside }: { selected: boolean; onClick: () => void; icon: React.ReactNode; title: string; description?: string; aside: string }) {
   return (
     <button
       type="button"
@@ -1057,8 +1273,11 @@ function OptionCard({ selected, onClick, icon, title, aside }: { selected: boole
       className={cx('w-full flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition', selected ? 'border-[var(--store)] bg-[var(--store-soft)] ring-1 ring-[var(--store)]' : 'border-black/10 hover:border-black/20')}
     >
       <span className={cx('w-8 h-8 rounded-lg flex items-center justify-center', selected ? 'bg-[var(--store)] text-[var(--store-ink)]' : 'bg-black/[0.04] text-ink-muted')}>{icon}</span>
-      <span className="flex-1 text-sm font-medium">{title}</span>
-      <span className="text-sm text-ink-muted">{aside}</span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-sm font-medium">{title}</span>
+        {description && <span className="block text-xs text-ink-muted truncate">{description}</span>}
+      </span>
+      <span className={cx('text-sm shrink-0', aside === 'Grátis' ? 'font-semibold text-emerald-700' : 'text-ink-muted')}>{aside}</span>
     </button>
   );
 }

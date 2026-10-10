@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
   ArrowRight, BarChart3, Check, ChevronDown, Clapperboard, Link2, Menu, MessageCircle, Package, QrCode, ShoppingBag,
-  Smartphone, Sparkles, Store, Tag, X, Zap,
+  Smartphone, Sparkles, Store, Truck, X, Zap,
 } from 'lucide-react';
 import { Logo } from '../components/Logo';
 import { cx } from '../components/ui';
@@ -27,7 +27,7 @@ const FEATURES = [
   { icon: Smartphone, title: 'Vitrine profissional', text: 'Loja rápida e bonita no celular, com busca, categorias, favoritos e página de produto.' },
   { icon: MessageCircle, title: 'Pedido direto no WhatsApp', text: 'O cliente monta o carrinho e o pedido chega formatado: itens, endereço, frete e total.' },
   { icon: QrCode, title: 'Pix Copia e Cola', text: 'Cada pedido gera um código Pix com o valor exato, direto para a sua chave. Sem taxa por venda.' },
-  { icon: Tag, title: 'Cupons de desconto', text: 'Crie cupons em segundos para campanhas, primeira compra e clientes fiéis.' },
+  { icon: Truck, title: 'Venda para todo o Brasil', text: 'O cliente digita o CEP e vê entrega local, retirada na loja ou envio para a cidade dele. Frete grátis por valor mínimo.' },
   { icon: BarChart3, title: 'Painel e relatórios', text: 'Acompanhe faturamento, ticket médio, mais vendidos e estoque baixo num só lugar.' },
   { icon: Clapperboard, title: 'Roteiros e teleprompter', text: 'Gere roteiros de vídeo para cada produto e grave com o teleprompter embutido.' },
 ];
@@ -129,7 +129,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         <div className="relative max-w-6xl mx-auto px-5 pt-10 sm:pt-16 pb-16 sm:pb-24 grid lg:grid-cols-[1.1fr_1fr] gap-12 lg:gap-8 items-center">
           <div>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-100 text-brand-700 text-xs font-semibold animate-fade-up">
-              <Sparkles className="w-3.5 h-3.5" /> Vitrine + WhatsApp + Pix em um só lugar
+              <Sparkles className="w-3.5 h-3.5" /> Vitrine + WhatsApp + Pix + envio para todo o Brasil
             </span>
             <h1 className="mt-5 font-display font-semibold text-[40px] leading-[1.05] sm:text-6xl text-balance animate-fade-up [animation-delay:80ms]">
               Sua loja vende sozinha no <span className="text-brand-600">WhatsApp</span>
@@ -147,7 +147,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
               </a>
             </div>
             <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-muted animate-fade-up [animation-delay:320ms]">
-              {['Pronta em 2 minutos', 'Sem taxa por venda', 'Funciona no celular'].map((t) => (
+              {['Pronta em 2 minutos', 'Sem taxa por venda', 'Venda na cidade e no Brasil todo'].map((t) => (
                 <li key={t} className="flex items-center gap-1.5"><Check className="w-4 h-4 text-brand-600" /> {t}</li>
               ))}
             </ul>
@@ -236,7 +236,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
             <h2 className="mt-3 font-display font-semibold text-3xl sm:text-4xl text-balance">Uma loja com a cara da sua marca</h2>
             <p className="mt-4 text-ink-muted leading-relaxed">Escolha a cor, escreva sua descrição e pronto: a vitrine se adapta à sua identidade. Seus clientes navegam, favoritam, aplicam cupom e finalizam o pedido em poucos toques.</p>
             <ul className="mt-6 space-y-3 text-sm">
-              {['Página de produto com avaliações reais', 'Carrinho com quantidades e controle de estoque', 'Rastreio do pedido pelo código', 'Frete por região configurável'].map((t) => (
+              {['Página de produto com avaliações reais', 'Carrinho com quantidades e controle de estoque', 'Rastreio do pedido pelo código', 'Cupons, tamanhos/cores e preço promocional', 'Entrega local, retirada e envio por CEP'].map((t) => (
                 <li key={t} className="flex items-start gap-2.5"><span className="mt-0.5 w-5 h-5 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center shrink-0"><Check className="w-3 h-3" /></span>{t}</li>
               ))}
             </ul>
