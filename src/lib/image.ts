@@ -37,3 +37,36 @@ export function dataUrlKB(dataUrl: string): number {
   const base64 = dataUrl.split(',')[1] ?? '';
   return Math.round((base64.length * 3) / 4 / 1024);
 }
+
+const BUCKET = 'product-images';
+
+function dataUrlToBlob(dataUrl: string): Blob {
+  const [meta, base64] = dataUrl.split(',');
+  const mime = /data:(.*?);/.exec(meta)?.[1] || 'image/jpeg';
+  const bytes = atob(base64);
+  const arr = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) arr[i] = bytes.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
+/**
+ * Envia a foto (já otimizada, em data URL) para o Supabase Storage e devolve o link público.
+ * Retorna null se o bucket ainda não existir — nesse caso a foto continua salva no próprio produto.
+ */
+export async function uploadProductImage(
+  supabase: import('@supabase/supabase-js').SupabaseClient,
+  tenantId: string,
+  dataUrl: string,
+): Promise<string | null> {
+  const path = `${tenantId}/${crypto.randomUUID()}.jpg`;
+  const { error } = await supabase.storage.from(BUCKET).upload(path, dataUrlToBlob(dataUrl), {
+    contentType: 'image/jpeg',
+    cacheControl: '31536000',
+    upsert: false,
+  });
+  if (error) {
+    console.warn('[upload] Storage indisponível, mantendo a foto no produto:', error.message);
+    return null;
+  }
+  return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+}

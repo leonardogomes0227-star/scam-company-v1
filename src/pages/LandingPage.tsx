@@ -334,6 +334,8 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
           <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-muted">
             {NAV.map((n) => <a key={n.id} href={`#${n.id}`} onClick={scrollTo(n.id)} className="hover:text-ink">{n.label}</a>)}
             <a href="#/login" onClick={go('login')} className="hover:text-ink">Entrar</a>
+            <a href="#/termos" className="hover:text-ink">Termos de Uso</a>
+            <a href="#/privacidade" className="hover:text-ink">Privacidade</a>
           </nav>
         </div>
         <div className="max-w-6xl mx-auto px-5 pb-8 text-xs text-ink-soft">© {new Date().getFullYear()} STCK Company · Feito para quem vende todo dia no WhatsApp.</div>

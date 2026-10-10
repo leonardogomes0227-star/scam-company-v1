@@ -758,7 +758,7 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
           </div>
         </div>
         <div className="border-t border-black/[0.06] py-5 text-center text-xs text-ink-soft">
-          © {new Date().getFullYear()} {store.name} · Loja criada com <a href="#/" className="font-semibold text-ink-muted hover:text-ink">STCK Company</a>
+          © {new Date().getFullYear()} {store.name} · Loja criada com <a href="#/" className="font-semibold text-ink-muted hover:text-ink">STCK Company</a> · <a href="#/privacidade" className="hover:text-ink">Privacidade</a>
         </div>
       </footer>
 
@@ -938,6 +938,7 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
                   </button>
                 )}
                 {!store.whatsapp && checkoutStep === 'details' && <p className="text-xs text-ink-muted text-center">A loja entrará em contato para confirmar seu pedido.</p>}
+                {checkoutStep === 'details' && <p className="text-[11px] text-ink-soft text-center">Seus dados são usados só para entregar este pedido. <a href="#/privacidade" target="_blank" className="underline">Privacidade</a></p>}
               </div>
             ) : undefined
           }
