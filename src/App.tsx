@@ -1,107 +1,107 @@
-import { useState, useEffect } from 'react';
-import LandingPage from './pages/LandingPage';
-import Storefront from './pages/Storefront';
-import AdminDashboard from './pages/AdminDashboard';
-import SuperAdminDashboard from './pages/SuperAdminDashboard';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { LogOut } from 'lucide-react';
+import { ToastProvider } from './components/Toast';
+import { Spinner } from './components/ui';
+import LandingPage from './pages/LandingPage';
+
+// Páginas carregadas sob demanda: o visitante da vitrine não baixa o painel.
+const Storefront = lazy(() => import('./pages/Storefront'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+
+function navigateTo(path: string) {
+  window.location.hash = path;
+}
+
+function Redirect({ to }: { to: string }) {
+  useEffect(() => navigateTo(to), [to]);
+  return null;
+}
+
+function FullScreenMessage({ title, children }: { title: string; children?: React.ReactNode }) {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-canvas p-6 text-center gap-3">
+      <h1 className="font-display text-2xl font-semibold">{title}</h1>
+      {children}
+    </div>
+  );
+}
 
 function AppRoutes() {
-  const { user, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
   const [route, setRoute] = useState(() => window.location.hash || '#/');
 
   useEffect(() => {
-    const handleHashChange = () => setRoute(window.location.hash || '#/');
+    const handleHashChange = () => {
+      setRoute(window.location.hash || '#/');
+      window.scrollTo(0, 0);
+    };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  const navigateTo = (path: string) => {
-    window.location.hash = path;
-  };
-
-  // ============================================
-  // 1. ROTAS PÚBLICAS
-  // ============================================
-  
+  // ---------------- Rotas públicas ----------------
   if (route.startsWith('#/loja/')) {
-    const tenantId = route.replace('#/loja/', '');
-    return <Storefront tenantId={tenantId} />;
-  }
-  
-  if (route === '#/login') return <LoginPage />;
-  if (route === '#/register') return <RegisterPage />;
-  
-  if (route === '#/' || route === '') {
-    return <LandingPage onNavigate={(p: string) => {
-      if (p === 'register') navigateTo('#/register');
-      else navigateTo(`#/${p}`);
-    }} />;
+    const tenantId = decodeURIComponent(route.replace('#/loja/', '').split(/[/?]/)[0]);
+    return <Storefront key={tenantId} tenantId={tenantId} />;
   }
 
-  // ============================================
-  // 2. ROTAS PROTEGIDAS
-  // ============================================
+  // "#/" é a home; hashes sem "/" (ex: #recursos) são âncoras da landing page.
+  if (route === '#/' || !route.startsWith('#/')) {
+    return <LandingPage onNavigate={(p: string) => navigateTo(`#/${p}`)} />;
+  }
 
+  if (loading) return <Spinner />;
+
+  if (route === '#/login' || route === '#/register') {
+    if (user) return <Redirect to={user.role === 'SUPER_ADMIN' && !user.tenantId ? '#/admin-global' : '#/admin'} />;
+    return route === '#/login' ? <LoginPage /> : <RegisterPage />;
+  }
+
+  // ---------------- Rotas protegidas ----------------
   if (route === '#/admin-global') {
     if (!user) return <LoginPage />;
     if (user.role !== 'SUPER_ADMIN') {
       return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-slate-950 text-white space-y-4 font-sans">
-          <h1 className="text-xl font-black text-red-400">Acesso Negado</h1>
-          <button onClick={() => navigateTo('#/admin')} className="px-4 py-2 bg-slate-800 rounded-xl text-xs font-bold transition-all hover:bg-slate-700">Voltar ao meu painel</button>
-        </div>
+        <FullScreenMessage title="Acesso negado">
+          <a href="#/admin" className="text-sm font-semibold text-brand-700 hover:underline">Voltar ao meu painel</a>
+        </FullScreenMessage>
       );
     }
-    
-    return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
-        <div className="bg-slate-900 border-b border-slate-800 px-6 py-3 flex justify-between items-center text-xs">
-          <span className="text-emerald-400 font-black tracking-wider uppercase">👑 Super Admin | CEO</span>
-          <button onClick={logout} className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-red-400 rounded-lg font-bold transition-all">
-            <LogOut className="w-3.5 h-3.5" /> Encerrar Sessão
-          </button>
-        </div>
-        <SuperAdminDashboard />
-      </div>
-    );
+    return <SuperAdminDashboard />;
   }
 
   if (route === '#/admin') {
     if (!user) return <LoginPage />;
-    if (user.role !== 'STORE_OWNER' && user.role !== 'SUPER_ADMIN') return <LoginPage />;
-
-    return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
-        <div className="bg-slate-900 border-b border-slate-800 px-6 py-3 flex justify-between items-center text-xs">
-          <div className="flex items-center gap-3">
-            <span className="text-slate-300 font-bold bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
-              Usuário: <span className="text-emerald-400">{user.email}</span>
-            </span>
-            {user.role === 'SUPER_ADMIN' && (
-              <button onClick={() => navigateTo('#/admin-global')} className="text-amber-400 font-bold hover:underline transition-all">
-                Voltar pro Global ↗
-              </button>
-            )}
-          </div>
-          <button onClick={logout} className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-red-400 rounded-lg font-bold transition-all">
-            <LogOut className="w-3.5 h-3.5" /> Sair
-          </button>
-        </div>
-        <AdminDashboard />
-      </div>
-    );
+    if (!user.tenantId) {
+      if (user.role === 'SUPER_ADMIN') return <Redirect to="#/admin-global" />;
+      return (
+        <FullScreenMessage title="Nenhuma loja vinculada">
+          <p className="text-ink-muted max-w-sm">Sua conta ainda não está associada a uma loja. Entre em contato com o suporte.</p>
+          <button onClick={logout} className="text-sm font-semibold text-brand-700 hover:underline">Sair</button>
+        </FullScreenMessage>
+      );
+    }
+    return <AdminDashboard tenantId={user.tenantId} />;
   }
 
-  return <LandingPage onNavigate={(p: string) => navigateTo(`#/${p}`)} />;
+  return (
+    <FullScreenMessage title="Página não encontrada">
+      <a href="#/" className="text-sm font-semibold text-brand-700 hover:underline">Voltar ao início</a>
+    </FullScreenMessage>
+  );
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppRoutes />
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <Suspense fallback={<Spinner />}>
+          <AppRoutes />
+        </Suspense>
+      </AuthProvider>
+    </ToastProvider>
   );
 }

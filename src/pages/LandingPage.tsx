@@ -1,248 +1,353 @@
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
+import {
+  ArrowRight, BarChart3, Check, ChevronDown, Clapperboard, Link2, Menu, MessageCircle, Package, QrCode, ShoppingBag,
+  Smartphone, Sparkles, Store, Tag, X, Zap,
+} from 'lucide-react';
+import { Logo } from '../components/Logo';
+import { cx } from '../components/ui';
 
 interface LandingPageProps {
   onNavigate: (path: string) => void;
 }
 
-export default function Landing({ onNavigate }: LandingPageProps) {
-  const waBodyRef = useRef<HTMLDivElement>(null);
-  const originalHtmlRef = useRef<string>("");
+const NAV = [
+  { id: 'como-funciona', label: 'Como funciona' },
+  { id: 'recursos', label: 'Recursos' },
+  { id: 'precos', label: 'Preços' },
+  { id: 'faq', label: 'Dúvidas' },
+];
+
+const STEPS = [
+  { icon: Store, title: 'Crie sua loja', text: 'Cadastre-se, escolha o nome e a cor da sua marca. Sua vitrine fica no ar na hora.' },
+  { icon: Package, title: 'Cadastre os produtos', text: 'Foto, preço, estoque e categoria. Tudo pelo celular, em poucos segundos por produto.' },
+  { icon: Link2, title: 'Compartilhe o link', text: 'Coloque na bio do Instagram, no status e nos grupos. Os pedidos chegam prontos no seu WhatsApp.' },
+];
+
+const FEATURES = [
+  { icon: Smartphone, title: 'Vitrine profissional', text: 'Loja rápida e bonita no celular, com busca, categorias, favoritos e página de produto.' },
+  { icon: MessageCircle, title: 'Pedido direto no WhatsApp', text: 'O cliente monta o carrinho e o pedido chega formatado: itens, endereço, frete e total.' },
+  { icon: QrCode, title: 'Pix Copia e Cola', text: 'Cada pedido gera um código Pix com o valor exato, direto para a sua chave. Sem taxa por venda.' },
+  { icon: Tag, title: 'Cupons de desconto', text: 'Crie cupons em segundos para campanhas, primeira compra e clientes fiéis.' },
+  { icon: BarChart3, title: 'Painel e relatórios', text: 'Acompanhe faturamento, ticket médio, mais vendidos e estoque baixo num só lugar.' },
+  { icon: Clapperboard, title: 'Roteiros e teleprompter', text: 'Gere roteiros de vídeo para cada produto e grave com o teleprompter embutido.' },
+];
+
+const PLANS = [
+  {
+    name: 'Iniciante',
+    price: 49,
+    description: 'Para quem está começando a vender pelo WhatsApp.',
+    features: ['Até 100 produtos', 'Vitrine com link exclusivo', 'Pix Copia e Cola em cada pedido', 'Cupons de desconto', 'Suporte por chat'],
+    highlight: false,
+  },
+  {
+    name: 'Profissional',
+    price: 97,
+    description: 'Para quem quer escalar com vídeo e dados.',
+    features: ['Produtos ilimitados', 'Tudo do Iniciante', 'Relatórios completos', 'Roteiros e teleprompter', 'Prioridade no suporte', 'Sem taxa por venda'],
+    highlight: true,
+  },
+];
+
+const FAQ = [
+  { q: 'Como recebo o dinheiro das vendas?', a: 'O Pix vai direto para a chave que você cadastrar no painel. A STCK não intermedia o pagamento e não cobra taxa por venda.' },
+  { q: 'Preciso de conhecimento técnico?', a: 'Não. Você cria a conta, cadastra os produtos e compartilha o link. Tudo funciona pelo celular.' },
+  { q: 'O cliente precisa criar conta para comprar?', a: 'Não. Ele escolhe os produtos, informa nome, WhatsApp e endereço e o pedido é enviado para você.' },
+  { q: 'Como funcionam os roteiros e o teleprompter?', a: 'Você escolhe um produto e o objetivo do vídeo; o painel monta gancho, corpo e chamada. Depois é só abrir o teleprompter e gravar.' },
+  { q: 'Posso personalizar a minha loja?', a: 'Sim: nome, descrição, cor da marca, WhatsApp, chave Pix e valores de frete são configurados no painel.' },
+];
+
+const DEMO_PRODUCTS = [
+  { name: 'Vestido Midi Azul', price: 'R$ 89,90', tone: 'from-sky-200 to-sky-400' },
+  { name: 'Bolsa Couro Caramelo', price: 'R$ 129,90', tone: 'from-amber-200 to-amber-500' },
+  { name: 'Tênis Casual Branco', price: 'R$ 199,90', tone: 'from-zinc-100 to-zinc-300' },
+  { name: 'Óculos Retrô', price: 'R$ 59,90', tone: 'from-rose-200 to-rose-400' },
+];
+
+export default function LandingPage({ onNavigate }: LandingPageProps) {
+  const [chatCycle, setChatCycle] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    // Animação cíclica do WhatsApp
-    if (waBodyRef.current && !originalHtmlRef.current) {
-      originalHtmlRef.current = waBodyRef.current.innerHTML;
-    }
-
-    const interval = setInterval(() => {
-      if (waBodyRef.current) {
-        waBodyRef.current.style.opacity = '0';
-        setTimeout(() => {
-          if (waBodyRef.current) {
-            waBodyRef.current.innerHTML = originalHtmlRef.current;
-            waBodyRef.current.style.opacity = '1';
-          }
-        }, 400);
-      }
-    }, 7000);
-
-    // Intersection Observer para animar os cards de recursos aparecendo
-    const feats = document.querySelectorAll('.feat');
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry, i) => {
-        if (entry.isIntersecting) {
-          setTimeout(() => entry.target.classList.add('in-view'), i * 100);
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.2 });
-
-    feats.forEach(f => observer.observe(f));
-
+    const interval = setInterval(() => setChatCycle((c) => c + 1), 7000);
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       clearInterval(interval);
-      observer.disconnect();
+      window.removeEventListener('scroll', onScroll);
     };
   }, []);
 
-  return (
-    <>
-      <div className="glow"></div>
+  // O app usa rotas por hash (#/...), então as âncoras rolam a página manualmente.
+  const scrollTo = (id: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    setMenuOpen(false);
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+  };
+  const go = (path: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    onNavigate(path);
+  };
 
-      <header>
-        <div className="logo">
-          <div className="logo-mark">
-            <svg viewBox="-5 -15 110 110" width="100%" height="100%" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path
-                d="M50,92 C46,78 56,66 48,52 C45,46 46,42 47,39 L53,39 C54,42 52,47 55,53 C63,68 52,79 56,92 Z"
-                fill="currentColor"
-              />
-              <g fill="currentColor">
-                <path d="M50,39 C40,25 40,5 50,-7 C60,5 60,25 50,39 Z" transform="rotate(-70 50 39)" />
-                <path d="M50,39 C40,25 40,5 50,-7 C60,5 60,25 50,39 Z" transform="rotate(-35 50 39)" />
-                <path d="M50,39 C40,25 40,5 50,-7 C60,5 60,25 50,39 Z" />
-                <path d="M50,39 C40,25 40,5 50,-7 C60,5 60,25 50,39 Z" transform="rotate(35 50 39)" />
-                <path d="M50,39 C40,25 40,5 50,-7 C60,5 60,25 50,39 Z" transform="rotate(70 50 39)" />
-              </g>
-            </svg>
-          </div>
-          <div>
-            <div className="logo-text">STCK COMPANY</div>
-            <div className="logo-sub">The World Is Yours</div>
+  return (
+    <div className="min-h-screen bg-canvas text-ink overflow-x-hidden">
+      {/* ================= HEADER ================= */}
+      <header className={cx('sticky top-0 z-40 transition-all', scrolled ? 'bg-canvas/85 backdrop-blur-md border-b border-black/[0.06]' : 'bg-transparent')}>
+        <div className="max-w-6xl mx-auto px-5 h-16 sm:h-[72px] flex items-center justify-between gap-4">
+          <Logo />
+          <nav className="hidden md:flex items-center gap-1">
+            {NAV.map((n) => (
+              <a key={n.id} href={`#${n.id}`} onClick={scrollTo(n.id)} className="px-3 py-2 text-sm text-ink-muted hover:text-ink rounded-lg transition-colors">
+                {n.label}
+              </a>
+            ))}
+          </nav>
+          <div className="flex items-center gap-2">
+            <a href="#/login" onClick={go('login')} className="hidden sm:inline-flex h-10 px-4 items-center text-sm font-medium text-ink hover:bg-black/[0.04] rounded-xl">Entrar</a>
+            <a href="#/register" onClick={go('register')} className="inline-flex h-10 px-4 items-center gap-1.5 text-sm font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-sm transition-colors">
+              Criar loja <ArrowRight className="w-4 h-4 hidden sm:block" />
+            </a>
+            <button onClick={() => setMenuOpen(!menuOpen)} className="md:hidden p-2 -mr-2 text-ink" aria-label="Menu">
+              {menuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
-        <nav>
-          <a href="#recursos">Recursos</a>
-          <a href="#precos">Preços</a>
-          <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('login'); }}>Fazer login</a>
-          <a href="#" className="btn-primary" onClick={(e) => { e.preventDefault(); onNavigate('register'); }}>Criar loja grátis</a>
-        </nav>
+        {menuOpen && (
+          <div className="md:hidden border-t border-black/[0.06] bg-canvas px-5 py-3 space-y-1 animate-fade-in">
+            {NAV.map((n) => (
+              <a key={n.id} href={`#${n.id}`} onClick={scrollTo(n.id)} className="block px-3 py-2.5 text-[15px] text-ink rounded-lg hover:bg-black/[0.04]">{n.label}</a>
+            ))}
+            <a href="#/login" onClick={go('login')} className="block px-3 py-2.5 text-[15px] font-semibold text-brand-700 rounded-lg hover:bg-black/[0.04]">Entrar na minha conta</a>
+          </div>
+        )}
       </header>
 
-      <main>
-        {/* HERO SECTION */}
-        <section className="hero">
+      {/* ================= HERO ================= */}
+      <section className="relative">
+        <div aria-hidden className="absolute -top-40 right-[-10%] w-[640px] h-[640px] rounded-full bg-[radial-gradient(circle,rgba(14,107,79,0.12),transparent_65%)] pointer-events-none" />
+        <div className="relative max-w-6xl mx-auto px-5 pt-10 sm:pt-16 pb-16 sm:pb-24 grid lg:grid-cols-[1.1fr_1fr] gap-12 lg:gap-8 items-center">
           <div>
-            <div className="eyebrow reveal r1">Roteiros e teleprompter integrados</div>
-            <h1 className="reveal r2">Sua loja vende<br />sozinha no <span className="hl">WhatsApp</span></h1>
-            <p className="lead reveal r3">Cadastre seus produtos, envie seu link exclusivo e receba pedidos organizados direto no chat — com Pix gerado na hora e roteiros prontos pra gravar com teleprompter embutido.</p>
-            <div className="cta-row reveal r4">
-              <a href="#" className="btn-lg" onClick={(e) => { e.preventDefault(); onNavigate('register'); }}>Criar minha loja agora →</a>
-              <a href="#recursos" className="btn-ghost">Ver recursos</a>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-100 text-brand-700 text-xs font-semibold animate-fade-up">
+              <Sparkles className="w-3.5 h-3.5" /> Vitrine + WhatsApp + Pix em um só lugar
+            </span>
+            <h1 className="mt-5 font-display font-semibold text-[40px] leading-[1.05] sm:text-6xl text-balance animate-fade-up [animation-delay:80ms]">
+              Sua loja vende sozinha no <span className="text-brand-600">WhatsApp</span>
+            </h1>
+            <p className="mt-5 text-lg text-ink-muted leading-relaxed max-w-xl animate-fade-up [animation-delay:160ms]">
+              Monte sua vitrine em minutos, compartilhe o link e receba pedidos organizados no chat — com Pix Copia e Cola gerado
+              na hora e roteiros prontos para gravar seus vídeos.
+            </p>
+            <div className="mt-8 flex flex-col sm:flex-row gap-3 animate-fade-up [animation-delay:240ms]">
+              <a href="#/register" onClick={go('register')} className="inline-flex h-12 px-6 items-center justify-center gap-2 font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-lg shadow-brand-600/20 transition-colors">
+                Criar minha loja agora <ArrowRight className="w-4 h-4" />
+              </a>
+              <a href="#como-funciona" onClick={scrollTo('como-funciona')} className="inline-flex h-12 px-6 items-center justify-center font-semibold text-ink bg-white border border-black/10 hover:border-black/20 rounded-xl transition-colors">
+                Ver como funciona
+              </a>
             </div>
-            <div className="proof reveal r5">
-              <span><strong>+2.400</strong> lojas criadas</span>
-              <span>·</span>
-              <span>Pix gerado automaticamente em cada pedido</span>
-            </div>
+            <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-muted animate-fade-up [animation-delay:320ms]">
+              {['Pronta em 2 minutos', 'Sem taxa por venda', 'Funciona no celular'].map((t) => (
+                <li key={t} className="flex items-center gap-1.5"><Check className="w-4 h-4 text-brand-600" /> {t}</li>
+              ))}
+            </ul>
           </div>
 
-          <div className="phone-wrap reveal r2">
-            <div className="phone">
-              <div className="phone-notch"></div>
-              <div className="wa-header">
-                <div className="wa-avatar">M</div>
-                <div>
-                  <div className="wa-name">Loja da Marina</div>
-                  <div className="wa-status">online</div>
+          {/* Celular com conversa */}
+          <div className="flex justify-center lg:justify-end animate-fade-up [animation-delay:200ms]">
+            <div className="relative">
+              <div className="absolute -left-10 top-16 hidden sm:flex items-center gap-2 bg-white rounded-2xl shadow-lift px-4 py-3 z-10">
+                <span className="w-9 h-9 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center"><ShoppingBag className="w-4 h-4" /></span>
+                <span className="text-xs leading-tight"><span className="block font-semibold text-ink">Novo pedido</span><span className="text-ink-muted">R$ 219,80 · Pix</span></span>
+              </div>
+              <div className="absolute -right-8 bottom-6 hidden sm:flex items-center gap-2 bg-white rounded-2xl shadow-lift px-4 py-3 z-10">
+                <span className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center"><Zap className="w-4 h-4" /></span>
+                <span className="text-xs leading-tight"><span className="block font-semibold text-ink">Cupom aplicado</span><span className="text-ink-muted">BEMVINDO10</span></span>
+              </div>
+              <div className="w-[290px] h-[580px] rounded-[44px] bg-[#0B141A] border-[10px] border-[#1a1a1a] shadow-[0_40px_80px_-30px_rgba(16,25,15,0.45)] overflow-hidden relative">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-28 h-6 bg-[#1a1a1a] rounded-b-2xl z-10" />
+                <div className="bg-[#1F2C34] pt-9 pb-3 px-4 flex items-center gap-2.5">
+                  <span className="w-8 h-8 rounded-full bg-brand-700 text-white text-xs font-semibold flex items-center justify-center">M</span>
+                  <span className="leading-tight"><span className="block text-white text-[13px] font-semibold">Loja da Marina</span><span className="text-[11px] text-[#8ea3a8]">online</span></span>
+                </div>
+                <div key={chatCycle} className="p-3.5 flex flex-col gap-2 text-[12.5px] leading-snug">
+                  <div className="chat-bubble self-start max-w-[82%] bg-[#1F2C34] text-[#E9EDEF] rounded-xl rounded-tl-sm px-3 py-2 [animation-delay:.3s]">Oi! Vi o vestido azul na sua loja, ainda tem M?</div>
+                  <div className="chat-bubble self-end max-w-[82%] bg-[#025C4C] text-[#E9EDEF] rounded-xl rounded-tr-sm px-3 py-2 [animation-delay:1.1s]">
+                    Tem sim! Separei pra você 💙
+                    <div className="mt-2 h-16 rounded-md bg-gradient-to-br from-sky-300 to-sky-600" />
+                  </div>
+                  <div className="chat-bubble self-start max-w-[82%] bg-[#1F2C34] text-[#E9EDEF] rounded-xl rounded-tl-sm px-3 py-2 [animation-delay:1.9s]">Perfeito, quero levar!</div>
+                  <div className="chat-bubble self-end max-w-[86%] bg-[#152A22] border border-brand-500/40 text-[#E9EDEF] rounded-xl rounded-tr-sm px-3 py-2 [animation-delay:2.7s]">
+                    <span className="block text-[10.5px] font-bold text-[#57C08A] mb-1">🛒 PEDIDO PED-7KQ2 · PIX GERADO</span>
+                    1x Vestido Midi Azul (M)<br />Frete: R$ 10,00<br /><b>Total: R$ 99,90</b>
+                  </div>
+                  <div className="chat-bubble self-start max-w-[82%] bg-[#1F2C34] text-[#E9EDEF] rounded-xl rounded-tl-sm px-3 py-2 [animation-delay:3.5s]">Pago! Segue o comprovante ✅</div>
                 </div>
               </div>
-              <div className="wa-body" id="waBody" ref={waBodyRef}>
-                <div className="bubble in b1">Oi! Vi o vestido azul na sua loja, ainda tem tamanho M?</div>
-                <div className="bubble out b2">
-                  Tem sim! Separei aqui pra você<br />
-                  <div style={{ height: '64px', background: 'linear-gradient(135deg,#2a2a2a,#111)', borderRadius: '6px', marginTop: '6px' }}></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Segmentos */}
+        <div className="border-y border-black/[0.06] bg-white/60">
+          <div className="max-w-6xl mx-auto px-5 py-5 flex items-center gap-x-8 gap-y-2 flex-wrap justify-center text-sm text-ink-muted">
+            <span className="font-semibold text-ink">Feito para quem vende:</span>
+            {['Moda e acessórios', 'Cosméticos', 'Eletrônicos', 'Doces e delivery', 'Artesanato', 'Suplementos'].map((s) => <span key={s}>{s}</span>)}
+          </div>
+        </div>
+      </section>
+
+      {/* ================= COMO FUNCIONA ================= */}
+      <section id="como-funciona" className="max-w-6xl mx-auto px-5 py-20 sm:py-28 scroll-mt-20">
+        <SectionHead eyebrow="Como funciona" title="Do cadastro ao primeiro pedido em 3 passos" />
+        <div className="grid md:grid-cols-3 gap-5">
+          {STEPS.map((s, i) => (
+            <div key={s.title} className="relative bg-white rounded-2xl border border-black/[0.07] p-6 shadow-soft">
+              <span className="absolute top-6 right-6 font-display text-5xl font-semibold text-black/[0.05]">{i + 1}</span>
+              <span className="w-11 h-11 rounded-xl bg-brand-600 text-white flex items-center justify-center"><s.icon className="w-5 h-5" /></span>
+              <h3 className="mt-5 font-semibold text-lg">{s.title}</h3>
+              <p className="mt-2 text-sm text-ink-muted leading-relaxed">{s.text}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ================= RECURSOS ================= */}
+      <section id="recursos" className="bg-white border-y border-black/[0.06] scroll-mt-16">
+        <div className="max-w-6xl mx-auto px-5 py-20 sm:py-28">
+          <SectionHead eyebrow="Recursos" title="Tudo que você precisa para vender sem complicação" subtitle="Ferramentas pensadas para o pequeno lojista que vende pelo WhatsApp e pelo Instagram." />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-black/[0.06] rounded-2xl overflow-hidden border border-black/[0.06]">
+            {FEATURES.map((f) => (
+              <div key={f.title} className="bg-white p-7 group">
+                <span className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center group-hover:bg-brand-600 group-hover:text-white transition-colors"><f.icon className="w-5 h-5" /></span>
+                <h3 className="mt-5 font-semibold">{f.title}</h3>
+                <p className="mt-2 text-sm text-ink-muted leading-relaxed">{f.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ================= DEMONSTRAÇÃO ================= */}
+      <section className="max-w-6xl mx-auto px-5 py-20 sm:py-28">
+        <div className="grid lg:grid-cols-[1fr_1.2fr] gap-12 items-center">
+          <div>
+            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-600">Sua vitrine</span>
+            <h2 className="mt-3 font-display font-semibold text-3xl sm:text-4xl text-balance">Uma loja com a cara da sua marca</h2>
+            <p className="mt-4 text-ink-muted leading-relaxed">Escolha a cor, escreva sua descrição e pronto: a vitrine se adapta à sua identidade. Seus clientes navegam, favoritam, aplicam cupom e finalizam o pedido em poucos toques.</p>
+            <ul className="mt-6 space-y-3 text-sm">
+              {['Página de produto com avaliações reais', 'Carrinho com quantidades e controle de estoque', 'Rastreio do pedido pelo código', 'Frete por região configurável'].map((t) => (
+                <li key={t} className="flex items-start gap-2.5"><span className="mt-0.5 w-5 h-5 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center shrink-0"><Check className="w-3 h-3" /></span>{t}</li>
+              ))}
+            </ul>
+          </div>
+          <div className="bg-white rounded-3xl border border-black/[0.07] shadow-lift overflow-hidden">
+            <div className="flex items-center gap-1.5 px-4 h-10 border-b border-black/[0.06] bg-black/[0.02]">
+              <span className="w-2.5 h-2.5 rounded-full bg-red-300" /><span className="w-2.5 h-2.5 rounded-full bg-amber-300" /><span className="w-2.5 h-2.5 rounded-full bg-green-300" />
+              <span className="ml-3 text-[11px] text-ink-soft truncate">stck.company/#/loja/loja-da-marina</span>
+            </div>
+            <div className="bg-gradient-to-r from-sky-600 to-sky-500 px-6 py-7 text-white">
+              <p className="text-[11px] uppercase tracking-widest opacity-80">Bem-vinda</p>
+              <p className="font-display text-2xl font-semibold">Loja da Marina</p>
+              <p className="text-sm opacity-90">Moda feminina com entrega na cidade toda</p>
+            </div>
+            <div className="p-5 grid grid-cols-2 gap-3">
+              {DEMO_PRODUCTS.map((p) => (
+                <div key={p.name} className="rounded-xl border border-black/[0.06] overflow-hidden">
+                  <div className={`h-24 bg-gradient-to-br ${p.tone}`} />
+                  <div className="p-3">
+                    <p className="text-xs font-medium truncate">{p.name}</p>
+                    <div className="mt-1.5 flex items-center justify-between">
+                      <span className="text-sm font-semibold">{p.price}</span>
+                      <span className="w-7 h-7 rounded-lg bg-sky-600 text-white flex items-center justify-center"><ShoppingBag className="w-3.5 h-3.5" /></span>
+                    </div>
+                  </div>
                 </div>
-                <div className="bubble in b3">Perfeito, quero levar!</div>
-                <div className="bubble out pix b4">
-                  <div className="pix-tag">PIX GERADO</div>
-                  Vestido Azul M — R$ 89,90<br />Copia e cola disponível
-                </div>
-                <div className="bubble in b5">Pago agora mesmo!</div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ================= PREÇOS ================= */}
+      <section id="precos" className="bg-white border-y border-black/[0.06] scroll-mt-16">
+        <div className="max-w-6xl mx-auto px-5 py-20 sm:py-28">
+          <SectionHead center eyebrow="Planos" title="Preço simples, sem taxa por venda" subtitle="Escolha o plano ideal para o momento do seu negócio. Troque quando quiser." />
+          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+            {PLANS.map((plan) => (
+              <div key={plan.name} className={cx('relative rounded-3xl p-8 border', plan.highlight ? 'bg-ink text-white border-ink shadow-lift' : 'bg-canvas border-black/[0.08]')}>
+                {plan.highlight && <span className="absolute -top-3 left-8 px-3 py-1 rounded-full bg-brand-500 text-white text-xs font-semibold">Mais popular</span>}
+                <h3 className="font-display font-semibold text-xl">{plan.name}</h3>
+                <p className={cx('mt-1 text-sm', plan.highlight ? 'text-white/70' : 'text-ink-muted')}>{plan.description}</p>
+                <p className="mt-6 font-display font-semibold text-5xl">R$ {plan.price}<span className={cx('text-base font-normal', plan.highlight ? 'text-white/60' : 'text-ink-muted')}>/mês</span></p>
+                <ul className="mt-7 space-y-3 text-sm">
+                  {plan.features.map((f) => (
+                    <li key={f} className="flex items-center gap-2.5"><Check className={cx('w-4 h-4 shrink-0', plan.highlight ? 'text-brand-300' : 'text-brand-600')} /> {f}</li>
+                  ))}
+                </ul>
+                <a
+                  href="#/register"
+                  onClick={go('register')}
+                  className={cx('mt-8 h-12 flex items-center justify-center rounded-xl font-semibold transition-colors', plan.highlight ? 'bg-brand-500 hover:bg-brand-400 text-white' : 'bg-white border border-black/10 hover:border-black/25 text-ink')}
+                >
+                  Começar com o {plan.name}
+                </a>
               </div>
-            </div>
+            ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* RECURSOS */}
-        <section className="section" id="recursos">
-          <div className="section-head">
-            <div className="eyebrow">Como funciona</div>
-            <h2>Tudo que você precisa pra vender sem complicação</h2>
-            <p>Do cadastro do produto ao Pix na mão do cliente — sem sair do WhatsApp.</p>
-          </div>
-          <div className="grid3">
-            <div className="feat">
-              <div className="feat-ic">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <rect x="7" y="2" width="10" height="20" rx="2" />
-                  <line x1="11" y1="18" x2="13" y2="18" />
-                </svg>
-              </div>
-              <h3>100% otimizado pra mobile</h3>
-              <p>Seus clientes navegam, escolhem e compram direto pelo celular, com carregamento rápido.</p>
-            </div>
-            <div className="feat">
-              <div className="feat-ic">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <rect x="2" y="6" width="14" height="12" rx="2" />
-                  <path d="M16 10l6-3v10l-6-3" />
-                </svg>
-              </div>
-              <h3>Roteiros e teleprompter</h3>
-              <p>Gere roteiros automáticos pros seus produtos e grave vídeos direto pelo painel, sem decorar a fala.</p>
-            </div>
-            <div className="feat">
-              <div className="feat-ic">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z" />
-                </svg>
-              </div>
-              <h3>Checkout via WhatsApp</h3>
-              <p>Cada pedido chega formatado e organizado direto no chat da sua loja, com Pix já gerado.</p>
-            </div>
-          </div>
-        </section>
+      {/* ================= FAQ ================= */}
+      <section id="faq" className="max-w-3xl mx-auto px-5 py-20 sm:py-28 scroll-mt-16">
+        <SectionHead center eyebrow="Dúvidas frequentes" title="Tudo o que você precisa saber" />
+        <div className="space-y-3">
+          {FAQ.map((item) => (
+            <details key={item.q} className="group bg-white rounded-2xl border border-black/[0.07] px-5 open:shadow-soft">
+              <summary className="flex items-center justify-between gap-4 py-4 cursor-pointer list-none font-medium [&::-webkit-details-marker]:hidden">
+                {item.q}
+                <ChevronDown className="w-4 h-4 text-ink-muted shrink-0 transition-transform group-open:rotate-180" />
+              </summary>
+              <p className="pb-5 -mt-1 text-sm text-ink-muted leading-relaxed">{item.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
 
-        {/* PREÇOS */}
-        <section className="section" id="precos">
-          <div className="section-head" style={{ textAlign: 'center', margin: '0 auto 50px' }}>
-            <div className="eyebrow" style={{ margin: '0 auto 16px' }}>Planos Transparentes</div>
-            <h2>Comece a vender mais hoje mesmo</h2>
-            <p>Escolha o plano ideal para o tamanho do seu negócio e acelere suas vendas no WhatsApp.</p>
-          </div>
+      {/* ================= CTA FINAL ================= */}
+      <section className="max-w-6xl mx-auto px-5 pb-20">
+        <div className="relative overflow-hidden rounded-3xl bg-brand-700 px-8 py-14 sm:p-16 text-center text-white">
+          <div aria-hidden className="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-brand-500/40 blur-3xl" />
+          <div aria-hidden className="absolute -bottom-24 -left-24 w-80 h-80 rounded-full bg-brand-900/60 blur-3xl" />
+          <h2 className="relative font-display font-semibold text-3xl sm:text-4xl text-balance">Pronto para vender no automático?</h2>
+          <p className="relative mt-4 text-white/75 max-w-xl mx-auto">Crie sua loja agora e receba o primeiro pedido ainda hoje.</p>
+          <a href="#/register" onClick={go('register')} className="relative mt-8 inline-flex h-12 px-7 items-center gap-2 rounded-xl bg-white text-brand-700 font-semibold hover:bg-brand-50 transition-colors">
+            Criar minha loja <ArrowRight className="w-4 h-4" />
+          </a>
+        </div>
+      </section>
 
-          <div className="pricing-grid">
-            <div className="price-card">
-              <div className="plan-name">Iniciante</div>
-              <div className="plan-desc">Ideal para quem está começando a estruturar as vendas online.</div>
-              <div className="plan-price">R$ 49<span>/mês</span></div>
-              <ul className="plan-features">
-                <li>✓ Até 100 produtos cadastrados</li>
-                <li>✓ Link exclusivo da loja</li>
-                <li>✓ Geração automática de Pix</li>
-                <li>✓ Suporte via chat</li>
-              </ul>
-              <a href="#" className="btn-ghost" style={{ display: 'block', textAlign: 'center', marginTop: '24px' }} onClick={(e) => { e.preventDefault(); onNavigate('register'); }}>Escolher Iniciante</a>
-            </div>
-
-            <div className="price-card popular">
-              <div className="popular-badge">Mais Popular</div>
-              <div className="plan-name">Profissional</div>
-              <div className="plan-desc">Para quem quer escala, roteiros automáticos e teleprompter.</div>
-              <div className="plan-price">R$ 97<span>/mês</span></div>
-              <ul className="plan-features">
-                <li>✓ Produtos ilimitados</li>
-                <li>✓ Roteiros e teleprompter integrados</li>
-                <li>✓ Checkout avançado via WhatsApp</li>
-                <li>✓ Prioridade no suporte</li>
-                <li>✓ Sem taxa por venda</li>
-              </ul>
-              <a href="#" className="btn-primary" style={{ display: 'block', textAlign: 'center', marginTop: '24px' }} onClick={(e) => { e.preventDefault(); onNavigate('register'); }}>Criar Loja Pro Agora</a>
-            </div>
-          </div>
-        </section>
-
-        {/* FAQ */}
-        <section className="section" id="faq">
-          <div className="section-head">
-            <div className="eyebrow">Dúvidas Frequentes</div>
-            <h2>Tudo o que você precisa saber</h2>
-            <p>Tire suas dúvidas sobre como a STCK Company funciona na prática.</p>
-          </div>
-
-          <div className="faq-list">
-            <div className="faq-item">
-              <h3>Como recebo o dinheiro das minhas vendas?</h3>
-              <p>O pagamento via Pix vai direto para a sua conta bancária cadastrada, sem intermediários e sem taxas ocultas por transação.</p>
-            </div>
-            <div className="faq-item">
-              <h3>Preciso ter conhecimento técnico para montar a loja?</h3>
-              <p>Zero! O painel foi desenvolvido para ser extremamente simples. Em menos de 5 minutos você cadastra seus produtos e já pode divulgar o link.</p>
-            </div>
-            <div className="faq-item">
-              <h3>Como funcionam os roteiros e o teleprompter?</h3>
-              <p>Nossa inteligência ajuda a estruturar o texto ideal para o seu produto. O teleprompter roda direto na tela para você gravar vídeos fluidos para o Instagram, TikTok e Status sem travar.</p>
-            </div>
-          </div>
-        </section>
-
-        {/* CTA FINAL */}
-        <section className="section">
-          <div className="cta-bottom">
-            <h2>Pronto para vender no automático?</h2>
-            <p>Junte-se a milhares de lojistas que simplificaram os pedidos e pagamentos no WhatsApp.</p>
-            <a href="#" className="btn-lg" style={{ position: 'relative', zIndex: 1 }} onClick={(e) => { e.preventDefault(); onNavigate('register'); }}>
-              Criar minha loja grátis agora →
-            </a>
-          </div>
-        </section>
-      </main>
-
-      <footer>
-        <div>© 2026 STCK Company</div>
-        <div>Feito pra quem vende todo dia no WhatsApp</div>
+      {/* ================= RODAPÉ ================= */}
+      <footer className="border-t border-black/[0.06]">
+        <div className="max-w-6xl mx-auto px-5 py-10 flex flex-col sm:flex-row gap-6 sm:items-center justify-between">
+          <Logo />
+          <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-muted">
+            {NAV.map((n) => <a key={n.id} href={`#${n.id}`} onClick={scrollTo(n.id)} className="hover:text-ink">{n.label}</a>)}
+            <a href="#/login" onClick={go('login')} className="hover:text-ink">Entrar</a>
+          </nav>
+        </div>
+        <div className="max-w-6xl mx-auto px-5 pb-8 text-xs text-ink-soft">© {new Date().getFullYear()} STCK Company · Feito para quem vende todo dia no WhatsApp.</div>
       </footer>
-    </>
+    </div>
+  );
+}
+
+function SectionHead({ eyebrow, title, subtitle, center }: { eyebrow: string; title: string; subtitle?: string; center?: boolean }) {
+  return (
+    <div className={cx('mb-12 max-w-2xl', center && 'mx-auto text-center')}>
+      <span className="text-xs font-semibold uppercase tracking-[0.14em] text-brand-600">{eyebrow}</span>
+      <h2 className="mt-3 font-display font-semibold text-3xl sm:text-4xl text-balance">{title}</h2>
+      {subtitle && <p className="mt-4 text-ink-muted leading-relaxed">{subtitle}</p>}
+    </div>
   );
 }

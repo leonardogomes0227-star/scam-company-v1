@@ -1,56 +1,77 @@
-export type UserRole = 'SUPER_ADMIN' | 'STORE_OWNER' | 'CUSTOMER';
+export type UserRole = 'SUPER_ADMIN' | 'STORE_OWNER';
 
-export interface User {
+export interface Tenant {
   id: string;
   name: string;
-  email: string;
-  role: UserRole;
-  tenantId?: string; // Nulo para Super Admin; ID da loja para Lojistas e Clientes
-}
-
-export interface StoreTenant {
-  id: string; // Ex: 'lkd-imports', 'carbura-ms'
-  name: string;
-  ownerEmail: string;
-  plan: 'BASIC' | 'PRO' | 'ENTERPRISE';
-  active: boolean;
-  createdAt: string;
-  config: {
-    about: string;
-    whatsapp: string;
-    pixKey: string;
-    fixedFreight: number;
-    freeFreightThreshold: number;
-    logoUrl?: string;
-  };
+  owner_id?: string | null;
+  about?: string | null;
+  whatsapp?: string | null;
+  color?: string | null;
+  pix_key?: string | null;
+  plan?: 'BASIC' | 'PRO' | string;
+  subscription_status?: 'active' | 'pending' | 'blocked' | string;
+  shipping_local?: number | null;
+  shipping_far?: number | null;
+  created_at?: string;
 }
 
 export interface Product {
   id: string;
-  tenantId: string; // Garantia de isolamento por loja
+  tenant_id: string;
+  name: string;
+  description?: string | null;
+  price: number;
+  stock: number;
+  image?: string | null;
+  category?: string | null;
+  created_at?: string;
+}
+
+export interface OrderItem {
+  id: string;
   name: string;
   price: number;
-  promoPrice?: number;
-  image: string;
-  category: string;
-  variants?: string[];
-  stock: number;
+  quantity: number;
 }
+
+export const ORDER_STATUSES = [
+  'Aguardando Pagamento',
+  'Pago / Separando',
+  'Enviado / A Caminho',
+  'Entregue com Sucesso',
+  'Cancelado',
+] as const;
 
 export interface Order {
   id: string;
-  tenantId: string;
-  customerName: string;
+  tenant_id: string;
+  customer: string;
+  whatsapp?: string | null;
+  address?: string | null;
+  payment?: string | null;
   total: number;
-  status: 'Pendente' | 'Pago' | 'Enviado' | 'Cancelado';
+  shipping?: number | null;
+  discount?: number | null;
+  coupon?: string | null;
+  status: string;
   date: string;
-  items?: any[];
+  items?: OrderItem[] | null;
+  created_at?: string;
 }
 
 export interface Coupon {
   id: string;
-  tenantId: string;
+  tenant_id: string;
   code: string;
   discount: number;
-  type: 'percent' | 'fixed';
+}
+
+export interface Review {
+  id: string;
+  tenant_id: string;
+  product_id: string;
+  name: string;
+  comment: string;
+  rating: number;
+  created_at?: string;
 }
