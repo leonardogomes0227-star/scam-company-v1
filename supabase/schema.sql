@@ -126,12 +126,14 @@ create trigger on_auth_user_created
   for each row execute function public.handle_new_user();
 
 -- Rastreio público: devolve só o necessário, sem expor dados do cliente.
+-- Os casts deixam a função compatível com bancos antigos (ex.: date salvo como texto).
+drop function if exists public.track_order(text, text);
 create or replace function public.track_order(p_tenant_id text, p_code text)
-returns table (id text, status text, total numeric, date date)
+returns table (id text, status text, total numeric, date text)
 language sql stable security definer set search_path = public as $$
-  select o.id, o.status, o.total, o.date
+  select o.id::text, o.status::text, o.total::numeric, o.date::text
   from orders o
-  where o.tenant_id = p_tenant_id and upper(o.id) = upper(trim(p_code))
+  where o.tenant_id::text = p_tenant_id and upper(o.id::text) = upper(trim(p_code))
   limit 1;
 $$;
 grant execute on function public.track_order(text, text) to anon, authenticated;
