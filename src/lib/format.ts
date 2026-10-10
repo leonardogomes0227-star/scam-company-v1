@@ -41,3 +41,15 @@ export function generateOrderCode(): string {
 export function generateId(): string {
   return crypto.randomUUID();
 }
+
+/** "P, M, G" → ["P", "M", "G"] */
+export function parseVariants(value: string | null | undefined): string[] {
+  return Array.from(new Set((value || '').split(/[,;\n]/).map((v) => v.trim()).filter(Boolean)));
+}
+
+/** Percentual de desconto entre o preço "de" e o preço atual. */
+export function discountPercent(price: number, comparePrice: number | null | undefined): number {
+  const cp = Number(comparePrice);
+  if (!cp || cp <= price) return 0;
+  return Math.round((1 - price / cp) * 100);
+}

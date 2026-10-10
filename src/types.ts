@@ -12,6 +12,13 @@ export interface Tenant {
   subscription_status?: 'active' | 'pending' | 'blocked' | string;
   shipping_local?: number | null;
   shipping_far?: number | null;
+  city?: string | null;
+  state?: string | null;
+  pickup_enabled?: boolean | null;
+  pickup_address?: string | null;
+  ship_nationwide?: boolean | null;
+  shipping_national?: number | null;
+  free_shipping_min?: number | null;
   created_at?: string;
 }
 
@@ -24,12 +31,17 @@ export interface Product {
   stock: number;
   image?: string | null;
   category?: string | null;
+  /** Opções separadas por vírgula, ex.: "P, M, G" */
+  variants?: string | null;
+  /** Preço "de" (riscado) para promoções */
+  compare_price?: number | null;
   created_at?: string;
 }
 
 export interface OrderItem {
   id: string;
   name: string;
+  variant?: string;
   price: number;
   quantity: number;
 }

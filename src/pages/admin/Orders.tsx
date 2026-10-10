@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ClipboardCopy, Download, MapPin, MessageCircle, Phone, Search, ShoppingBag, Wallet } from 'lucide-react';
+import { ClipboardCopy, Download, MapPin, MessageCircle, Phone, Search, ShoppingBag, Truck, Wallet } from 'lucide-react';
 import { Badge, Button, Card, EmptyState, Input, Modal, Select, cx } from '../../components/ui';
 import { csvNumber, downloadCsv } from '../../lib/csv';
 import { useToast } from '../../components/Toast';
@@ -16,6 +16,21 @@ const PERIODS: { id: Period; label: string }[] = [
   { id: '7', label: 'Últimos 7 dias' },
   { id: '30', label: 'Últimos 30 dias' },
 ];
+
+/** O endereço do pedido começa com "[Tipo de entrega]". */
+function deliveryOf(o: Order): { label: string; address: string } | null {
+  const m = /^\[(.+?)\]\s*(.*)$/s.exec(o.address || '');
+  if (!m) return null;
+  // No painel, deixa claro do ponto de vista do lojista
+  const label = /^Envio para sua cidade$/i.test(m[1]) ? 'Envio para outra cidade' : m[1];
+  return { label, address: m[2] };
+}
+
+function deliveryTone(label: string): 'violet' | 'blue' | 'neutral' {
+  if (/envio|outra cidade/i.test(label)) return 'violet';
+  if (/retirar|retirada/i.test(label)) return 'neutral';
+  return 'blue';
+}
 
 function periodStart(period: Period): string | null {
   if (period === 'all') return null;
@@ -191,6 +206,7 @@ export default function Orders({ data }: { data: StoreData }) {
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{o.customer}</p>
+                    {deliveryOf(o) && <Badge tone={deliveryTone(deliveryOf(o)!.label)} className="mb-1">{deliveryOf(o)!.label}</Badge>}
                     <p className="text-xs text-ink-soft truncate">{o.id} · {formatDate(orderDay(o))} · {(o.items || []).reduce((a, i) => a + i.quantity, 0) || '—'} itens{o.payment ? ` · ${o.payment}` : ''}</p>
                   </div>
                   <div className="text-right shrink-0 space-y-1">
@@ -215,7 +231,8 @@ export default function Orders({ data }: { data: StoreData }) {
             <div className="rounded-2xl bg-black/[0.025] p-4 space-y-2 text-sm">
               <p className="font-semibold">{selected.customer}</p>
               {selected.whatsapp && <p className="flex items-center gap-2 text-ink-muted"><Phone className="w-4 h-4" /> {selected.whatsapp}</p>}
-              {selected.address && <p className="flex items-start gap-2 text-ink-muted"><MapPin className="w-4 h-4 mt-0.5 shrink-0" /> {selected.address}</p>}
+              {deliveryOf(selected) && <p className="flex items-center gap-2 text-ink"><Truck className="w-4 h-4" /> {deliveryOf(selected)!.label}</p>}
+              {selected.address && <p className="flex items-start gap-2 text-ink-muted"><MapPin className="w-4 h-4 mt-0.5 shrink-0" /> {deliveryOf(selected)?.address ?? selected.address}</p>}
               {selected.payment && <p className="flex items-center gap-2 text-ink-muted"><Wallet className="w-4 h-4" /> {selected.payment}</p>}
             </div>
 

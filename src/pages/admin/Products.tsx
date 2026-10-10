@@ -3,14 +3,26 @@ import { Copy, Edit3, ImagePlus, Link2, Loader2, Package, Plus, Search, Trash2 }
 import { Badge, Button, Card, EmptyState, Field, Input, Modal, Select, Textarea, cx } from '../../components/ui';
 import { useToast } from '../../components/Toast';
 import { supabase } from '../../supabaseClient';
-import { formatBRL, generateId } from '../../lib/format';
+import { formatBRL, generateId, parseVariants } from '../../lib/format';
+import { MIGRATION_HINT, writeWithFallback } from '../../lib/db';
 import { compressImage, dataUrlKB } from '../../lib/image';
 import type { Product } from '../../types';
 import type { StoreData } from './useStoreData';
 
 
-type Draft = { id?: string; name: string; price: string; stock: string; category: string; description: string; image: string };
-const emptyDraft: Draft = { name: '', price: '', stock: '', category: '', description: '', image: '' };
+type Draft = { id?: string; name: string; price: string; comparePrice: string; stock: string; category: string; description: string; image: string; variants: string };
+const emptyDraft: Draft = { name: '', price: '', comparePrice: '', stock: '', category: '', description: '', image: '', variants: '' };
+
+const toDraft = (p: Product): Draft => ({
+  name: p.name,
+  price: String(p.price),
+  comparePrice: p.compare_price ? String(p.compare_price) : '',
+  stock: String(p.stock),
+  category: p.category || '',
+  description: p.description || '',
+  image: p.image || '',
+  variants: p.variants || '',
+});
 
 export default function Products({ data, tenantId }: { data: StoreData; tenantId: string }) {
   const toast = useToast();
@@ -36,10 +48,8 @@ export default function Products({ data, tenantId }: { data: StoreData; tenantId
   });
 
   const openNew = () => setDraft({ ...emptyDraft, category: categories[0] || '' });
-  const openEdit = (p: Product) =>
-    setDraft({ id: p.id, name: p.name, price: String(p.price), stock: String(p.stock), category: p.category || '', description: p.description || '', image: p.image || '' });
-  const duplicate = (p: Product) =>
-    setDraft({ name: `${p.name} (cópia)`, price: String(p.price), stock: String(p.stock), category: p.category || '', description: p.description || '', image: p.image || '' });
+  const openEdit = (p: Product) => setDraft({ id: p.id, ...toDraft(p) });
+  const duplicate = (p: Product) => setDraft({ ...toDraft(p), name: `${p.name} (cópia)` });
 
   const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -64,6 +74,12 @@ export default function Products({ data, tenantId }: { data: StoreData; tenantId
       toast('Informe o nome e um preço válido.', true);
       return;
     }
+    const comparePrice = parseFloat(draft.comparePrice.replace(',', '.'));
+    if (draft.comparePrice.trim() && !(comparePrice > price)) {
+      toast('O preço "de" precisa ser maior que o preço atual.', true);
+      return;
+    }
+    const variants = parseVariants(draft.variants).join(', ');
     const payload = {
       name: draft.name.trim(),
       price,
@@ -71,22 +87,26 @@ export default function Products({ data, tenantId }: { data: StoreData; tenantId
       category: draft.category.trim() || 'Geral',
       description: draft.description.trim() || null,
       image: draft.image.trim() || null,
+      variants: variants || null,
+      compare_price: comparePrice > price ? comparePrice : null,
     };
+    const optional: (keyof typeof payload)[] = ['variants', 'compare_price'];
 
     setSaving(true);
     if (draft.id) {
-      const { error } = await supabase.from('products').update(payload).eq('id', draft.id);
+      const id = draft.id;
+      const { error, degraded } = await writeWithFallback((data) => supabase.from('products').update(data).eq('id', id), payload, optional);
       setSaving(false);
       if (error) return toast('Erro ao salvar: ' + error.message, true);
-      setProducts((prev) => prev.map((p) => (p.id === draft.id ? { ...p, ...payload } : p)));
-      toast('Produto atualizado!');
+      setProducts((prev) => prev.map((p) => (p.id === id ? { ...p, ...payload } : p)));
+      toast(degraded ? MIGRATION_HINT : 'Produto atualizado!', degraded);
     } else {
-      const newProduct: Product = { id: generateId(), tenant_id: tenantId, ...payload, created_at: new Date().toISOString() };
-      const { error } = await supabase.from('products').insert([newProduct]);
+      const newProduct = { id: generateId(), tenant_id: tenantId, ...payload };
+      const { error, degraded } = await writeWithFallback((data) => supabase.from('products').insert([data]), newProduct, optional);
       setSaving(false);
       if (error) return toast('Erro ao cadastrar: ' + error.message, true);
-      setProducts((prev) => [newProduct, ...prev]);
-      toast('Produto cadastrado!');
+      setProducts((prev) => [{ ...newProduct, created_at: new Date().toISOString() }, ...prev]);
+      toast(degraded ? MIGRATION_HINT : 'Produto cadastrado!', degraded);
     }
     setDraft(null);
   };
@@ -218,9 +238,12 @@ export default function Products({ data, tenantId }: { data: StoreData; tenantId
               <Field label="Nome do produto">
                 <Input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Ex: Vestido Midi Azul" required autoFocus />
               </Field>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <Field label="Preço (R$)">
                   <Input inputMode="decimal" value={draft.price} onChange={(e) => setDraft({ ...draft, price: e.target.value })} placeholder="0,00" required />
+                </Field>
+                <Field label="Preço “de” (opcional)">
+                  <Input inputMode="decimal" value={draft.comparePrice} onChange={(e) => setDraft({ ...draft, comparePrice: e.target.value })} placeholder="Promoção" />
                 </Field>
                 <Field label="Estoque">
                   <Input type="number" min={0} value={draft.stock} onChange={(e) => setDraft({ ...draft, stock: e.target.value })} placeholder="0" />
@@ -230,7 +253,10 @@ export default function Products({ data, tenantId }: { data: StoreData; tenantId
                 <Input list="category-options" value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })} placeholder="Ex: Vestidos" />
                 <datalist id="category-options">{categories.map((c) => <option key={c} value={c} />)}</datalist>
               </Field>
-              <Field label="Descrição" hint="Tamanhos, material, cores disponíveis... Aparece na página do produto.">
+              <Field label="Tamanhos / cores (opcional)" hint="Separe por vírgula. O cliente escolhe uma opção antes de comprar. Ex: P, M, G, GG">
+                <Input value={draft.variants} onChange={(e) => setDraft({ ...draft, variants: e.target.value })} placeholder="P, M, G" />
+              </Field>
+              <Field label="Descrição" hint="Material, medidas, cuidados... Aparece na página do produto.">
                 <Textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} rows={4} />
               </Field>
             </div>

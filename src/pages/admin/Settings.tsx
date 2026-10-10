@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Check, ExternalLink, MessageCircle, ShoppingBag, Truck } from 'lucide-react';
-import { Button, Card, Field, Input, Textarea, cx } from '../../components/ui';
+import { Bike, Check, ExternalLink, MapPin, MessageCircle, ShoppingBag, Store as StoreIcon, Truck } from 'lucide-react';
+import { Button, Card, Field, Input, Select, Textarea, cx } from '../../components/ui';
+import { formatCep, lookupCep, UFS } from '../../lib/cep';
+import { MIGRATION_HINT, writeWithFallback } from '../../lib/db';
 import { useToast } from '../../components/Toast';
 import { supabase } from '../../supabaseClient';
 import { brandVars, safeColor } from '../../lib/color';
@@ -19,6 +21,29 @@ export default function Settings({ data, tenantId, storeUrl }: { data: StoreData
   const [color, setColor] = useState(safeColor(tenant?.color));
   const [shippingLocal, setShippingLocal] = useState(String(tenant?.shipping_local ?? 10));
   const [shippingFar, setShippingFar] = useState(String(tenant?.shipping_far ?? 18));
+  const [city, setCity] = useState(tenant?.city ?? '');
+  const [uf, setUf] = useState(tenant?.state ?? '');
+  const [storeCep, setStoreCep] = useState('');
+  const [pickupEnabled, setPickupEnabled] = useState(tenant?.pickup_enabled ?? false);
+  const [pickupAddress, setPickupAddress] = useState(tenant?.pickup_address ?? '');
+  const [shipNationwide, setShipNationwide] = useState(tenant?.ship_nationwide ?? true);
+  const [shippingNational, setShippingNational] = useState(tenant?.shipping_national != null ? String(tenant.shipping_national) : '');
+  const [freeShippingMin, setFreeShippingMin] = useState(tenant?.free_shipping_min != null ? String(tenant.free_shipping_min) : '');
+
+  const fillFromCep = async (value: string) => {
+    const cep = formatCep(value);
+    setStoreCep(cep);
+    if (cep.replace(/\D/g, '').length !== 8) return;
+    try {
+      const found = await lookupCep(cep);
+      if (!found) return toast('CEP não encontrado.', true);
+      setCity(found.city);
+      setUf(found.state);
+      if (!pickupAddress) setPickupAddress([found.street, found.district].filter(Boolean).join(', '));
+    } catch {
+      toast('Não foi possível consultar o CEP agora. Preencha a cidade manualmente.', true);
+    }
+  };
   const [saving, setSaving] = useState(false);
 
   const save = async (e: React.FormEvent) => {
@@ -27,21 +52,31 @@ export default function Settings({ data, tenantId, storeUrl }: { data: StoreData
     const digits = whatsapp.replace(/\D/g, '');
     if (digits && digits.length < 10) return toast('WhatsApp inválido: informe DDD + número.', true);
 
+    const money = (v: string) => Math.max(0, parseFloat(v.replace(',', '.')) || 0);
+    const optionalMoney = (v: string) => (v.trim() === '' ? null : money(v));
     const patch = {
       name: name.trim(),
       about: about.trim(),
       whatsapp: digits,
       pix_key: pixKey.trim(),
       color,
-      shipping_local: Math.max(0, parseFloat(shippingLocal.replace(',', '.')) || 0),
-      shipping_far: Math.max(0, parseFloat(shippingFar.replace(',', '.')) || 0),
+      shipping_local: money(shippingLocal),
+      shipping_far: money(shippingFar),
+      city: city.trim() || null,
+      state: uf || null,
+      pickup_enabled: pickupEnabled,
+      pickup_address: pickupAddress.trim() || null,
+      ship_nationwide: shipNationwide,
+      shipping_national: optionalMoney(shippingNational),
+      free_shipping_min: optionalMoney(freeShippingMin),
     };
+    const optional: (keyof typeof patch)[] = ['city', 'state', 'pickup_enabled', 'pickup_address', 'ship_nationwide', 'shipping_national', 'free_shipping_min'];
     setSaving(true);
-    const { error } = await supabase.from('tenants').update(patch).eq('id', tenantId);
+    const { error, degraded } = await writeWithFallback((data) => supabase.from('tenants').update(data).eq('id', tenantId), patch, optional);
     setSaving(false);
     if (error) return toast('Erro ao salvar: ' + error.message, true);
     setTenant((t) => (t ? { ...t, ...patch } : t));
-    toast('Configurações salvas!');
+    toast(degraded ? MIGRATION_HINT : 'Configurações salvas!', degraded);
   };
 
   return (
@@ -85,11 +120,55 @@ export default function Settings({ data, tenantId, storeUrl }: { data: StoreData
             </Field>
           </Card>
 
-          <Card className="p-5 space-y-4">
-            <h2 className="font-semibold">Frete</h2>
-            <div className="grid sm:grid-cols-2 gap-3">
-              <Field label="Centro / local (R$)"><Input inputMode="decimal" value={shippingLocal} onChange={(e) => setShippingLocal(e.target.value)} /></Field>
-              <Field label="Bairros distantes (R$)"><Input inputMode="decimal" value={shippingFar} onChange={(e) => setShippingFar(e.target.value)} /></Field>
+          <Card className="p-5 space-y-5">
+            <div>
+              <h2 className="font-semibold">Entregas</h2>
+              <p className="text-sm text-ink-muted mt-0.5">O cliente informa o CEP e a vitrine mostra só as opções que valem para ele.</p>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-sm font-semibold flex items-center gap-2"><MapPin className="w-4 h-4 text-brand-600" /> Cidade da loja</p>
+              <div className="grid sm:grid-cols-[140px_1fr_90px] gap-2">
+                <Input inputMode="numeric" placeholder="CEP da loja" value={storeCep} onChange={(e) => fillFromCep(e.target.value)} />
+                <Input placeholder="Cidade" value={city} onChange={(e) => setCity(e.target.value)} />
+                <Select value={uf} onChange={(e) => setUf(e.target.value)} aria-label="Estado">
+                  <option value="">UF</option>
+                  {UFS.map((u) => <option key={u}>{u}</option>)}
+                </Select>
+              </div>
+              <p className="text-xs text-ink-soft">Clientes desta cidade veem a entrega local; de outras cidades, o envio.</p>
+            </div>
+
+            <div className="space-y-3 pt-4 border-t border-black/[0.06]">
+              <p className="text-sm font-semibold flex items-center gap-2"><Bike className="w-4 h-4 text-brand-600" /> Entrega na cidade</p>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <Field label="Centro (R$)" hint="Use 0 para grátis."><Input inputMode="decimal" value={shippingLocal} onChange={(e) => setShippingLocal(e.target.value)} /></Field>
+                <Field label="Bairros afastados (R$)"><Input inputMode="decimal" value={shippingFar} onChange={(e) => setShippingFar(e.target.value)} /></Field>
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-4 border-t border-black/[0.06]">
+              <Toggle checked={shipNationwide} onChange={setShipNationwide} icon={<Truck className="w-4 h-4 text-brand-600" />} title="Enviar para outras cidades" description="Correios ou transportadora, para todo o Brasil." />
+              {shipNationwide && (
+                <Field label="Valor fixo do envio (R$)" hint="Deixe em branco para combinar o frete com cada cliente pelo WhatsApp.">
+                  <Input inputMode="decimal" value={shippingNational} onChange={(e) => setShippingNational(e.target.value)} placeholder="A combinar" />
+                </Field>
+              )}
+            </div>
+
+            <div className="space-y-3 pt-4 border-t border-black/[0.06]">
+              <Toggle checked={pickupEnabled} onChange={setPickupEnabled} icon={<StoreIcon className="w-4 h-4 text-brand-600" />} title="Retirada na loja" description="O cliente busca o pedido sem pagar frete." />
+              {pickupEnabled && (
+                <Field label="Endereço / ponto de retirada">
+                  <Input value={pickupAddress} onChange={(e) => setPickupAddress(e.target.value)} placeholder="Ex: Rua das Flores, 120 - Centro (seg a sáb, 9h às 18h)" />
+                </Field>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-black/[0.06]">
+              <Field label="Frete grátis acima de (R$)" hint="Vale para a entrega na cidade e o envio com valor fixo. Deixe em branco para desativar.">
+                <Input inputMode="decimal" value={freeShippingMin} onChange={(e) => setFreeShippingMin(e.target.value)} placeholder="Ex: 199" />
+              </Field>
             </div>
           </Card>
 
@@ -125,7 +204,7 @@ export default function Settings({ data, tenantId, storeUrl }: { data: StoreData
               </div>
               <div className="mt-3 flex gap-2 text-[10px] text-ink-muted">
                 <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" /> {whatsapp ? 'WhatsApp ok' : 'Sem WhatsApp'}</span>
-                <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> desde {formatBRL(Math.min(parseFloat(shippingLocal) || 0, parseFloat(shippingFar) || 0))}</span>
+                <span className="flex items-center gap-1"><Truck className="w-3 h-3" /> {shipNationwide ? 'Todo o Brasil' : `desde ${formatBRL(Math.min(parseFloat(shippingLocal) || 0, parseFloat(shippingFar) || 0))}`}</span>
               </div>
             </div>
           </div>
@@ -133,5 +212,19 @@ export default function Settings({ data, tenantId, storeUrl }: { data: StoreData
         </div>
       </div>
     </div>
+  );
+}
+
+function Toggle({ checked, onChange, icon, title, description }: { checked: boolean; onChange: (v: boolean) => void; icon: React.ReactNode; title: string; description: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)} className="w-full flex items-center gap-3 text-left">
+      <span className="flex-1">
+        <span className="text-sm font-semibold flex items-center gap-2">{icon} {title}</span>
+        <span className="block text-xs text-ink-muted mt-0.5">{description}</span>
+      </span>
+      <span className={cx('w-11 h-6 rounded-full p-0.5 transition shrink-0', checked ? 'bg-brand-600' : 'bg-black/15')}>
+        <span className={cx('block w-5 h-5 rounded-full bg-white shadow transition', checked && 'translate-x-5')} />
+      </span>
+    </button>
   );
 }
