@@ -72,7 +72,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
   return <select ref={ref} className={cx(fieldBase, 'h-11 pr-8 cursor-pointer', className)} {...rest} />;
 });
 
-export function Field({ label, hint, children, className }: { label: string; hint?: ReactNode; children: ReactNode; className?: string }) {
+export function Field({ label, hint, children, className }: { label: ReactNode; hint?: ReactNode; children: ReactNode; className?: string }) {
   return (
     <label className={cx('block space-y-1.5', className)}>
       <span className="text-[13px] font-medium text-ink">{label}</span>

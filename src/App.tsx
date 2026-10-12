@@ -2,6 +2,7 @@ import { useState, useEffect, lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './components/Toast';
 import { Spinner } from './components/ui';
+import ErrorBoundary from './components/ErrorBoundary';
 import LandingPage from './pages/LandingPage';
 
 // Páginas carregadas sob demanda: o visitante da vitrine não baixa o painel.
@@ -10,6 +11,8 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const SuperAdminDashboard = lazy(() => import('./pages/SuperAdminDashboard'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'));
+const LegalPage = lazy(() => import('./pages/LegalPage'));
 
 function navigateTo(path: string) {
   window.location.hash = path;
@@ -30,7 +33,7 @@ function FullScreenMessage({ title, children }: { title: string; children?: Reac
 }
 
 function AppRoutes() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, recoveringPassword } = useAuth();
   const [route, setRoute] = useState(() => window.location.hash || '#/');
 
   useEffect(() => {
@@ -50,12 +53,21 @@ function AppRoutes() {
     return <Storefront key={tenantId} tenantId={tenantId} initialProductId={productId} />;
   }
 
+  // Chegou pelo link de recuperação de senha do e-mail
+  if (recoveringPassword) return <ResetPasswordPage />;
+
+  if (route === '#/termos' || route === '#/privacidade') {
+    return <LegalPage kind={route === '#/termos' ? 'terms' : 'privacy'} />;
+  }
+
   // "#/" é a home; hashes sem "/" (ex: #recursos) são âncoras da landing page.
   if (route === '#/' || !route.startsWith('#/')) {
     return <LandingPage onNavigate={(p: string) => navigateTo(`#/${p}`)} />;
   }
 
   if (loading) return <Spinner />;
+
+  if (route === '#/recuperar-senha') return <ResetPasswordPage />;
 
   if (route === '#/login' || route === '#/register') {
     if (user) return <Redirect to={user.role === 'SUPER_ADMIN' && !user.tenantId ? '#/admin-global' : '#/admin'} />;
@@ -98,12 +110,14 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <Suspense fallback={<Spinner />}>
-          <AppRoutes />
-        </Suspense>
-      </AuthProvider>
-    </ToastProvider>
+    <ErrorBoundary>
+      <ToastProvider>
+        <AuthProvider>
+          <Suspense fallback={<Spinner />}>
+            <AppRoutes />
+          </Suspense>
+        </AuthProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }

@@ -17,6 +17,12 @@ const NAV = [
   { id: 'faq', label: 'Dúvidas' },
 ];
 
+const PAINS = [
+  { problem: 'Pedido chegando em áudio, foto e mensagem solta', solution: 'Cada pedido chega completo: itens, endereço, frete e total.' },
+  { problem: '"Qual o valor?", "Tem no tamanho M?" o dia inteiro', solution: 'Preço, estoque e tamanhos ficam na vitrine, sempre atualizados.' },
+  { problem: 'Cliente de outra cidade pergunta o frete e some', solution: 'O cliente digita o CEP e já vê a entrega ou o envio para a cidade dele.' },
+];
+
 const STEPS = [
   { icon: Store, title: 'Crie sua loja', text: 'Cadastre-se, escolha o nome e a cor da sua marca. Sua vitrine fica no ar na hora.' },
   { icon: Package, title: 'Cadastre os produtos', text: 'Foto, preço, estoque e categoria. Tudo pelo celular, em poucos segundos por produto.' },
@@ -54,6 +60,8 @@ const FAQ = [
   { q: 'Preciso de conhecimento técnico?', a: 'Não. Você cria a conta, cadastra os produtos e compartilha o link. Tudo funciona pelo celular.' },
   { q: 'O cliente precisa criar conta para comprar?', a: 'Não. Ele escolhe os produtos, informa nome, WhatsApp e endereço e o pedido é enviado para você.' },
   { q: 'Como funcionam os roteiros e o teleprompter?', a: 'Você escolhe um produto e o objetivo do vídeo; o painel monta gancho, corpo e chamada. Depois é só abrir o teleprompter e gravar.' },
+  { q: 'Meus clientes precisam baixar algum aplicativo?', a: 'Não. A vitrine abre direto no navegador do celular, a partir do link que você compartilha.' },
+  { q: 'Consigo vender para clientes de outras cidades?', a: 'Sim. O cliente informa o CEP e vê as opções que valem para ele: entrega na sua cidade, retirada ou envio. Você define os valores, ou combina o frete pelo WhatsApp.' },
   { q: 'Posso personalizar a minha loja?', a: 'Sim: nome, descrição, cor da marca, WhatsApp, chave Pix e valores de frete são configurados no painel.' },
 ];
 
@@ -129,14 +137,14 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         <div className="relative max-w-6xl mx-auto px-5 pt-10 sm:pt-16 pb-16 sm:pb-24 grid lg:grid-cols-[1.1fr_1fr] gap-12 lg:gap-8 items-center">
           <div>
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-100 text-brand-700 text-xs font-semibold animate-fade-up">
-              <Sparkles className="w-3.5 h-3.5" /> Vitrine + WhatsApp + Pix + envio para todo o Brasil
+              <Sparkles className="w-3.5 h-3.5" /> Para quem vende pelo WhatsApp e pelo Instagram
             </span>
             <h1 className="mt-5 font-display font-semibold text-[40px] leading-[1.05] sm:text-6xl text-balance animate-fade-up [animation-delay:80ms]">
-              Sua loja vende sozinha no <span className="text-brand-600">WhatsApp</span>
+              Chega de anotar pedido no caderno e <span className="text-brand-600">perder venda</span> no WhatsApp
             </h1>
             <p className="mt-5 text-lg text-ink-muted leading-relaxed max-w-xl animate-fade-up [animation-delay:160ms]">
-              Monte sua vitrine em minutos, compartilhe o link e receba pedidos organizados no chat — com Pix Copia e Cola gerado
-              na hora e roteiros prontos para gravar seus vídeos.
+              Crie sua loja online em minutos. O cliente escolhe os produtos, informa o CEP, paga com Pix e o pedido chega
+              completo no seu WhatsApp — sem taxa por venda e sem precisar de equipe ou de conhecimento técnico.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3 animate-fade-up [animation-delay:240ms]">
               <a href="#/register" onClick={go('register')} className="inline-flex h-12 px-6 items-center justify-center gap-2 font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl shadow-lg shadow-brand-600/20 transition-colors">
@@ -156,7 +164,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
           {/* Celular com conversa */}
           <div className="flex justify-center lg:justify-end animate-fade-up [animation-delay:200ms]">
             <div className="relative">
-              <div className="absolute -left-10 top-16 hidden sm:flex items-center gap-2 bg-white rounded-2xl shadow-lift px-4 py-3 z-10">
+              <div className="absolute -left-10 top-32 hidden sm:flex items-center gap-2 bg-white rounded-2xl shadow-lift px-4 py-3 z-10">
                 <span className="w-9 h-9 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center"><ShoppingBag className="w-4 h-4" /></span>
                 <span className="text-xs leading-tight"><span className="block font-semibold text-ink">Novo pedido</span><span className="text-ink-muted">R$ 219,80 · Pix</span></span>
               </div>
@@ -191,9 +199,22 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         {/* Segmentos */}
         <div className="border-y border-black/[0.06] bg-white/60">
           <div className="max-w-6xl mx-auto px-5 py-5 flex items-center gap-x-8 gap-y-2 flex-wrap justify-center text-sm text-ink-muted">
-            <span className="font-semibold text-ink">Feito para quem vende:</span>
-            {['Moda e acessórios', 'Cosméticos', 'Eletrônicos', 'Doces e delivery', 'Artesanato', 'Suplementos'].map((s) => <span key={s}>{s}</span>)}
+            <span className="font-semibold text-ink">Pensado para pequenos lojistas:</span>
+            {['Roupas e acessórios', 'Cosméticos', 'Doces e salgados', 'Artesanato', 'Eletrônicos', 'Revenda de catálogo'].map((s) => <span key={s}>{s}</span>)}
           </div>
+        </div>
+      </section>
+
+      {/* ================= DORES ================= */}
+      <section className="max-w-6xl mx-auto px-5 pt-20 sm:pt-28">
+        <SectionHead eyebrow="Você se identifica?" title="Vender só pelo chat funciona — até o movimento crescer" />
+        <div className="grid md:grid-cols-3 gap-5">
+          {PAINS.map((pain) => (
+            <div key={pain.problem} className="rounded-2xl border border-black/[0.07] bg-white p-6 shadow-soft">
+              <p className="text-sm text-ink-muted line-through decoration-black/20">{pain.problem}</p>
+              <p className="mt-3 font-semibold text-ink flex items-start gap-2"><Check className="w-5 h-5 text-brand-600 shrink-0 mt-0.5" /> {pain.solution}</p>
+            </div>
+          ))}
         </div>
       </section>
 
@@ -334,6 +355,8 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
           <nav className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-muted">
             {NAV.map((n) => <a key={n.id} href={`#${n.id}`} onClick={scrollTo(n.id)} className="hover:text-ink">{n.label}</a>)}
             <a href="#/login" onClick={go('login')} className="hover:text-ink">Entrar</a>
+            <a href="#/termos" className="hover:text-ink">Termos de Uso</a>
+            <a href="#/privacidade" className="hover:text-ink">Privacidade</a>
           </nav>
         </div>
         <div className="max-w-6xl mx-auto px-5 pb-8 text-xs text-ink-soft">© {new Date().getFullYear()} STCK Company · Feito para quem vende todo dia no WhatsApp.</div>

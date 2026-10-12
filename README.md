@@ -51,3 +51,19 @@ npm run dev
 | `npm run preview` | Serve o build localmente |
 | `npm run lint` | ESLint |
 | `npm run typecheck` | Checagem de tipos do TypeScript |
+
+## Checklist de lançamento
+
+**No Supabase**
+1. SQL Editor: rode `supabase/migrations/003_lancamento.sql` (fotos no Storage + conferência de preços dos pedidos).
+2. **Authentication → URL Configuration**: em *Site URL* coloque o endereço do site (ex.: `https://scam-company-v1.vercel.app`) e adicione o mesmo em *Redirect URLs*. Sem isso, os links de confirmação de e-mail e de "esqueci minha senha" apontam para `localhost`.
+3. **Authentication → SMTP (Emails)**: configure um provedor de e-mail (Resend, Brevo, etc.). O envio padrão do Supabase tem limite baixo por hora e serve só para testes.
+4. Considere o plano pago do Supabase: projetos gratuitos pausam após dias sem uso.
+
+**Na Vercel**
+- Variáveis de ambiente opcionais: `VITE_CONTACT_EMAIL` (e-mail exibido nos Termos/Privacidade) e `VITE_SUBSCRIPTION_CHECKOUT_URL` (link de pagamento da assinatura).
+- Domínio próprio: em *Settings → Domains*. Depois, atualize `og:image` no `index.html` e as URLs do item 2.
+
+**Antes de divulgar**
+- Revise os textos de [Termos de Uso](src/pages/LegalPage.tsx) e Privacidade com um advogado e preencha os dados da empresa.
+- Faça um pedido de teste com CEP da sua cidade e outro de outra cidade.

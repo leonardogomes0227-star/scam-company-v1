@@ -5,7 +5,7 @@ import { useToast } from '../../components/Toast';
 import { supabase } from '../../supabaseClient';
 import { formatBRL, generateId, parseVariants } from '../../lib/format';
 import { MIGRATION_HINT, writeWithFallback } from '../../lib/db';
-import { compressImage, dataUrlKB } from '../../lib/image';
+import { compressImage, dataUrlKB, uploadProductImage } from '../../lib/image';
 import type { Product } from '../../types';
 import type { StoreData } from './useStoreData';
 
@@ -80,19 +80,22 @@ export default function Products({ data, tenantId }: { data: StoreData; tenantId
       return;
     }
     const variants = parseVariants(draft.variants).join(', ');
+    setSaving(true);
+    // Foto nova: envia para o Storage e guarda só o link (vitrine muito mais leve)
+    let image = draft.image.trim() || null;
+    if (image?.startsWith('data:')) image = (await uploadProductImage(supabase, tenantId, image)) ?? image;
     const payload = {
       name: draft.name.trim(),
       price,
       stock: Math.max(0, parseInt(draft.stock) || 0),
       category: draft.category.trim() || 'Geral',
       description: draft.description.trim() || null,
-      image: draft.image.trim() || null,
+      image,
       variants: variants || null,
       compare_price: comparePrice > price ? comparePrice : null,
     };
     const optional: (keyof typeof payload)[] = ['variants', 'compare_price'];
 
-    setSaving(true);
     if (draft.id) {
       const id = draft.id;
       const { error, degraded } = await writeWithFallback((data) => supabase.from('products').update(data).eq('id', id), payload, optional);
@@ -119,6 +122,24 @@ export default function Products({ data, tenantId }: { data: StoreData; tenantId
     } catch {
       prompt('Copie o link do produto:', url);
     }
+  };
+
+  const legacyImages = products.filter((p) => p.image?.startsWith('data:'));
+  const [migrating, setMigrating] = useState(false);
+  const migrateImages = async () => {
+    setMigrating(true);
+    let moved = 0;
+    for (const p of legacyImages) {
+      const url = await uploadProductImage(supabase, tenantId, p.image!);
+      if (!url) break; // Storage ainda não configurado
+      const { error } = await supabase.from('products').update({ image: url }).eq('id', p.id);
+      if (error) break;
+      moved++;
+      setProducts((prev) => prev.map((x) => (x.id === p.id ? { ...x, image: url } : x)));
+    }
+    setMigrating(false);
+    if (moved === legacyImages.length) toast(`${moved} foto(s) otimizada(s)! Sua vitrine ficou mais rápida.`);
+    else toast('Não foi possível mover as fotos. Rode o SQL de atualização (Storage) no Supabase.', true);
   };
 
   const quickStock = async (p: Product, delta: number) => {
@@ -149,6 +170,15 @@ export default function Products({ data, tenantId }: { data: StoreData; tenantId
         </div>
         <Button onClick={openNew}><Plus className="w-4 h-4" /> Novo produto</Button>
       </div>
+
+      {legacyImages.length > 0 && (
+        <Card className="p-4 flex flex-col sm:flex-row sm:items-center gap-3 bg-amber-50 border-amber-100">
+          <p className="flex-1 text-sm text-amber-900">
+            <b>{legacyImages.length} foto(s)</b> estão guardadas dentro do banco e deixam a vitrine mais lenta. Mova para o armazenamento de imagens com um clique.
+          </p>
+          <Button size="sm" variant="dark" loading={migrating} onClick={migrateImages}>Otimizar fotos</Button>
+        </Card>
+      )}
 
       {products.length > 0 && (
         <div className="flex flex-col sm:flex-row gap-2">

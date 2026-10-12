@@ -82,6 +82,9 @@ export default function RegisterPage() {
           </p>
         )}
         <Button type="submit" size="lg" loading={submitting} className="w-full">Criar minha loja</Button>
+        <p className="text-xs text-ink-soft text-center">
+          Ao criar sua loja você concorda com os <a href="#/termos" target="_blank" className="underline hover:text-ink">Termos de Uso</a> e a <a href="#/privacidade" target="_blank" className="underline hover:text-ink">Política de Privacidade</a>.
+        </p>
       </form>
     </AuthShell>
   );
