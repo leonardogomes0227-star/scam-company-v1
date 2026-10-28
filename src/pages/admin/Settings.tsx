@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bike, Check, ExternalLink, MapPin, MessageCircle, ShoppingBag, Store as StoreIcon, Truck } from 'lucide-react';
+import { Bike, Check, Clock, CreditCard, ExternalLink, MapPin, MessageCircle, PauseCircle, Plus, ShoppingBag, Store as StoreIcon, Trash2, Truck } from 'lucide-react';
 import { Button, Card, Field, Input, Select, Textarea, cx } from '../../components/ui';
 import { formatCep, lookupCep, UFS } from '../../lib/cep';
 import { MIGRATION_HINT, writeWithFallback } from '../../lib/db';
@@ -7,6 +7,7 @@ import { useToast } from '../../components/Toast';
 import { supabase } from '../../supabaseClient';
 import { brandVars, safeColor } from '../../lib/color';
 import { formatBRL } from '../../lib/format';
+import { DAY_NAMES, normalizeCustom, type DeliveryZone } from '../../lib/custom';
 import type { StoreData } from './useStoreData';
 
 const PRESETS = ['#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#2563eb', '#0891b2', '#0E6B4F', '#16a34a', '#111827', '#a16207'];
@@ -29,6 +30,16 @@ export default function Settings({ data, tenantId, storeUrl }: { data: StoreData
   const [shipNationwide, setShipNationwide] = useState(tenant?.ship_nationwide ?? true);
   const [shippingNational, setShippingNational] = useState(tenant?.shipping_national != null ? String(tenant.shipping_national) : '');
   const [freeShippingMin, setFreeShippingMin] = useState(tenant?.free_shipping_min != null ? String(tenant.free_shipping_min) : '');
+
+  const base = normalizeCustom(tenant?.custom);
+  const [hours, setHours] = useState(base.hours);
+  const [paused, setPaused] = useState(base.paused);
+  const [pausedMessage, setPausedMessage] = useState(base.pausedMessage);
+  const [payments, setPayments] = useState(base.payments);
+  const [zones, setZones] = useState<(Omit<DeliveryZone, 'fee'> & { fee: string })[]>(base.delivery.zones.map((z) => ({ ...z, fee: String(z.fee) })));
+  const [localEta, setLocalEta] = useState(base.delivery.localEta);
+  const [nationalEta, setNationalEta] = useState(base.delivery.nationalEta);
+  const [minOrder, setMinOrder] = useState(base.delivery.minOrder ? String(base.delivery.minOrder) : '');
 
   const fillFromCep = async (value: string) => {
     const cep = formatCep(value);
@@ -70,12 +81,28 @@ export default function Settings({ data, tenantId, storeUrl }: { data: StoreData
       shipping_national: optionalMoney(shippingNational),
       free_shipping_min: optionalMoney(freeShippingMin),
     };
-    const optional: (keyof typeof patch)[] = ['city', 'state', 'pickup_enabled', 'pickup_address', 'ship_nationwide', 'shipping_national', 'free_shipping_min'];
+    if (!payments.pix && !payments.card && !payments.cash) return toast('Deixe pelo menos uma forma de pagamento ativa.', true);
+    const latest = normalizeCustom(tenant?.custom);
+    const custom = {
+      ...latest,
+      hours,
+      paused,
+      pausedMessage: pausedMessage.trim() || latest.pausedMessage,
+      payments: { ...payments, pixDiscount: Math.min(50, Math.max(0, Number(payments.pixDiscount) || 0)) },
+      delivery: {
+        zones: zones.map((z) => ({ name: z.name.trim(), eta: z.eta.trim(), fee: money(z.fee) })).filter((z) => z.name),
+        localEta: localEta.trim(),
+        nationalEta: nationalEta.trim(),
+        minOrder: money(minOrder),
+      },
+    };
+    const full = { ...patch, custom };
+    const optional: (keyof typeof full)[] = ['custom', 'city', 'state', 'pickup_enabled', 'pickup_address', 'ship_nationwide', 'shipping_national', 'free_shipping_min'];
     setSaving(true);
-    const { error, degraded } = await writeWithFallback((data) => supabase.from('tenants').update(data).eq('id', tenantId), patch, optional);
+    const { error, degraded } = await writeWithFallback((data) => supabase.from('tenants').update(data).eq('id', tenantId), full, optional);
     setSaving(false);
     if (error) return toast('Erro ao salvar: ' + error.message, true);
-    setTenant((t) => (t ? { ...t, ...patch } : t));
+    setTenant((t) => (t ? { ...t, ...(degraded ? patch : full) } : t));
     toast(degraded ? MIGRATION_HINT : 'Configurações salvas!', degraded);
   };
 
@@ -120,6 +147,55 @@ export default function Settings({ data, tenantId, storeUrl }: { data: StoreData
             </Field>
           </Card>
 
+          <Card className="p-5 space-y-4">
+            <h2 className="font-semibold flex items-center gap-2"><CreditCard className="w-4 h-4 text-brand-600" /> Formas de pagamento</h2>
+            <div className="space-y-3">
+              <Toggle checked={payments.pix} onChange={(v) => setPayments({ ...payments, pix: v })} icon={<span className="w-4" />} title="Pix" description="Código Pix Copia e Cola gerado com o valor exato." />
+              <Toggle checked={payments.card} onChange={(v) => setPayments({ ...payments, card: v })} icon={<span className="w-4" />} title="Cartão" description="Na entrega/retirada ou por link de pagamento enviado pelo WhatsApp." />
+              <Toggle checked={payments.cash} onChange={(v) => setPayments({ ...payments, cash: v })} icon={<span className="w-4" />} title="Dinheiro" description="Na entrega ou na retirada (não vale para envio a outras cidades)." />
+            </div>
+            <div className="grid sm:grid-cols-2 gap-3 pt-2 border-t border-black/[0.06]">
+              <Field label="Desconto para pagar no Pix (%)" hint="Atrai clientes e reduz taxas. 0 desativa.">
+                <Input inputMode="decimal" value={payments.pixDiscount ? String(payments.pixDiscount) : ''} placeholder="Ex: 5" onChange={(e) => setPayments({ ...payments, pixDiscount: Number(e.target.value.replace(',', '.')) || 0 })} />
+              </Field>
+              <Field label="Aviso do cartão" hint="Aparece ao escolher cartão.">
+                <Input value={payments.cardNote} maxLength={120} placeholder="Ex: Até 3x sem juros" onChange={(e) => setPayments({ ...payments, cardNote: e.target.value })} />
+              </Field>
+            </div>
+          </Card>
+
+          <Card className="p-5 space-y-4">
+            <h2 className="font-semibold flex items-center gap-2"><Clock className="w-4 h-4 text-brand-600" /> Horário e disponibilidade</h2>
+            <Toggle checked={paused} onChange={setPaused} icon={<PauseCircle className="w-4 h-4 text-amber-600" />} title="Pausar pedidos" description="Fecha a loja temporariamente (férias, falta de estoque...). Clientes veem o aviso e não conseguem finalizar." />
+            {paused && <Field label="Mensagem para os clientes"><Input value={pausedMessage} maxLength={160} onChange={(e) => setPausedMessage(e.target.value)} /></Field>}
+            <div className="pt-4 border-t border-black/[0.06] space-y-3">
+              <Toggle checked={hours.enabled} onChange={(v) => setHours({ ...hours, enabled: v })} icon={<Clock className="w-4 h-4 text-brand-600" />} title="Mostrar horário de funcionamento" description="Aparece o selo “Aberto agora / Fechado” e o horário no rodapé." />
+              {hours.enabled && (
+                <>
+                  <div className="space-y-1.5">
+                    {hours.days.map((d, i) => (
+                      <div key={i} className="grid grid-cols-[92px_auto_1fr] sm:grid-cols-[110px_auto_1fr] items-center gap-2 text-sm">
+                        <span className={cx('font-medium', !d.open && 'text-ink-soft')}>{DAY_NAMES[i]}</span>
+                        <button type="button" role="switch" aria-checked={d.open} aria-label={`${DAY_NAMES[i]} aberto`} onClick={() => setHours({ ...hours, days: hours.days.map((x, j) => (j === i ? { ...x, open: !x.open } : x)) })} className={cx('w-9 h-5 rounded-full p-0.5 transition', d.open ? 'bg-brand-600' : 'bg-black/15')}>
+                          <span className={cx('block w-4 h-4 rounded-full bg-white shadow transition', d.open && 'translate-x-4')} />
+                        </button>
+                        {d.open ? (
+                          <span className="flex items-center gap-2">
+                            <input type="time" value={d.from} onChange={(e) => setHours({ ...hours, days: hours.days.map((x, j) => (j === i ? { ...x, from: e.target.value } : x)) })} className="h-9 rounded-lg border border-black/10 px-2 text-sm" />
+                            <span className="text-ink-soft">às</span>
+                            <input type="time" value={d.to} onChange={(e) => setHours({ ...hours, days: hours.days.map((x, j) => (j === i ? { ...x, to: e.target.value } : x)) })} className="h-9 rounded-lg border border-black/10 px-2 text-sm" />
+                          </span>
+                        ) : <span className="text-ink-soft">Fechado</span>}
+                      </div>
+                    ))}
+                  </div>
+                  <Toggle checked={hours.acceptOutside} onChange={(v) => setHours({ ...hours, acceptOutside: v })} icon={<span className="w-4" />} title="Aceitar pedidos fora do horário" description="Desligado: o cliente só consegue finalizar quando a loja está aberta." />
+                  <p className="text-xs text-ink-soft">O horário vale para o relógio do aparelho do cliente.</p>
+                </>
+              )}
+            </div>
+          </Card>
+
           <Card className="p-5 space-y-5">
             <div>
               <h2 className="font-semibold">Entregas</h2>
@@ -145,6 +221,28 @@ export default function Settings({ data, tenantId, storeUrl }: { data: StoreData
                 <Field label="Centro (R$)" hint="Use 0 para grátis."><Input inputMode="decimal" value={shippingLocal} onChange={(e) => setShippingLocal(e.target.value)} /></Field>
                 <Field label="Bairros afastados (R$)"><Input inputMode="decimal" value={shippingFar} onChange={(e) => setShippingFar(e.target.value)} /></Field>
               </div>
+            </div>
+
+            <div className="space-y-3 pt-4 border-t border-black/[0.06]">
+              <div>
+                <p className="text-sm font-semibold flex items-center gap-2"><MapPin className="w-4 h-4 text-brand-600" /> Frete por bairro (opcional)</p>
+                <p className="text-xs text-ink-muted mt-0.5">Cadastre o valor de cada bairro. O cliente digita o bairro no pedido e vê o preço certo. Bairros não listados usam o valor de “bairros afastados”; sem nenhum bairro cadastrado, valem centro/afastados acima.</p>
+              </div>
+              {zones.map((z, i) => (
+                <div key={i} className="grid grid-cols-[1fr_90px_1fr_auto] gap-2 items-center">
+                  <Input placeholder="Bairro" value={z.name} onChange={(e) => setZones(zones.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} />
+                  <Input inputMode="decimal" placeholder="R$" value={z.fee} onChange={(e) => setZones(zones.map((x, j) => (j === i ? { ...x, fee: e.target.value } : x)))} />
+                  <Input placeholder="Prazo (ex: 1h)" value={z.eta} onChange={(e) => setZones(zones.map((x, j) => (j === i ? { ...x, eta: e.target.value } : x)))} />
+                  <button type="button" onClick={() => setZones(zones.filter((_, j) => j !== i))} className="w-9 h-9 flex items-center justify-center text-ink-soft hover:text-red-600" aria-label="Remover bairro"><Trash2 className="w-4 h-4" /></button>
+                </div>
+              ))}
+              <Button type="button" variant="secondary" size="sm" onClick={() => setZones([...zones, { name: '', fee: '', eta: '' }])}><Plus className="w-3.5 h-3.5" /> Adicionar bairro</Button>
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-3 pt-4 border-t border-black/[0.06]">
+              <Field label="Prazo da entrega na cidade" hint="Ex: Hoje, em até 2h"><Input value={localEta} maxLength={40} onChange={(e) => setLocalEta(e.target.value)} /></Field>
+              <Field label="Prazo do envio para outras cidades" hint="Ex: 3 a 7 dias úteis"><Input value={nationalEta} maxLength={40} onChange={(e) => setNationalEta(e.target.value)} /></Field>
+              <Field label="Pedido mínimo (R$)" hint="Em branco, sem mínimo."><Input inputMode="decimal" value={minOrder} onChange={(e) => setMinOrder(e.target.value)} placeholder="Ex: 30" /></Field>
             </div>
 
             <div className="space-y-3 pt-4 border-t border-black/[0.06]">

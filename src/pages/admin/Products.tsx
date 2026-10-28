@@ -10,8 +10,8 @@ import type { Product } from '../../types';
 import type { StoreData } from './useStoreData';
 
 
-type Draft = { id?: string; name: string; price: string; comparePrice: string; stock: string; category: string; description: string; image: string; variants: string };
-const emptyDraft: Draft = { name: '', price: '', comparePrice: '', stock: '', category: '', description: '', image: '', variants: '' };
+type Draft = { id?: string; name: string; price: string; comparePrice: string; stock: string; category: string; description: string; image: string; variants: string; featured: boolean };
+const emptyDraft: Draft = { name: '', price: '', comparePrice: '', stock: '', category: '', description: '', image: '', variants: '', featured: false };
 
 const toDraft = (p: Product): Draft => ({
   name: p.name,
@@ -22,6 +22,7 @@ const toDraft = (p: Product): Draft => ({
   description: p.description || '',
   image: p.image || '',
   variants: p.variants || '',
+  featured: !!p.featured,
 });
 
 export default function Products({ data, tenantId }: { data: StoreData; tenantId: string }) {
@@ -89,8 +90,9 @@ export default function Products({ data, tenantId }: { data: StoreData; tenantId
       image: draft.image.trim() || null,
       variants: variants || null,
       compare_price: comparePrice > price ? comparePrice : null,
+      featured: draft.featured,
     };
-    const optional: (keyof typeof payload)[] = ['variants', 'compare_price'];
+    const optional: (keyof typeof payload)[] = ['variants', 'compare_price', 'featured'];
 
     setSaving(true);
     if (draft.id) {
@@ -256,6 +258,10 @@ export default function Products({ data, tenantId }: { data: StoreData; tenantId
               <Field label="Tamanhos / cores (opcional)" hint="Separe por vírgula. O cliente escolhe uma opção antes de comprar. Ex: P, M, G, GG">
                 <Input value={draft.variants} onChange={(e) => setDraft({ ...draft, variants: e.target.value })} placeholder="P, M, G" />
               </Field>
+              <label className="flex items-center gap-3 rounded-xl border border-black/10 px-3.5 py-3 cursor-pointer">
+                <input type="checkbox" checked={draft.featured} onChange={(e) => setDraft({ ...draft, featured: e.target.checked })} className="w-4 h-4 accent-brand-600" />
+                <span className="text-sm"><b className="font-semibold">Destaque na vitrine</b> <span className="text-ink-muted">— aparece na seção “Em destaque”, logo abaixo do banner.</span></span>
+              </label>
               <Field label="Descrição" hint="Material, medidas, cuidados... Aparece na página do produto.">
                 <Textarea value={draft.description} onChange={(e) => setDraft({ ...draft, description: e.target.value })} rows={4} />
               </Field>

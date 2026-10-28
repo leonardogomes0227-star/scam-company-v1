@@ -10,6 +10,14 @@ function parseHex(hex: string): [number, number, number] | null {
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
 }
 
+export function mix(a: string, b: string, t: number): string {
+  const ra = parseHex(a);
+  const rb = parseHex(b);
+  if (!ra || !rb) return a;
+  const c = ra.map((v, i) => Math.round(v + (rb[i] - v) * t));
+  return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
 function luminance([r, g, b]: [number, number, number]) {
   const lin = (c: number) => {
     const s = c / 255;

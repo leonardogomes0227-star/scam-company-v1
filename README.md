@@ -22,8 +22,10 @@ Plataforma SaaS para lojistas criarem uma vitrine virtual e receberem pedidos or
   - **Pedidos:** abas por status, busca, detalhes, mensagem pronta para o cliente no WhatsApp e **baixa automática de estoque** ao confirmar o pagamento;
   - **Produtos:** busca e filtros, cadastro/edição com foto, duplicar, ajuste rápido de estoque;
   - **Cupons:** criação com sugestões e contagem de uso;
+  - **Clientes:** lista automática a partir dos pedidos (pedidos, total pago, último pedido, selos Novo/Recorrente/Fiel/Sumido), botão para chamar no WhatsApp, mais vendidos e exportação em CSV;
+  - **Aparência:** editor com pré-visualização ao vivo (celular/computador) — temas prontos, cor da marca e do fundo, modo claro/escuro, 5 fontes, cantos, logo, banner (cor, degradê ou foto) com textos próprios, faixa de avisos, colunas/formato/estilo dos cartões, seções reordenáveis (destaques, produtos em destaque, sobre a loja, perguntas frequentes), redes sociais e rodapé;
   - **Marketing:** roteiros de vídeo com teleprompter (velocidade, fonte, espelhamento) e texto pronto para status/grupos;
-  - **Configurações:** identidade, cor da marca, WhatsApp, chave Pix e frete, com pré-visualização ao vivo.
+  - **Configurações:** identidade, WhatsApp, chave Pix, formas de pagamento (Pix/cartão/dinheiro, desconto no Pix), horário de funcionamento com selo "Aberto agora", pausa de pedidos, frete por bairro, prazos, pedido mínimo, envio nacional e retirada.
 - **Super Admin** (`#/admin-global`): lojas da plataforma, MRR, bloqueio/liberação, troca de plano e exclusão.
 
 ## Como rodar
@@ -37,7 +39,7 @@ npm run dev
 ### Banco de dados (obrigatório)
 
 1. No painel do Supabase, abra **SQL Editor** e execute todo o arquivo [`supabase/schema.sql`](supabase/schema.sql).
-   Se o banco já existia, basta rodar as atualizações em [`supabase/migrations/`](supabase/migrations).
+   Se o banco já existia, basta rodar as atualizações (a mais recente é `003_personalizacao.sql`) em [`supabase/migrations/`](supabase/migrations).
    Ele é idempotente: cria as tabelas/colunas que faltarem, as políticas de segurança (RLS), o trigger que cria a loja no cadastro e a função pública de rastreio.
 2. (Opcional) Em **Authentication → Providers → Email**, desative "Confirm email" se quiser que o lojista entre no painel logo após o cadastro.
 3. Para tornar seu usuário Super Admin, rode o `update` comentado no final do `schema.sql` com o seu e-mail.
