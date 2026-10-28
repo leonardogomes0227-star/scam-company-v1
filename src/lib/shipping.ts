@@ -1,5 +1,6 @@
 import type { Tenant } from '../types';
 import { sameCity } from './cep';
+import { normalizeCustom, type DeliveryZone } from './custom';
 
 export type DeliveryId = 'pickup' | 'local' | 'far' | 'national';
 
@@ -23,12 +24,21 @@ export interface ShippingConfig {
   shipNationwide: boolean;
   shippingNational: number | null;
   freeShippingMin: number | null;
+  zones: DeliveryZone[];
+  localEta: string;
+  nationalEta: string;
+  minOrder: number;
 }
 
 const num = (v: unknown): number | null => (v === null || v === undefined || v === '' ? null : Number.isFinite(Number(v)) ? Number(v) : null);
 
 export function shippingConfig(t: Tenant | null | undefined): ShippingConfig {
+  const custom = normalizeCustom(t?.custom);
   return {
+    zones: custom.delivery.zones,
+    localEta: custom.delivery.localEta,
+    nationalEta: custom.delivery.nationalEta,
+    minOrder: custom.delivery.minOrder,
     city: t?.city?.trim() || '',
     state: t?.state?.trim() || '',
     shippingLocal: num(t?.shipping_local) ?? 10,
@@ -47,7 +57,16 @@ export function shippingConfig(t: Tenant | null | undefined): ShippingConfig {
  * - Outra cidade: envio (Correios/transportadora), com valor fixo ou a combinar.
  * - Retirada na loja sempre que estiver habilitada.
  */
-export function deliveryOptions(cfg: ShippingConfig, customerCity: string, customerState: string, subtotal: number): DeliveryOption[] {
+const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+/** Acha o bairro cadastrado pela loja que corresponde ao bairro do cliente. */
+export function matchZone(zones: DeliveryZone[], district: string): DeliveryZone | null {
+  const d = norm(district);
+  if (!d) return null;
+  return zones.find((z) => norm(z.name) === d) ?? zones.find((z) => norm(z.name).includes(d) || d.includes(norm(z.name))) ?? null;
+}
+
+export function deliveryOptions(cfg: ShippingConfig, customerCity: string, customerState: string, subtotal: number, customerDistrict = ''): DeliveryOption[] {
   const knownCustomer = !!customerCity.trim();
   const storeCityKnown = !!cfg.city;
   const isLocal = !storeCityKnown || !knownCustomer || (sameCity(cfg.city, customerCity) && (!cfg.state || !customerState || cfg.state.toUpperCase() === customerState.toUpperCase()));
@@ -66,14 +85,23 @@ export function deliveryOptions(cfg: ShippingConfig, customerCity: string, custo
   }
   if (isLocal) {
     const where = cfg.city ? ` em ${cfg.city}` : '';
-    options.push({ id: 'local', title: `Entrega${where} — centro`, description: 'Entrega rápida na região central', fee: apply(cfg.shippingLocal), payments: ['Pix', 'Cartão', 'Dinheiro'] });
-    options.push({ id: 'far', title: `Entrega${where} — bairros afastados`, description: 'Demais bairros da cidade', fee: apply(cfg.shippingFar), payments: ['Pix', 'Cartão', 'Dinheiro'] });
+    const zone = cfg.zones.length > 0 ? matchZone(cfg.zones, customerDistrict) : null;
+    if (zone) {
+      options.push({ id: 'local', title: `Entrega — ${zone.name}`, description: zone.eta ? `Prazo: ${zone.eta}` : cfg.localEta ? `Prazo: ${cfg.localEta}` : 'Entrega no seu bairro', fee: apply(zone.fee), payments: ['Pix', 'Cartão', 'Dinheiro'] });
+    } else if (cfg.zones.length > 0) {
+      // Mesmo id da entrega por bairro, para a escolha do cliente não se perder ao digitar o bairro
+      options.push({ id: 'local', title: `Entrega${where}`, description: cfg.localEta ? `Prazo: ${cfg.localEta}` : 'Informe seu bairro para ver o valor exato', fee: apply(cfg.shippingFar), payments: ['Pix', 'Cartão', 'Dinheiro'] });
+    } else {
+      const eta = cfg.localEta ? ` · ${cfg.localEta}` : '';
+      options.push({ id: 'local', title: `Entrega${where} — centro`, description: `Entrega rápida na região central${eta}`, fee: apply(cfg.shippingLocal), payments: ['Pix', 'Cartão', 'Dinheiro'] });
+      options.push({ id: 'far', title: `Entrega${where} — bairros afastados`, description: `Demais bairros da cidade${eta}`, fee: apply(cfg.shippingFar), payments: ['Pix', 'Cartão', 'Dinheiro'] });
+    }
   }
   if ((!isLocal || !storeCityKnown) && cfg.shipNationwide) {
     options.push({
       id: 'national',
       title: 'Envio para sua cidade',
-      description: cfg.shippingNational == null ? 'Correios/transportadora — a loja informa o frete no WhatsApp' : 'Correios/transportadora',
+      description: (cfg.shippingNational == null ? 'Correios/transportadora — a loja informa o frete no WhatsApp' : 'Correios/transportadora') + (cfg.nationalEta ? ` · ${cfg.nationalEta}` : ''),
       fee: apply(cfg.shippingNational),
       payments: ['Pix', 'Cartão'],
     });

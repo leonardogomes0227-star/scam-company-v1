@@ -36,3 +36,38 @@
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
   .chat-bubble { opacity: 1; transform: none; }
 }
+
+/* ------------------------------------------------------------------
+   Vitrine personalizada: as variáveis (--bg, --surface, --fg, --r-*,
+   --font-*) vêm de themeStyle() em src/lib/custom.ts.
+   ------------------------------------------------------------------ */
+.store-themed {
+  background-color: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body), Inter, system-ui, sans-serif;
+}
+.store-themed h1,
+.store-themed h2,
+.store-themed h3,
+.store-themed .font-display {
+  font-family: var(--font-display), 'Space Grotesk', Inter, sans-serif;
+}
+.store-themed .bg-white { background-color: var(--surface); }
+.store-themed .bg-white\/90 { background-color: color-mix(in srgb, var(--bg) 90%, transparent); }
+.store-themed .text-ink { color: var(--fg); }
+.store-themed .text-ink-muted { color: var(--muted); }
+.store-themed .text-ink-soft { color: var(--soft); }
+.store-themed .placeholder\:text-ink-soft::placeholder { color: var(--soft); }
+.store-themed .rounded-xl { border-radius: var(--r-md); }
+.store-themed .rounded-2xl { border-radius: var(--r-lg); }
+.store-themed .rounded-3xl { border-radius: var(--r-xl); }
+
+.store-dark [class*='border-black/'] { border-color: rgba(255, 255, 255, 0.12); }
+.store-dark [class*='bg-black/['] { background-color: rgba(255, 255, 255, 0.06); }
+.store-dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.14); }
+.store-dark .text-emerald-700 { color: #6ee7b7; }
+.store-dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.14); }
+.store-dark .text-amber-700 { color: #fcd34d; }
+.store-dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.14); }
+.store-dark .text-red-700 { color: #fca5a5; }
+.store-dark .bg-\[\#E7FFDB\] { background-color: rgba(37, 211, 102, 0.14); }

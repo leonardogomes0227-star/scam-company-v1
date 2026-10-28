@@ -58,6 +58,7 @@ export default function Overview({ data, storeUrl, goTo }: { data: StoreData; st
   const checklist = [
     { done: !!tenant?.whatsapp, label: 'Cadastrar o WhatsApp que recebe os pedidos', action: () => goTo('settings') },
     { done: !!tenant?.pix_key, label: 'Cadastrar sua chave Pix', action: () => goTo('settings') },
+    { done: !!tenant?.custom && Object.keys(tenant.custom as object).length > 0, label: 'Personalizar a aparência da vitrine', action: () => goTo('appearance') },
     { done: !!tenant?.city, label: 'Configurar entregas (cidade, envio e retirada)', action: () => goTo('settings') },
     { done: products.length > 0, label: 'Cadastrar o primeiro produto', action: () => goTo('products') },
     { done: coupons.length > 0, label: 'Criar um cupom de boas-vindas', action: () => goTo('coupons') },

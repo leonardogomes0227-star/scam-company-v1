@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Crown, ExternalLink, LayoutDashboard, Lock, LogOut, Megaphone, Menu, Package, Settings as SettingsIcon, ShoppingBag, Tag, X } from 'lucide-react';
+import { Crown, ExternalLink, LayoutDashboard, Lock, LogOut, Megaphone, Menu, Package, Palette, Users, Settings as SettingsIcon, ShoppingBag, Tag, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Logo } from '../components/Logo';
 import { Spinner, cx } from '../components/ui';
@@ -10,16 +10,20 @@ import Products from './admin/Products';
 import Orders from './admin/Orders';
 import Coupons from './admin/Coupons';
 import Marketing from './admin/Marketing';
+import Appearance from './admin/Appearance';
+import Customers from './admin/Customers';
 import Settings from './admin/Settings';
 
-export type AdminSection = 'overview' | 'products' | 'orders' | 'coupons' | 'marketing' | 'settings';
+export type AdminSection = 'overview' | 'products' | 'orders' | 'coupons' | 'customers' | 'marketing' | 'appearance' | 'settings';
 
 const NAV: { id: AdminSection; label: string; icon: typeof Package }[] = [
   { id: 'overview', label: 'Visão geral', icon: LayoutDashboard },
   { id: 'orders', label: 'Pedidos', icon: ShoppingBag },
   { id: 'products', label: 'Produtos', icon: Package },
   { id: 'coupons', label: 'Cupons', icon: Tag },
+  { id: 'customers', label: 'Clientes', icon: Users },
   { id: 'marketing', label: 'Marketing', icon: Megaphone },
+  { id: 'appearance', label: 'Aparência', icon: Palette },
   { id: 'settings', label: 'Configurações', icon: SettingsIcon },
 ];
 
@@ -168,6 +172,8 @@ export default function AdminDashboard({ tenantId }: { tenantId: string }) {
         {section === 'products' && <Products data={data} tenantId={tenantId} />}
         {section === 'orders' && <Orders data={data} />}
         {section === 'coupons' && <Coupons data={data} tenantId={tenantId} />}
+        {section === 'customers' && <Customers data={data} />}
+        {section === 'appearance' && <Appearance key={data.tenant?.id} data={data} tenantId={tenantId} storeUrl={storeUrl} />}
         {section === 'marketing' && <Marketing data={data} storeUrl={storeUrl} />}
         {section === 'settings' && <Settings data={data} tenantId={tenantId} storeUrl={storeUrl} />}
       </main>

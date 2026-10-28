@@ -2,7 +2,7 @@
  * Reduz a foto no próprio navegador antes de salvar: redimensiona para no máximo
  * `maxSide` px e converte para JPEG. Uma foto de celular de 4 MB vira ~100–200 KB.
  */
-export async function compressImage(file: File, maxSide = 1000, quality = 0.82): Promise<string> {
+export async function compressImage(file: File, maxSide = 1000, quality = 0.82, format: 'jpeg' | 'png' = 'jpeg'): Promise<string> {
   if (!file.type.startsWith('image/')) throw new Error('O arquivo precisa ser uma imagem.');
 
   const url = URL.createObjectURL(file);
@@ -23,10 +23,12 @@ export async function compressImage(file: File, maxSide = 1000, quality = 0.82):
     canvas.height = height;
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Seu navegador não conseguiu processar a imagem.');
-    ctx.fillStyle = '#ffffff'; // fundo branco para PNG transparente
-    ctx.fillRect(0, 0, width, height);
+    if (format === 'jpeg') {
+      ctx.fillStyle = '#ffffff'; // fundo branco para PNG transparente
+      ctx.fillRect(0, 0, width, height);
+    }
     ctx.drawImage(img, 0, 0, width, height);
-    return canvas.toDataURL('image/jpeg', quality);
+    return format === 'png' ? canvas.toDataURL('image/png') : canvas.toDataURL('image/jpeg', quality);
   } finally {
     URL.revokeObjectURL(url);
   }

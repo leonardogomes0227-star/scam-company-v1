@@ -1,14 +1,17 @@
-import { useState, useEffect, useMemo } from 'react';
+import { Fragment, useState, useEffect, useMemo, type ReactNode } from 'react';
 import {
   ArrowLeft, ArrowRight, Check, CheckCircle2, Clock, Copy, CreditCard, Heart, MapPin, MessageCircle, Minus, Package, Plus,
   Search, Share2, ShoppingBag, SlidersHorizontal, Star, Store as StoreIcon, Tag, Trash2, Truck, X, Zap,
+  Facebook, Globe, Instagram, Lock, Music2, Youtube, ChevronDown,
 } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { discountPercent, formatBRL, formatDate, generateId, generateOrderCode, normalizeWhatsapp, parseVariants, whatsappLink } from '../lib/format';
 import { formatCep, lookupCep, UFS } from '../lib/cep';
 import { deliveryOptions, PAYMENT_HINTS, shippingConfig, type DeliveryId } from '../lib/shipping';
 import { buildPixPayload } from '../lib/pix';
-import { brandVars, safeColor } from '../lib/color';
+import { safeColor } from '../lib/color';
+import { ensureFont, hoursSummary, normalizeCustom, openStatus, socialLinks, themeStyle, type SectionId, type StoreCustom } from '../lib/custom';
+import { AnnouncementBar, BenefitsRow, StoreHero, StoreLogo, defaultBenefits } from '../components/StoreParts';
 import { Drawer, Modal, cx } from '../components/ui';
 import type { Coupon, OrderItem, Product, Review, Tenant } from '../types';
 
@@ -218,6 +221,9 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
     };
   }, [store?.name]);
 
+  const custom = useMemo(() => normalizeCustom(store?.custom), [store]);
+  useEffect(() => ensureFont(custom.font), [custom.font]);
+
   const productById = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
 
   const ratings = useMemo(() => {
@@ -387,12 +393,18 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
   const shipCfg = shippingConfig(store);
   const subtotal = cartLines.reduce((acc, l) => acc + l.product.price * l.quantity, 0);
   const discountAmount = appliedCoupon ? Math.round(subtotal * appliedCoupon.discount) / 100 : 0;
-  const options = deliveryOptions(shipCfg, customer.city, customer.state, subtotal - discountAmount);
+  const options = deliveryOptions(shipCfg, customer.city, customer.state, subtotal - discountAmount, customer.district);
   const selectedDelivery = options.find((o) => o.id === delivery) ?? null;
   const freightPending = selectedDelivery?.fee === null;
   const shippingFee = selectedDelivery?.fee ?? 0;
-  const total = Math.max(0, subtotal - discountAmount) + shippingFee;
-  const allowedPayments = selectedDelivery?.payments ?? ['Pix', 'Cartão', 'Dinheiro'];
+  const payEnabled: Record<string, boolean> = { Pix: custom.payments.pix, Cartão: custom.payments.card, Dinheiro: custom.payments.cash };
+  const enabledPayments = (selectedDelivery?.payments ?? ['Pix', 'Cartão', 'Dinheiro']).filter((m) => payEnabled[m]);
+  const allowedPayments = enabledPayments.length > 0 ? enabledPayments : ['Pix'];
+  const pixDiscountAmount = paymentMethod === 'Pix' && selectedDelivery && custom.payments.pixDiscount > 0 ? Math.round((subtotal - discountAmount) * custom.payments.pixDiscount) / 100 : 0;
+  const total = Math.max(0, subtotal - discountAmount - pixDiscountAmount) + shippingFee;
+  const hoursNow = openStatus(custom.hours);
+  const blockReason = custom.paused ? custom.pausedMessage : hoursNow && !hoursNow.open && !custom.hours.acceptOutside ? `Estamos fechados no momento. ${hoursNow.label.replace('Fechado · ', '')}.` : null;
+  const minOrderGap = custom.delivery.minOrder > 0 ? custom.delivery.minOrder - (subtotal - discountAmount) : 0;
   // Frete grátis só vale para fretes com valor definido (não para "a combinar")
   const freeShippingApplies = selectedDelivery ? selectedDelivery.id !== 'pickup' && !freightPending : options.some((o) => o.id === 'local' || o.id === 'far' || (o.id === 'national' && shipCfg.shippingNational != null));
   const freeShippingGap = shipCfg.freeShippingMin && shipCfg.freeShippingMin > 0 && freeShippingApplies ? shipCfg.freeShippingMin - (subtotal - discountAmount) : null;
@@ -440,6 +452,8 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
     e.preventDefault();
     setCheckoutError('');
     if (cartLines.length === 0 || !store) return;
+    if (blockReason) return setCheckoutError(blockReason);
+    if (minOrderGap > 0) return setCheckoutError(`O pedido mínimo da loja é ${formatBRL(custom.delivery.minOrder)}.`);
     if (!customer.name.trim()) return setCheckoutError('Informe seu nome.');
     if (normalizeWhatsapp(customer.phone).length < 12) return setCheckoutError('Informe um WhatsApp válido com DDD.');
     if (!selectedDelivery) return setCheckoutError('Escolha como você quer receber o pedido.');
@@ -478,6 +492,7 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
     });
     msg += `\nSubtotal: ${formatBRL(subtotal)}\n`;
     if (appliedCoupon) msg += `🎟 Cupom ${appliedCoupon.code} (-${appliedCoupon.discount}%): -${formatBRL(discountAmount)}\n`;
+    if (pixDiscountAmount > 0) msg += `⚡ Desconto Pix (${custom.payments.pixDiscount}%): -${formatBRL(pixDiscountAmount)}\n`;
     msg += `🚚 Frete: ${freightPending ? 'a combinar (por favor, me informe o valor)' : shippingFee === 0 ? 'grátis' : formatBRL(shippingFee)}\n`;
     msg += `\n💰 *Total${freightPending ? ' (sem frete)' : ''}: ${formatBRL(total)}*`;
     if (pixCode) msg += `\n\nVou pagar via Pix e envio o comprovante aqui.`;
@@ -501,7 +516,7 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
         payment: paymentLabel,
         total,
         shipping: shippingFee,
-        discount: discountAmount,
+        discount: discountAmount + pixDiscountAmount,
         coupon: appliedCoupon?.code ?? null,
         items,
         status: 'Aguardando Pagamento',
@@ -592,173 +607,204 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
   }
 
   const color = safeColor(store.color);
-  const initial = store.name.trim().charAt(0).toUpperCase() || 'L';
   const contactLink = store.whatsapp ? whatsappLink(store.whatsapp, `Olá! Vim pela vitrine da ${store.name} e tenho uma dúvida.`) : null;
 
-  return (
-    <div style={brandVars(color)} className="min-h-screen bg-white text-ink selection:bg-[var(--store-soft)]">
-      {/* Faixa de avisos */}
-      <div className="bg-[var(--store)] text-[var(--store-ink)] text-[12px] font-medium">
-        <div className="max-w-6xl mx-auto px-4 h-9 flex items-center justify-center gap-5 overflow-x-auto scrollbar-none whitespace-nowrap">
-          <span className="flex items-center gap-1.5"><MessageCircle className="w-3.5 h-3.5" /> Pedido direto pelo WhatsApp</span>
-          <span className="hidden sm:flex items-center gap-1.5"><Zap className="w-3.5 h-3.5" /> Pix na hora</span>
-          <span className="flex items-center gap-1.5"><Truck className="w-3.5 h-3.5" /> {shipCfg.shipNationwide ? 'Enviamos para todo o Brasil' : `Entrega a partir de ${formatBRL(Math.min(shipCfg.shippingLocal, shipCfg.shippingFar))}`}</span>
-          {shipCfg.freeShippingMin ? <span className="flex items-center gap-1.5"><Tag className="w-3.5 h-3.5" /> Frete grátis acima de {formatBRL(shipCfg.freeShippingMin)}</span> : null}
+  const gridCols = {
+    mobile: { 1: 'grid-cols-1', 2: 'grid-cols-2' }[custom.layout.mobileColumns],
+    desktop: { 3: 'md:grid-cols-3', 4: 'md:grid-cols-3 lg:grid-cols-4' }[custom.layout.columns],
+  };
+  const featuredProducts = products.filter((p) => p.featured && p.stock > 0).slice(0, 8);
+  const social = socialLinks(custom.footer);
+  const hoursLines = custom.hours.enabled ? hoursSummary(custom.hours) : [];
+  const goProducts = () => document.getElementById('produtos')?.scrollIntoView({ behavior: 'smooth' });
+
+  const renderCard = (product: Product) => (
+    <ProductCard
+      key={product.id}
+      product={product}
+      layout={custom.layout}
+      rating={ratings.get(product.id)}
+      isFavorite={favorites.includes(product.id)}
+      onOpen={() => openProduct(product)}
+      onToggleFavorite={() => toggleFavorite(product.id)}
+      onAdd={() => addToCart(product)}
+    />
+  );
+
+  const sectionNodes: Record<SectionId, ReactNode> = {
+    benefits: (
+      <section className="max-w-6xl mx-auto px-4 pt-4">
+        <BenefitsRow items={custom.benefits.length > 0 ? custom.benefits : defaultBenefits(shipCfg, custom)} />
+      </section>
+    ),
+    featured: featuredProducts.length > 0 && (
+      <section className="max-w-6xl mx-auto px-4 pt-10">
+        <h2 className="font-display text-2xl font-semibold flex items-center gap-2"><Star className="w-5 h-5 text-[var(--store)] fill-current" /> Em destaque</h2>
+        <div className={cx('mt-4 grid gap-x-3 gap-y-6 sm:gap-x-5 sm:gap-y-8', gridCols.mobile, gridCols.desktop)}>{featuredProducts.map(renderCard)}</div>
+      </section>
+    ),
+    products: (
+      <>
+        <section id="produtos" className="max-w-6xl mx-auto px-4 pt-10 scroll-mt-28">
+          <div className="flex items-end justify-between gap-4 mb-4">
+            <div>
+              <h2 className="font-display text-2xl font-semibold">{custom.layout.productsTitle}</h2>
+              <p className="text-sm text-ink-muted">{visibleProducts.length} {visibleProducts.length === 1 ? 'item' : 'itens'}{searchQuery && ` para "${searchQuery}"`}</p>
+            </div>
+            <label className="flex items-center gap-2 text-sm text-ink-muted">
+              <SlidersHorizontal className="w-4 h-4" />
+              <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className="bg-transparent font-medium text-ink focus:outline-none cursor-pointer">
+                <option value="recent">Novidades</option>
+                <option value="price-asc">Menor preço</option>
+                <option value="price-desc">Maior preço</option>
+                <option value="rating">Mais bem avaliados</option>
+              </select>
+            </label>
+          </div>
+          {custom.layout.showCategories && categories.length > 2 && (
+            <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 -mx-4 px-4">
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat)}
+                  className={cx(
+                    'h-9 px-4 rounded-full text-sm font-medium shrink-0 transition border',
+                    selectedCategory === cat ? 'bg-[var(--store)] text-[var(--store-ink)] border-transparent' : 'bg-white border-black/10 text-ink-muted hover:text-ink hover:border-black/20',
+                  )}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+        <section className="max-w-6xl mx-auto px-4 pt-5 pb-14">
+          {visibleProducts.length === 0 ? (
+            <div className="text-center py-20 rounded-3xl bg-black/[0.02] border border-dashed border-black/10">
+              <Package className="w-10 h-10 mx-auto text-ink-soft" />
+              <p className="mt-3 font-semibold">{products.length === 0 ? 'Em breve, novidades por aqui!' : 'Nenhum produto encontrado'}</p>
+              <p className="text-sm text-ink-muted mt-1">{products.length === 0 ? 'A loja ainda está cadastrando os produtos.' : 'Tente outra busca ou categoria.'}</p>
+              {(searchQuery || selectedCategory !== 'Todos') && (
+                <button onClick={() => { setSearchQuery(''); setSelectedCategory('Todos'); }} className="mt-4 text-sm font-semibold text-[var(--store)] hover:underline">Limpar filtros</button>
+              )}
+            </div>
+          ) : (
+            <div className={cx('grid gap-x-3 gap-y-6 sm:gap-x-5 sm:gap-y-8', gridCols.mobile, gridCols.desktop)}>{visibleProducts.map(renderCard)}</div>
+          )}
+        </section>
+      </>
+    ),
+    about: (custom.about.text.trim() || custom.about.image) && (
+      <section className="max-w-6xl mx-auto px-4 pt-6 pb-10">
+        <div className={cx('grid gap-6 items-center rounded-3xl bg-black/[0.03] p-6 sm:p-10', custom.about.image && 'md:grid-cols-2')}>
+          {custom.about.image && <img src={custom.about.image} alt={custom.about.title} loading="lazy" className="w-full aspect-[4/3] object-cover rounded-2xl" />}
+          <div>
+            <h2 className="font-display text-2xl sm:text-3xl font-semibold">{custom.about.title}</h2>
+            <p className="mt-3 text-ink-muted leading-relaxed whitespace-pre-line">{custom.about.text}</p>
+          </div>
         </div>
-      </div>
+      </section>
+    ),
+    faq: custom.faq.filter((f) => f.q.trim() && f.a.trim()).length > 0 && (
+      <section className="max-w-3xl mx-auto px-4 pt-6 pb-12">
+        <h2 className="font-display text-2xl font-semibold text-center">Perguntas frequentes</h2>
+        <div className="mt-5 space-y-2">
+          {custom.faq.filter((f) => f.q.trim() && f.a.trim()).map((f) => (
+            <details key={f.q} className="group rounded-2xl border border-black/10 bg-white px-4 py-3">
+              <summary className="flex items-center justify-between gap-3 cursor-pointer list-none font-medium text-sm">
+                {f.q} <ChevronDown className="w-4 h-4 shrink-0 text-ink-soft transition group-open:rotate-180" />
+              </summary>
+              <p className="mt-2 text-sm text-ink-muted leading-relaxed whitespace-pre-line">{f.a}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+    ),
+  };
+
+  const SOCIAL_ICONS: Record<string, typeof Globe> = { instagram: Instagram, facebook: Facebook, tiktok: Music2, youtube: Youtube, site: Globe };
+
+  return (
+    <div style={themeStyle(color, custom)} className={cx('store-themed min-h-screen selection:bg-[var(--store-soft)]', custom.mode === 'dark' && 'store-dark')}>
+      <AnnouncementBar custom={custom} ship={shipCfg} />
+
+      {blockReason && (
+        <div className="bg-amber-50 text-amber-800 text-sm text-center px-4 py-2.5 flex items-center justify-center gap-2"><Lock className="w-4 h-4 shrink-0" /> {blockReason}</div>
+      )}
 
       {/* Cabeçalho */}
       <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-black/[0.06]">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center gap-3">
-          <a href={`#/loja/${tenantId}`} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="flex items-center gap-2.5 min-w-0 shrink-0">
-            <span className="w-9 h-9 rounded-xl bg-[var(--store)] text-[var(--store-ink)] font-display font-semibold flex items-center justify-center">{initial}</span>
-            <span className="font-display font-semibold text-lg truncate max-w-[140px] sm:max-w-[220px]">{store.name}</span>
+          <a href={`#/loja/${tenantId}`} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="min-w-0 shrink-0">
+            <StoreLogo name={store.name} custom={custom} />
           </a>
-          <div className="relative flex-1 hidden md:block max-w-md mx-auto">
-            <Search className="w-4 h-4 text-ink-soft absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Buscar produtos" className={cx(fieldClass, 'pl-10 bg-black/[0.03] border-transparent')} />
-          </div>
+          {custom.layout.showSearch && (
+            <div className="relative flex-1 hidden md:block max-w-md mx-auto">
+              <Search className="w-4 h-4 text-ink-soft absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Buscar produtos" className={cx(fieldClass, 'pl-10 bg-black/[0.03] border-transparent')} />
+            </div>
+          )}
           <div className="flex items-center gap-1 ml-auto md:ml-0">
             <IconButton label="Rastrear pedido" onClick={() => setPanel('tracking')}><Truck className="w-5 h-5" /></IconButton>
             <IconButton label="Favoritos" onClick={() => setPanel('favorites')} badge={favorites.length}><Heart className="w-5 h-5" /></IconButton>
             <IconButton label="Carrinho" onClick={() => { setCheckoutStep('cart'); setPanel('cart'); }} badge={cartCount} pulse={cartPulse}><ShoppingBag className="w-5 h-5" /></IconButton>
           </div>
         </div>
-        <div className="md:hidden px-4 pb-3">
-          <div className="relative">
-            <Search className="w-4 h-4 text-ink-soft absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Buscar produtos" className={cx(fieldClass, 'pl-10 h-10 bg-black/[0.03] border-transparent')} />
+        {custom.layout.showSearch && (
+          <div className="md:hidden px-4 pb-3">
+            <div className="relative">
+              <Search className="w-4 h-4 text-ink-soft absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Buscar produtos" className={cx(fieldClass, 'pl-10 h-10 bg-black/[0.03] border-transparent')} />
+            </div>
           </div>
-        </div>
+        )}
       </header>
 
       {/* Hero */}
       <section className="max-w-6xl mx-auto px-4 pt-5">
-        <div className="relative overflow-hidden rounded-3xl bg-[var(--store)] text-[var(--store-ink)] px-6 py-10 sm:px-12 sm:py-14">
-          <div aria-hidden className="absolute -right-16 -top-16 w-72 h-72 rounded-full bg-white/15 blur-2xl" />
-          <div aria-hidden className="absolute right-24 -bottom-24 w-64 h-64 rounded-full bg-black/10 blur-2xl" />
-          <div className="relative max-w-xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] opacity-75">Bem-vindo(a) à</p>
-            <h1 className="mt-2 font-display text-4xl sm:text-5xl font-semibold text-balance">{store.name}</h1>
-            <p className="mt-3 text-[15px] opacity-85 leading-relaxed">{store.about || 'Confira nossos produtos e faça seu pedido pelo WhatsApp.'}</p>
-            <div className="mt-6 flex flex-wrap gap-2">
-              <a href="#produtos" onClick={(e) => { e.preventDefault(); document.getElementById('produtos')?.scrollIntoView({ behavior: 'smooth' }); }} className="inline-flex h-11 px-5 items-center gap-2 rounded-xl bg-white text-ink font-semibold text-sm hover:bg-white/90">
-                Ver produtos <ArrowRight className="w-4 h-4" />
-              </a>
-              {contactLink && (
-                <a href={contactLink} target="_blank" rel="noopener noreferrer" className="inline-flex h-11 px-5 items-center gap-2 rounded-xl bg-black/15 hover:bg-black/20 font-semibold text-sm">
-                  <MessageCircle className="w-4 h-4" /> Falar com a loja
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-4">
-          {[
-            { icon: MessageCircle, title: 'Atendimento', text: 'via WhatsApp' },
-            { icon: CreditCard, title: 'Pagamento', text: 'Pix ou cartão' },
-            { icon: Truck, title: shipCfg.shipNationwide ? 'Todo o Brasil' : 'Entrega', text: shipCfg.city ? `${shipCfg.city} e região` : `a partir de ${formatBRL(Math.min(shipCfg.shippingLocal, shipCfg.shippingFar))}` },
-          ].map((b) => (
-            <div key={b.title} className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-3 text-center sm:text-left rounded-2xl bg-black/[0.03] px-3 py-3 sm:px-4">
-              <span className="w-9 h-9 rounded-xl bg-[var(--store-soft)] text-[var(--store)] flex items-center justify-center shrink-0"><b.icon className="w-4 h-4" /></span>
-              <span className="leading-tight"><span className="block text-[13px] font-semibold">{b.title}</span><span className="text-[11.5px] text-ink-muted">{b.text}</span></span>
-            </div>
-          ))}
-        </div>
+        <StoreHero name={store.name} about={store.about || ''} custom={custom} contactLink={contactLink} onCta={goProducts} />
       </section>
 
-      {/* Filtros */}
-      <section id="produtos" className="max-w-6xl mx-auto px-4 pt-10 scroll-mt-28">
-        <div className="flex items-end justify-between gap-4 mb-4">
-          <div>
-            <h2 className="font-display text-2xl font-semibold">Produtos</h2>
-            <p className="text-sm text-ink-muted">{visibleProducts.length} {visibleProducts.length === 1 ? 'item' : 'itens'}{searchQuery && ` para "${searchQuery}"`}</p>
-          </div>
-          <label className="flex items-center gap-2 text-sm text-ink-muted">
-            <SlidersHorizontal className="w-4 h-4" />
-            <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className="bg-transparent font-medium text-ink focus:outline-none cursor-pointer">
-              <option value="recent">Novidades</option>
-              <option value="price-asc">Menor preço</option>
-              <option value="price-desc">Maior preço</option>
-              <option value="rating">Mais bem avaliados</option>
-            </select>
-          </label>
-        </div>
-        {categories.length > 2 && (
-          <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 -mx-4 px-4">
-            {categories.map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={cx(
-                  'h-9 px-4 rounded-full text-sm font-medium shrink-0 transition border',
-                  selectedCategory === cat ? 'bg-[var(--store)] text-[var(--store-ink)] border-transparent' : 'bg-white border-black/10 text-ink-muted hover:text-ink hover:border-black/20',
-                )}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* Grade de produtos */}
-      <section className="max-w-6xl mx-auto px-4 pt-5 pb-20">
-        {visibleProducts.length === 0 ? (
-          <div className="text-center py-20 rounded-3xl bg-black/[0.02] border border-dashed border-black/10">
-            <Package className="w-10 h-10 mx-auto text-ink-soft" />
-            <p className="mt-3 font-semibold">{products.length === 0 ? 'Em breve, novidades por aqui!' : 'Nenhum produto encontrado'}</p>
-            <p className="text-sm text-ink-muted mt-1">{products.length === 0 ? 'A loja ainda está cadastrando os produtos.' : 'Tente outra busca ou categoria.'}</p>
-            {(searchQuery || selectedCategory !== 'Todos') && (
-              <button onClick={() => { setSearchQuery(''); setSelectedCategory('Todos'); }} className="mt-4 text-sm font-semibold text-[var(--store)] hover:underline">Limpar filtros</button>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-3 gap-y-6 sm:gap-x-5 sm:gap-y-8">
-            {visibleProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                rating={ratings.get(product.id)}
-                isFavorite={favorites.includes(product.id)}
-                onOpen={() => openProduct(product)}
-                onToggleFavorite={() => toggleFavorite(product.id)}
-                onAdd={() => addToCart(product)}
-              />
-            ))}
-          </div>
-        )}
-      </section>
+      {custom.sections.filter((sec) => sec.enabled).map((sec) => <Fragment key={sec.id}>{sectionNodes[sec.id]}</Fragment>)}
 
       {/* Rodapé */}
       <footer className="border-t border-black/[0.06] bg-black/[0.015]">
         <div className="max-w-6xl mx-auto px-4 py-10 grid sm:grid-cols-3 gap-8 text-sm">
           <div>
-            <div className="flex items-center gap-2.5">
-              <span className="w-9 h-9 rounded-xl bg-[var(--store)] text-[var(--store-ink)] font-display font-semibold flex items-center justify-center">{initial}</span>
-              <span className="font-display font-semibold text-lg">{store.name}</span>
-            </div>
-            <p className="mt-3 text-ink-muted leading-relaxed">{store.about}</p>
+            <StoreLogo name={store.name} custom={custom} size="lg" />
+            <p className="mt-3 text-ink-muted leading-relaxed whitespace-pre-line">{custom.footer.text || store.about}</p>
+            {social.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {social.map((l) => {
+                  const Icon = SOCIAL_ICONS[l.id] ?? Globe;
+                  return <a key={l.id} href={l.url} target="_blank" rel="noopener noreferrer" aria-label={l.label} title={l.label} className="w-9 h-9 rounded-full bg-black/[0.05] hover:bg-[var(--store)] hover:text-[var(--store-ink)] flex items-center justify-center transition"><Icon className="w-4 h-4" /></a>;
+                })}
+              </div>
+            )}
           </div>
           <div>
             <p className="font-semibold">Atendimento</p>
             <ul className="mt-3 space-y-2 text-ink-muted">
               {contactLink && <li><a href={contactLink} target="_blank" rel="noopener noreferrer" className="hover:text-ink flex items-center gap-2"><MessageCircle className="w-4 h-4" /> Falar no WhatsApp</a></li>}
               <li><button onClick={() => setPanel('tracking')} className="hover:text-ink flex items-center gap-2"><Truck className="w-4 h-4" /> Rastrear pedido</button></li>
+              {custom.footer.address && <li className="flex items-start gap-2"><MapPin className="w-4 h-4 mt-0.5 shrink-0" /> {custom.footer.address}</li>}
+              {hoursLines.map((l) => <li key={l} className="flex items-start gap-2"><Clock className="w-4 h-4 mt-0.5 shrink-0" /> {l}</li>)}
             </ul>
           </div>
           <div>
-            <p className="font-semibold">Entrega</p>
+            <p className="font-semibold">Entrega e pagamento</p>
             <ul className="mt-3 space-y-2 text-ink-muted">
-              <li className="flex items-start gap-2"><MapPin className="w-4 h-4 mt-0.5 shrink-0" /> {shipCfg.city ? `${shipCfg.city}${shipCfg.state ? `/${shipCfg.state}` : ''}` : 'Na cidade'}: {formatBRL(shipCfg.shippingLocal)} a {formatBRL(shipCfg.shippingFar)}</li>
+              <li className="flex items-start gap-2"><MapPin className="w-4 h-4 mt-0.5 shrink-0" /> {shipCfg.city ? `${shipCfg.city}${shipCfg.state ? `/${shipCfg.state}` : ''}` : 'Na cidade'}: {shipCfg.zones.length > 0 ? `${formatBRL(Math.min(...shipCfg.zones.map((z) => z.fee)))} a ${formatBRL(Math.max(shipCfg.shippingFar, ...shipCfg.zones.map((z) => z.fee)))}` : `${formatBRL(shipCfg.shippingLocal)} a ${formatBRL(shipCfg.shippingFar)}`}</li>
               {shipCfg.shipNationwide && <li className="flex items-start gap-2"><Truck className="w-4 h-4 mt-0.5 shrink-0" /> Outras cidades: {shipCfg.shippingNational == null ? 'frete combinado no WhatsApp' : formatBRL(shipCfg.shippingNational)}</li>}
               {shipCfg.pickupEnabled && <li className="flex items-start gap-2"><StoreIcon className="w-4 h-4 mt-0.5 shrink-0" /> Retirada grátis{shipCfg.pickupAddress ? `: ${shipCfg.pickupAddress}` : ''}</li>}
               {shipCfg.freeShippingMin ? <li className="flex items-start gap-2"><Tag className="w-4 h-4 mt-0.5 shrink-0" /> Frete grátis acima de {formatBRL(shipCfg.freeShippingMin)}</li> : null}
+              {shipCfg.minOrder > 0 && <li className="flex items-start gap-2"><ShoppingBag className="w-4 h-4 mt-0.5 shrink-0" /> Pedido mínimo de {formatBRL(shipCfg.minOrder)}</li>}
+              <li className="flex items-start gap-2"><CreditCard className="w-4 h-4 mt-0.5 shrink-0" /> {[custom.payments.pix && 'Pix', custom.payments.card && 'Cartão', custom.payments.cash && 'Dinheiro'].filter(Boolean).join(' · ')}</li>
             </ul>
           </div>
         </div>
         <div className="border-t border-black/[0.06] py-5 text-center text-xs text-ink-soft">
-          © {new Date().getFullYear()} {store.name} · Loja criada com <a href="#/" className="font-semibold text-ink-muted hover:text-ink">STCK Company</a>
+          © {new Date().getFullYear()} {store.name}{custom.footer.showBrand && <> · Loja criada com <a href="#/" className="font-semibold text-ink-muted hover:text-ink">STCK Company</a></>}
         </div>
       </footer>
 
@@ -926,14 +972,17 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
                 <div className="space-y-1.5 text-sm">
                   <Row label="Subtotal" value={formatBRL(subtotal)} />
                   {appliedCoupon && <Row label={`Cupom ${appliedCoupon.code}`} value={`-${formatBRL(discountAmount)}`} className="text-emerald-700" />}
+                  {checkoutStep === 'details' && pixDiscountAmount > 0 && <Row label={`Desconto Pix (${custom.payments.pixDiscount}%)`} value={`-${formatBRL(pixDiscountAmount)}`} className="text-emerald-700" />}
                   {checkoutStep === 'details' && <Row label="Frete" value={!selectedDelivery ? '—' : freightPending ? 'A combinar' : shippingFee === 0 ? 'Grátis' : formatBRL(shippingFee)} />}
                   <Row label={checkoutStep === 'details' && selectedDelivery && !freightPending ? 'Total' : 'Total (sem frete)'} value={formatBRL(checkoutStep === 'details' ? total : subtotal - discountAmount)} className="text-base font-semibold pt-1.5 border-t border-black/[0.06]" />
                 </div>
                 {checkoutError && <p className="text-sm text-red-700 bg-red-50 rounded-xl px-3 py-2">{checkoutError}</p>}
+                {blockReason && <p className="text-sm text-amber-700 bg-amber-50 rounded-xl px-3 py-2 flex items-start gap-2"><Lock className="w-4 h-4 mt-0.5 shrink-0" /> {blockReason}</p>}
+                {!blockReason && minOrderGap > 0 && <p className="text-sm text-amber-700 bg-amber-50 rounded-xl px-3 py-2">Pedido mínimo de {formatBRL(custom.delivery.minOrder)}: faltam {formatBRL(minOrderGap)}.</p>}
                 {checkoutStep === 'cart' ? (
-                  <button key="go-details" type="button" onClick={(e) => { e.preventDefault(); setCheckoutStep('details'); }} className={cx(storeButton, 'w-full h-12')}>Continuar <ArrowRight className="w-4 h-4" /></button>
+                  <button key="go-details" type="button" disabled={!!blockReason || minOrderGap > 0} onClick={(e) => { e.preventDefault(); setCheckoutStep('details'); }} className={cx(storeButton, 'w-full h-12')}>Continuar <ArrowRight className="w-4 h-4" /></button>
                 ) : (
-                  <button key="submit-order" type="submit" form="checkout-form" disabled={placingOrder} className={cx(storeButton, 'w-full h-12')}>
+                  <button key="submit-order" type="submit" form="checkout-form" disabled={placingOrder || !!blockReason || minOrderGap > 0} className={cx(storeButton, 'w-full h-12')}>
                     <MessageCircle className="w-4 h-4" /> {placingOrder ? 'Enviando...' : 'Finalizar pelo WhatsApp'}
                   </button>
                 )}
@@ -1108,7 +1157,8 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
                     <input placeholder="Número" value={customer.number} onChange={setField('number')} className={fieldClass} />
                     <input autoComplete="address-line2" placeholder="Complemento (opcional)" value={customer.complement} onChange={setField('complement')} className={fieldClass} />
                   </div>
-                  <input placeholder="Bairro" value={customer.district} onChange={setField('district')} className={fieldClass} />
+                  <input placeholder="Bairro" list="zone-list" autoComplete="off" value={customer.district} onChange={setField('district')} className={fieldClass} />
+                  {shipCfg.zones.length > 0 && <datalist id="zone-list">{shipCfg.zones.map((z) => <option key={z.name} value={z.name} />)}</datalist>}
                 </div>
               )}
 
@@ -1122,6 +1172,7 @@ export default function Storefront({ tenantId, initialProductId }: { tenantId: s
                       onClick={() => setPaymentMethod(m)}
                       icon={m === 'Pix' ? <Zap className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
                       title={m}
+                      description={m === 'Pix' && custom.payments.pixDiscount > 0 ? `${custom.payments.pixDiscount}% de desconto` : m === 'Cartão' ? custom.payments.cardNote || undefined : undefined}
                       aside={m === 'Pix' && freightPending ? 'Após o frete' : PAYMENT_HINTS[m]?.[selectedDelivery.id] ?? ''}
                     />
                   ))}
@@ -1207,8 +1258,9 @@ function IconButton({ label, onClick, badge = 0, pulse, children }: { label: str
   );
 }
 
-function ProductCard({ product, rating, isFavorite, onOpen, onToggleFavorite, onAdd }: {
+function ProductCard({ product, layout, rating, isFavorite, onOpen, onToggleFavorite, onAdd }: {
   product: Product;
+  layout: StoreCustom['layout'];
   rating?: Rating;
   isFavorite: boolean;
   onOpen: () => void;
@@ -1217,10 +1269,10 @@ function ProductCard({ product, rating, isFavorite, onOpen, onToggleFavorite, on
 }) {
   const soldOut = product.stock <= 0;
   return (
-    <article className="group flex flex-col">
+    <article className={cx('group flex flex-col', layout.cardStyle === 'boxed' && 'p-2.5 rounded-2xl border border-black/[0.08] bg-white shadow-soft')}>
       <div className="relative overflow-hidden rounded-2xl">
         <button onClick={onOpen} className="block w-full" aria-label={`Ver ${product.name}`}>
-          <ProductImage product={product} className={cx('w-full aspect-[4/5] transition duration-500 group-hover:scale-[1.03]', soldOut && 'opacity-50 grayscale')} />
+          <ProductImage product={product} className={cx('w-full transition duration-500 group-hover:scale-[1.03]', { portrait: 'aspect-[4/5]', square: 'aspect-square', tall: 'aspect-[3/4]' }[layout.aspect], soldOut && 'opacity-50 grayscale')} />
         </button>
         <button
           onClick={onToggleFavorite}
@@ -1236,7 +1288,7 @@ function ProductCard({ product, rating, isFavorite, onOpen, onToggleFavorite, on
         ) : product.stock <= 3 ? (
           <span className="absolute top-2.5 left-2.5 px-2 py-1 rounded-lg bg-white/90 text-amber-700 text-[10px] font-bold uppercase tracking-wide">Últimas unidades</span>
         ) : null}
-        {!soldOut && (
+        {!soldOut && layout.showQuickAdd && (
           <button
             onClick={onAdd}
             className="absolute bottom-2.5 right-2.5 w-10 h-10 rounded-full bg-[var(--store)] text-[var(--store-ink)] flex items-center justify-center shadow-lg sm:opacity-0 sm:translate-y-2 sm:group-hover:opacity-100 sm:group-hover:translate-y-0 transition"
@@ -1247,9 +1299,9 @@ function ProductCard({ product, rating, isFavorite, onOpen, onToggleFavorite, on
         )}
       </div>
       <button onClick={onOpen} className="mt-3 text-left">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-ink-soft">{product.category || 'Geral'}</p>
+        {layout.showCategory && <p className="text-[11px] font-medium uppercase tracking-wide text-ink-soft">{product.category || 'Geral'}</p>}
         <h3 className="mt-0.5 text-sm font-medium line-clamp-2">{product.name}</h3>
-        {rating && (
+        {layout.showRating && rating && (
           <p className="mt-1 flex items-center gap-1 text-xs text-ink-muted">
             <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> {rating.average.toFixed(1)} <span className="text-ink-soft">({rating.count})</span>
           </p>

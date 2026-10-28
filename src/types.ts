@@ -19,6 +19,8 @@ export interface Tenant {
   ship_nationwide?: boolean | null;
   shipping_national?: number | null;
   free_shipping_min?: number | null;
+  /** Personalização da vitrine (jsonb) — leia com normalizeCustom() */
+  custom?: unknown;
   created_at?: string;
 }
 
@@ -35,6 +37,8 @@ export interface Product {
   variants?: string | null;
   /** Preço "de" (riscado) para promoções */
   compare_price?: number | null;
+  /** Aparece na seção de destaques da vitrine */
+  featured?: boolean | null;
   created_at?: string;
 }
 

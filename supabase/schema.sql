@@ -31,6 +31,8 @@ alter table public.tenants add column if not exists pickup_address      text;
 alter table public.tenants add column if not exists ship_nationwide     boolean default true;
 alter table public.tenants add column if not exists shipping_national   numeric(10,2);
 alter table public.tenants add column if not exists free_shipping_min   numeric(10,2);
+-- Personalização da vitrine (tema, banner, seções, horário, pagamentos, bairros)
+alter table public.tenants add column if not exists custom              jsonb default '{}'::jsonb;
 
 -- Perfis (liga o usuário do Auth à loja)
 create table if not exists public.profiles (
@@ -53,6 +55,7 @@ alter table public.products add column if not exists category    text default 'G
 alter table public.products add column if not exists created_at  timestamptz default now();
 alter table public.products add column if not exists variants      text;
 alter table public.products add column if not exists compare_price numeric(10,2);
+alter table public.products add column if not exists featured      boolean default false;
 
 -- Pedidos
 create table if not exists public.orders (
